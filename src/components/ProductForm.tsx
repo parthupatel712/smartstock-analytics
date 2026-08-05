@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -10,6 +11,11 @@ import {
   View,
 } from "react-native";
 
+import {
+  getCategoriesForDepartment,
+  PRODUCT_DEPARTMENTS,
+  type ProductDepartment,
+} from "../constants/productTaxonomy";
 import type {
   ProductFormErrors,
   ProductFormValues,
@@ -21,10 +27,14 @@ interface ProductFormProps {
   isSubmitting?: boolean;
 }
 
+type PickerType = "department" | "category" | null;
+
 const INITIAL_VALUES: ProductFormValues = {
   barcode: "",
   name: "",
+  department: "",
   category: "",
+  brand: "",
   unitCost: "",
   unitPrice: "",
   currentStock: "0",
@@ -41,6 +51,19 @@ export function ProductForm({
   const [errors, setErrors] =
     useState<ProductFormErrors>({});
 
+  const [activePicker, setActivePicker] =
+    useState<PickerType>(null);
+
+  const availableCategories = useMemo(() => {
+    if (!values.department) {
+      return [];
+    }
+
+    return getCategoriesForDepartment(
+      values.department as ProductDepartment,
+    );
+  }, [values.department]);
+
   function updateField(
     field: keyof ProductFormValues,
     value: string,
@@ -54,6 +77,29 @@ export function ProductForm({
       ...currentErrors,
       [field]: undefined,
     }));
+  }
+
+  function selectDepartment(
+    department: ProductDepartment,
+  ): void {
+    setValues((currentValues) => ({
+      ...currentValues,
+      department,
+      category: "",
+    }));
+
+    setErrors((currentErrors) => ({
+      ...currentErrors,
+      department: undefined,
+      category: undefined,
+    }));
+
+    setActivePicker(null);
+  }
+
+  function selectCategory(category: string): void {
+    updateField("category", category);
+    setActivePicker(null);
   }
 
   async function handleSubmit(): Promise<void> {
@@ -100,18 +146,40 @@ export function ProductForm({
           onChangeText={(value) =>
             updateField("name", value)
           }
-          placeholder="Example: Sparkling Water"
+          placeholder="Example: Coca-Cola Zero 355 mL"
           error={errors.name}
         />
 
-        <FormField
+        <DropdownField
+          label="Department"
+          value={values.department}
+          placeholder="Select a department"
+          error={errors.department}
+          onPress={() => setActivePicker("department")}
+        />
+
+        <DropdownField
           label="Category"
           value={values.category}
-          onChangeText={(value) =>
-            updateField("category", value)
+          placeholder={
+            values.department
+              ? "Select a category"
+              : "Select department first"
           }
-          placeholder="Example: Beverages"
           error={errors.category}
+          disabled={!values.department}
+          onPress={() => setActivePicker("category")}
+        />
+
+        <FormField
+          label="Brand"
+          value={values.brand}
+          onChangeText={(value) =>
+            updateField("brand", value)
+          }
+          placeholder="Example: Coca-Cola"
+          error={errors.brand}
+          autoCapitalize="words"
         />
 
         <FormField
@@ -173,6 +241,69 @@ export function ProductForm({
           </Text>
         </Pressable>
       </ScrollView>
+
+      <Modal
+        animationType="slide"
+        transparent
+        visible={activePicker !== null}
+        onRequestClose={() => setActivePicker(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {activePicker === "department"
+                  ? "Select department"
+                  : "Select category"}
+              </Text>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setActivePicker(null)}
+                style={styles.modalCloseButton}
+              >
+                <Text style={styles.modalCloseText}>
+                  Close
+                </Text>
+              </Pressable>
+            </View>
+
+            <ScrollView>
+              {activePicker === "department"
+                ? PRODUCT_DEPARTMENTS.map((department) => {
+                    const isSelected =
+                      values.department === department;
+
+                    return (
+                      <PickerOption
+                        key={department}
+                        label={department}
+                        selected={isSelected}
+                        onPress={() =>
+                          selectDepartment(department)
+                        }
+                      />
+                    );
+                  })
+                : availableCategories.map((category) => {
+                    const isSelected =
+                      values.category === category;
+
+                    return (
+                      <PickerOption
+                        key={category}
+                        label={category}
+                        selected={isSelected}
+                        onPress={() =>
+                          selectCategory(category)
+                        }
+                      />
+                    );
+                  })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -185,6 +316,9 @@ interface FormFieldProps {
   keyboardType?: React.ComponentProps<
     typeof TextInput
   >["keyboardType"];
+  autoCapitalize?: React.ComponentProps<
+    typeof TextInput
+  >["autoCapitalize"];
   error?: string;
 }
 
@@ -194,6 +328,7 @@ function FormField({
   onChangeText,
   placeholder,
   keyboardType = "default",
+  autoCapitalize = "none",
   error,
 }: FormFieldProps) {
   return (
@@ -205,7 +340,7 @@ function FormField({
         onChangeText={onChangeText}
         placeholder={placeholder}
         keyboardType={keyboardType}
-        autoCapitalize="none"
+        autoCapitalize={autoCapitalize}
         style={[
           styles.input,
           error && styles.inputError,
@@ -216,6 +351,89 @@ function FormField({
         <Text style={styles.errorText}>{error}</Text>
       ) : null}
     </View>
+  );
+}
+
+interface DropdownFieldProps {
+  label: string;
+  value: string;
+  placeholder: string;
+  onPress: () => void;
+  error?: string;
+  disabled?: boolean;
+}
+
+function DropdownField({
+  label,
+  value,
+  placeholder,
+  onPress,
+  error,
+  disabled = false,
+}: DropdownFieldProps) {
+  return (
+    <View style={styles.fieldContainer}>
+      <Text style={styles.label}>{label}</Text>
+
+      <Pressable
+        accessibilityRole="button"
+        disabled={disabled}
+        onPress={onPress}
+        style={[
+          styles.dropdownButton,
+          disabled && styles.dropdownButtonDisabled,
+          error && styles.inputError,
+        ]}
+      >
+        <Text
+          style={[
+            styles.dropdownText,
+            !value && styles.dropdownPlaceholder,
+            disabled && styles.dropdownTextDisabled,
+          ]}
+        >
+          {value || placeholder}
+        </Text>
+
+        <Text style={styles.dropdownIcon}>⌄</Text>
+      </Pressable>
+
+      {error ? (
+        <Text style={styles.errorText}>{error}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+interface PickerOptionProps {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}
+
+function PickerOption({
+  label,
+  selected,
+  onPress,
+}: PickerOptionProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={[
+        styles.pickerOption,
+        selected && styles.pickerOptionSelected,
+      ]}
+    >
+      <Text
+        style={[
+          styles.pickerOptionText,
+          selected && styles.pickerOptionTextSelected,
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -262,6 +480,85 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 13,
     color: "#B42318",
+  },
+  dropdownButton: {
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#C8CED6",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    backgroundColor: "#FFFFFF",
+  },
+  dropdownButtonDisabled: {
+    backgroundColor: "#ECEFF3",
+  },
+  dropdownText: {
+    flex: 1,
+    fontSize: 16,
+    color: "#20252B",
+  },
+  dropdownPlaceholder: {
+    color: "#8B949E",
+  },
+  dropdownTextDisabled: {
+    color: "#9AA3AD",
+  },
+  dropdownIcon: {
+    marginLeft: 12,
+    fontSize: 22,
+    color: "#5D6673",
+  },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0, 0, 0, 0.35)",
+  },
+  modalContent: {
+    maxHeight: "70%",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 32,
+    backgroundColor: "#FFFFFF",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+  },
+  modalCloseButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  modalCloseText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#20252B",
+  },
+  pickerOption: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+    paddingHorizontal: 8,
+    paddingVertical: 16,
+  },
+  pickerOptionSelected: {
+    backgroundColor: "#F1F5F9",
+  },
+  pickerOptionText: {
+    fontSize: 16,
+    color: "#20252B",
+  },
+  pickerOptionTextSelected: {
+    fontWeight: "800",
   },
   submitButton: {
     marginTop: 8,
