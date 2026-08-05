@@ -9,7 +9,9 @@ interface ProductRow {
   id: number;
   barcode: string;
   name: string;
-  category: string;
+  department: Product["department"];
+  category: Product["category"];
+  brand: string;
   unit_cost: number;
   unit_price: number;
   current_stock: number;
@@ -24,7 +26,9 @@ function mapProductRow(row: ProductRow): Product {
     id: row.id,
     barcode: row.barcode,
     name: row.name,
+    department: row.department,
     category: row.category,
+    brand: row.brand,
     unitCost: row.unit_cost,
     unitPrice: row.unit_price,
     currentStock: row.current_stock,
@@ -46,7 +50,7 @@ export async function createProduct(
 
   const barcode = normalizeBarcode(input.barcode);
   const name = input.name.trim();
-  const category = input.category.trim();
+  const brand = input.brand.trim();
   const currentStock = input.currentStock ?? 0;
   const reorderLevel = input.reorderLevel ?? 5;
   const now = new Date().toISOString();
@@ -59,8 +63,16 @@ export async function createProduct(
     throw new Error("Product name is required.");
   }
 
-  if (!category) {
+  if (!input.department) {
+    throw new Error("Department is required.");
+  }
+
+  if (!input.category) {
     throw new Error("Category is required.");
+  }
+
+  if (!brand) {
+    throw new Error("Brand is required.");
   }
 
   if (input.unitCost < 0) {
@@ -84,7 +96,9 @@ export async function createProduct(
       INSERT INTO products (
         barcode,
         name,
+        department,
         category,
+        brand,
         unit_cost,
         unit_price,
         current_stock,
@@ -93,11 +107,13 @@ export async function createProduct(
         created_at,
         updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
     `,
     barcode,
     name,
-    category,
+    input.department,
+    input.category,
+    brand,
     input.unitCost,
     input.unitPrice,
     currentStock,
@@ -117,7 +133,9 @@ export async function getAllProducts(): Promise<Product[]> {
       id,
       barcode,
       name,
+      department,
       category,
+      brand,
       unit_cost,
       unit_price,
       current_stock,
@@ -158,7 +176,9 @@ export async function getProductByBarcode(
         id,
         barcode,
         name,
+        department,
         category,
+        brand,
         unit_cost,
         unit_price,
         current_stock,
