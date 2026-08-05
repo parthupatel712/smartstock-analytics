@@ -13,7 +13,9 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({
+  product,
+}: ProductCardProps) {
   const isLowStock =
     product.currentStock <= product.reorderLevel;
 
@@ -22,7 +24,14 @@ export function ProductCard({ product }: ProductCardProps) {
       <View style={styles.headerRow}>
         <View style={styles.titleContainer}>
           <Text style={styles.name}>{product.name}</Text>
-          <Text style={styles.category}>{product.category}</Text>
+
+          <Text style={styles.brand}>
+            {product.brand}
+          </Text>
+
+          <Text style={styles.taxonomy}>
+            {product.department} · {product.category}
+          </Text>
         </View>
 
         <View
@@ -42,17 +51,20 @@ export function ProductCard({ product }: ProductCardProps) {
       </Text>
 
       <View style={styles.priceRow}>
-        <Text style={styles.priceLabel}>Selling price</Text>
+        <Text style={styles.priceLabel}>
+          Selling price
+        </Text>
+
         <Text style={styles.price}>
           {formatCurrency(product.unitPrice)}
         </Text>
       </View>
 
-      {isLowStock && (
+      {isLowStock ? (
         <Text style={styles.lowStockText}>
           Low stock — reorder level: {product.reorderLevel}
         </Text>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -78,9 +90,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
   },
-  category: {
+  brand: {
     marginTop: 4,
     fontSize: 14,
+    fontWeight: "600",
+    color: "#20252B",
+  },
+  taxonomy: {
+    marginTop: 3,
+    fontSize: 13,
     color: "#5D6673",
   },
   stockBadge: {
