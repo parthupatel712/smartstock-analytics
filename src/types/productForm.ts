@@ -1,7 +1,11 @@
 export interface ProductFormValues {
   barcode: string;
   name: string;
+
+  department: string;
   category: string;
+  brand: string;
+
   unitCost: string;
   unitPrice: string;
   currentStock: string;
@@ -11,7 +15,11 @@ export interface ProductFormValues {
 export interface ProductFormErrors {
   barcode?: string;
   name?: string;
+
+  department?: string;
   category?: string;
+  brand?: string;
+
   unitCost?: string;
   unitPrice?: string;
   currentStock?: string;

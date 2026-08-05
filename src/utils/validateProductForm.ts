@@ -41,8 +41,16 @@ export function validateProductForm(
     errors.name = "Product name is required.";
   }
 
+  if (!values.department.trim()) {
+    errors.department = "Department is required.";
+  }
+
   if (!values.category.trim()) {
     errors.category = "Category is required.";
+  }
+
+  if (!values.brand.trim()) {
+    errors.brand = "Brand is required.";
   }
 
   if (!isNonNegativeNumber(values.unitCost)) {
