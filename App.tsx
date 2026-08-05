@@ -2,6 +2,7 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   SafeAreaView,
@@ -11,18 +12,28 @@ import {
 } from "react-native";
 
 import { ProductCard } from "./src/components/ProductCard";
-import { getAllProducts } from "./src/database/productRepository";
+import { ProductForm } from "./src/components/ProductForm";
+import {
+  createProduct,
+  getAllProducts,
+} from "./src/database/productRepository";
 import { initializeDatabase } from "./src/database/schema";
 import { seedDatabase } from "./src/database/seed";
 import type { Product } from "./src/types/product";
+import type { ProductFormValues } from "./src/types/productForm";
 
 type AppStatus = "loading" | "ready" | "error";
+type AppView = "inventory" | "add-product";
 
 export default function App() {
   const [status, setStatus] = useState<AppStatus>("loading");
+  const [currentView, setCurrentView] =
+    useState<AppView>("inventory");
+
   const [products, setProducts] = useState<Product[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadProducts = useCallback(
     async (isPullToRefresh = false): Promise<void> => {
@@ -63,6 +74,56 @@ export default function App() {
     void loadProducts();
   }, [loadProducts]);
 
+  async function handleCreateProduct(
+    values: ProductFormValues,
+  ): Promise<void> {
+    try {
+      setIsSubmitting(true);
+
+      await createProduct({
+        barcode: values.barcode,
+        name: values.name,
+        category: values.category,
+        unitCost: Number(values.unitCost),
+        unitPrice: Number(values.unitPrice),
+        currentStock: Number(values.currentStock),
+        reorderLevel: Number(values.reorderLevel),
+      });
+
+      const updatedProducts = await getAllProducts();
+
+      setProducts(updatedProducts);
+      setCurrentView("inventory");
+
+      Alert.alert(
+        "Product saved",
+        `${values.name.trim()} was added successfully.`,
+      );
+    } catch (error) {
+      console.error("Could not create product:", error);
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "The product could not be saved.";
+
+      const isDuplicateBarcode =
+        message.toLowerCase().includes("unique") ||
+        message.toLowerCase().includes("constraint");
+
+      Alert.alert(
+        isDuplicateBarcode
+          ? "Barcode already exists"
+          : "Could not save product",
+        isDuplicateBarcode
+          ? "Another active product already uses this barcode."
+          : message,
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   if (status === "loading") {
     return (
       <SafeAreaView style={styles.screen}>
@@ -94,15 +155,40 @@ export default function App() {
           <Pressable
             accessibilityRole="button"
             onPress={() => void loadProducts()}
-            style={styles.retryButton}
+            style={styles.primaryButton}
           >
-            <Text style={styles.retryButtonText}>
+            <Text style={styles.primaryButtonText}>
               Try again
             </Text>
           </Pressable>
 
           <StatusBar style="auto" />
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (currentView === "add-product") {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.topBar}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setCurrentView("inventory")}
+            style={styles.secondaryButton}
+          >
+            <Text style={styles.secondaryButtonText}>
+              Cancel
+            </Text>
+          </Pressable>
+        </View>
+
+        <ProductForm
+          isSubmitting={isSubmitting}
+          onSubmit={handleCreateProduct}
+        />
+
+        <StatusBar style="auto" />
       </SafeAreaView>
     );
   }
@@ -118,13 +204,29 @@ export default function App() {
         )}
         ListHeaderComponent={
           <View style={styles.header}>
-            <Text style={styles.title}>
-              SmartStock Inventory
-            </Text>
+            <View style={styles.headerRow}>
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.title}>
+                  SmartStock Inventory
+                </Text>
 
-            <Text style={styles.summary}>
-              {products.length} active products
-            </Text>
+                <Text style={styles.summary}>
+                  {products.length} active products
+                </Text>
+              </View>
+
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  setCurrentView("add-product")
+                }
+                style={styles.addButton}
+              >
+                <Text style={styles.addButtonText}>
+                  Add Product
+                </Text>
+              </Pressable>
+            </View>
           </View>
         }
         ListEmptyComponent={
@@ -136,6 +238,18 @@ export default function App() {
             <Text style={styles.statusText}>
               Add a product to begin tracking inventory.
             </Text>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                setCurrentView("add-product")
+              }
+              style={styles.primaryButton}
+            >
+              <Text style={styles.primaryButtonText}>
+                Add first product
+              </Text>
+            </Pressable>
           </View>
         }
         refreshing={isRefreshing}
@@ -159,6 +273,15 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 18,
   },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  headerTextContainer: {
+    flex: 1,
+    marginRight: 14,
+  },
   title: {
     fontSize: 30,
     fontWeight: "800",
@@ -167,6 +290,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 15,
     color: "#5D6673",
+  },
+  topBar: {
+    alignItems: "flex-end",
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  addButton: {
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "#20252B",
+  },
+  addButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   centeredContainer: {
     flex: 1,
@@ -192,16 +331,30 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#5D6673",
   },
-  retryButton: {
+  primaryButton: {
     marginTop: 18,
+    minHeight: 46,
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: 10,
     paddingHorizontal: 18,
-    paddingVertical: 12,
     backgroundColor: "#20252B",
   },
-  retryButtonText: {
+  primaryButtonText: {
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: "#C8CED6",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    backgroundColor: "#FFFFFF",
+  },
+  secondaryButtonText: {
+    fontWeight: "700",
+    color: "#20252B",
   },
   emptyContainer: {
     paddingVertical: 60,
