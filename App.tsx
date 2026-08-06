@@ -11,11 +11,13 @@ import {
   View,
 } from "react-native";
 
+import { BarcodeScanner } from "./src/components/BarcodeScanner";
 import { ProductCard } from "./src/components/ProductCard";
 import { ProductForm } from "./src/components/ProductForm";
 import {
   createProduct,
   getAllProducts,
+  getProductByBarcode,
 } from "./src/database/productRepository";
 import { initializeDatabase } from "./src/database/schema";
 import { seedDatabase } from "./src/database/seed";
@@ -23,10 +25,16 @@ import type { Product } from "./src/types/product";
 import type { ProductFormValues } from "./src/types/productForm";
 
 type AppStatus = "loading" | "ready" | "error";
-type AppView = "inventory" | "add-product";
+
+type AppView =
+  | "inventory"
+  | "add-product"
+  | "scanner";
 
 export default function App() {
-  const [status, setStatus] = useState<AppStatus>("loading");
+  const [status, setStatus] =
+    useState<AppStatus>("loading");
+
   const [currentView, setCurrentView] =
     useState<AppView>("inventory");
 
@@ -34,6 +42,7 @@ export default function App() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [scannedBarcode, setScannedBarcode] = useState("");
 
   const loadProducts = useCallback(
     async (isPullToRefresh = false): Promise<void> => {
@@ -81,20 +90,23 @@ export default function App() {
       setIsSubmitting(true);
 
       await createProduct({
-  barcode: values.barcode,
-  name: values.name,
-  department: values.department as Product["department"],
-  category: values.category as Product["category"],
-  brand: values.brand,
-  unitCost: Number(values.unitCost),
-  unitPrice: Number(values.unitPrice),
-  currentStock: Number(values.currentStock),
-  reorderLevel: Number(values.reorderLevel),
-});
+        barcode: values.barcode,
+        name: values.name,
+        department:
+          values.department as Product["department"],
+        category:
+          values.category as Product["category"],
+        brand: values.brand,
+        unitCost: Number(values.unitCost),
+        unitPrice: Number(values.unitPrice),
+        currentStock: Number(values.currentStock),
+        reorderLevel: Number(values.reorderLevel),
+      });
 
       const updatedProducts = await getAllProducts();
 
       setProducts(updatedProducts);
+      setScannedBarcode("");
       setCurrentView("inventory");
 
       Alert.alert(
@@ -124,6 +136,51 @@ export default function App() {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function handleBarcodeDetected(
+    barcode: string,
+  ): Promise<void> {
+    try {
+      const existingProduct =
+        await getProductByBarcode(barcode);
+
+      if (existingProduct) {
+        setCurrentView("inventory");
+
+        Alert.alert(
+          "Product found",
+          `${existingProduct.name}\n\n` +
+            `Brand: ${existingProduct.brand}\n` +
+            `Stock: ${existingProduct.currentStock} units\n` +
+            `Barcode: ${existingProduct.barcode}`,
+        );
+
+        return;
+      }
+
+      setScannedBarcode(barcode);
+      setCurrentView("add-product");
+    } catch (error) {
+      console.error("Could not look up barcode:", error);
+
+      Alert.alert(
+        "Barcode lookup failed",
+        error instanceof Error
+          ? error.message
+          : "The barcode could not be processed.",
+      );
+    }
+  }
+
+  function openManualProductForm(): void {
+    setScannedBarcode("");
+    setCurrentView("add-product");
+  }
+
+  function closeProductForm(): void {
+    setScannedBarcode("");
+    setCurrentView("inventory");
   }
 
   if (status === "loading") {
@@ -170,13 +227,22 @@ export default function App() {
     );
   }
 
+  if (currentView === "scanner") {
+    return (
+      <BarcodeScanner
+        onBarcodeDetected={handleBarcodeDetected}
+        onClose={() => setCurrentView("inventory")}
+      />
+    );
+  }
+
   if (currentView === "add-product") {
     return (
       <SafeAreaView style={styles.screen}>
         <View style={styles.topBar}>
           <Pressable
             accessibilityRole="button"
-            onPress={() => setCurrentView("inventory")}
+            onPress={closeProductForm}
             style={styles.secondaryButton}
           >
             <Text style={styles.secondaryButtonText}>
@@ -186,6 +252,7 @@ export default function App() {
         </View>
 
         <ProductForm
+          initialBarcode={scannedBarcode}
           isSubmitting={isSubmitting}
           onSubmit={handleCreateProduct}
         />
@@ -217,17 +284,29 @@ export default function App() {
                 </Text>
               </View>
 
-              <Pressable
-                accessibilityRole="button"
-                onPress={() =>
-                  setCurrentView("add-product")
-                }
-                style={styles.addButton}
-              >
-                <Text style={styles.addButtonText}>
-                  Add Product
-                </Text>
-              </Pressable>
+              <View style={styles.headerActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() =>
+                    setCurrentView("scanner")
+                  }
+                  style={styles.scanButton}
+                >
+                  <Text style={styles.scanButtonText}>
+                    Scan Barcode
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={openManualProductForm}
+                  style={styles.addButton}
+                >
+                  <Text style={styles.addButtonText}>
+                    Add Product
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           </View>
         }
@@ -243,9 +322,7 @@ export default function App() {
 
             <Pressable
               accessibilityRole="button"
-              onPress={() =>
-                setCurrentView("add-product")
-              }
+              onPress={openManualProductForm}
               style={styles.primaryButton}
             >
               <Text style={styles.primaryButtonText}>
@@ -284,6 +361,10 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 14,
   },
+  headerActions: {
+    alignItems: "flex-end",
+    gap: 8,
+  },
   title: {
     fontSize: 30,
     fontWeight: "800",
@@ -297,6 +378,19 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     paddingHorizontal: 20,
     paddingTop: 8,
+  },
+  scanButton: {
+    borderWidth: 1,
+    borderColor: "#20252B",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "#FFFFFF",
+  },
+  scanButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#20252B",
   },
   addButton: {
     borderRadius: 10,
