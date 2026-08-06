@@ -3,6 +3,7 @@ import type {
   InventoryTransaction,
   InventoryTransactionType,
 } from "../types/inventoryTransaction";
+import type { TransactionHistoryItem } from "../types/transactionHistory";
 
 import { getDatabase } from "./database";
 
@@ -17,6 +18,28 @@ interface ProductStockRow {
 interface InventoryTransactionRow {
   id: number;
   product_id: number;
+  transaction_type: InventoryTransactionType;
+  quantity: number;
+  stock_before: number;
+  stock_after: number;
+  unit_cost: number;
+  unit_price: number;
+  transaction_value: number;
+  source: InventoryTransaction["source"];
+  notes: string | null;
+  created_at: string;
+}
+
+interface TransactionHistoryRow {
+  id: number;
+  product_id: number;
+
+  product_name: string;
+  product_brand: string;
+  product_barcode: string;
+  product_department: string;
+  product_category: string;
+
   transaction_type: InventoryTransactionType;
   quantity: number;
   stock_before: number;
@@ -48,14 +71,46 @@ function mapTransactionRow(
   };
 }
 
+function mapTransactionHistoryRow(
+  row: TransactionHistoryRow,
+): TransactionHistoryItem {
+  return {
+    id: row.id,
+    productId: row.product_id,
+
+    productName: row.product_name,
+    productBrand: row.product_brand,
+    productBarcode: row.product_barcode,
+    productDepartment: row.product_department,
+    productCategory: row.product_category,
+
+    transactionType: row.transaction_type,
+    quantity: row.quantity,
+    stockBefore: row.stock_before,
+    stockAfter: row.stock_after,
+    unitCost: row.unit_cost,
+    unitPrice: row.unit_price,
+    transactionValue: row.transaction_value,
+    source: row.source,
+    notes: row.notes,
+    createdAt: row.created_at,
+  };
+}
+
 function validateTransactionInput(
   input: CreateInventoryTransactionInput,
 ): void {
-  if (!Number.isInteger(input.productId) || input.productId <= 0) {
+  if (
+    !Number.isInteger(input.productId) ||
+    input.productId <= 0
+  ) {
     throw new Error("A valid product ID is required.");
   }
 
-  if (!Number.isInteger(input.quantity) || input.quantity < 0) {
+  if (
+    !Number.isInteger(input.quantity) ||
+    input.quantity < 0
+  ) {
     throw new Error(
       "Quantity must be a non-negative whole number.",
     );
@@ -86,11 +141,11 @@ function calculateStockAfter(
       return stockBefore - quantity;
 
     case "adjustment":
-      // For adjustments, quantity means the new counted stock.
       return quantity;
 
     default: {
       const exhaustiveCheck: never = transactionType;
+
       throw new Error(
         `Unsupported transaction type: ${exhaustiveCheck}`,
       );
@@ -116,10 +171,13 @@ function calculateTransactionValue(
       return quantity * unitCost;
 
     case "adjustment":
-      return Math.abs(stockAfter - stockBefore) * unitCost;
+      return (
+        Math.abs(stockAfter - stockBefore) * unitCost
+      );
 
     default: {
       const exhaustiveCheck: never = transactionType;
+
       throw new Error(
         `Unsupported transaction type: ${exhaustiveCheck}`,
       );
@@ -134,7 +192,8 @@ export async function createInventoryTransaction(
 
   const database = await getDatabase();
 
-  let createdTransaction: InventoryTransaction | null = null;
+  let createdTransaction: InventoryTransaction | null =
+    null;
 
   await database.withExclusiveTransactionAsync(
     async (transaction) => {
@@ -174,14 +233,15 @@ export async function createInventoryTransaction(
         );
       }
 
-      const transactionValue = calculateTransactionValue(
-        input.transactionType,
-        input.quantity,
-        stockBefore,
-        stockAfter,
-        product.unit_cost,
-        product.unit_price,
-      );
+      const transactionValue =
+        calculateTransactionValue(
+          input.transactionType,
+          input.quantity,
+          stockBefore,
+          stockAfter,
+          product.unit_cost,
+          product.unit_price,
+        );
 
       const createdAt = new Date().toISOString();
       const source = input.source ?? "manual";
@@ -200,35 +260,36 @@ export async function createInventoryTransaction(
         product.id,
       );
 
-      const insertResult = await transaction.runAsync(
-        `
-          INSERT INTO inventory_transactions (
-            product_id,
-            transaction_type,
-            quantity,
-            stock_before,
-            stock_after,
-            unit_cost,
-            unit_price,
-            transaction_value,
-            source,
-            notes,
-            created_at
-          )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `,
-        product.id,
-        input.transactionType,
-        input.quantity,
-        stockBefore,
-        stockAfter,
-        product.unit_cost,
-        product.unit_price,
-        transactionValue,
-        source,
-        notes,
-        createdAt,
-      );
+      const insertResult =
+        await transaction.runAsync(
+          `
+            INSERT INTO inventory_transactions (
+              product_id,
+              transaction_type,
+              quantity,
+              stock_before,
+              stock_after,
+              unit_cost,
+              unit_price,
+              transaction_value,
+              source,
+              notes,
+              created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+          product.id,
+          input.transactionType,
+          input.quantity,
+          stockBefore,
+          stockAfter,
+          product.unit_cost,
+          product.unit_price,
+          transactionValue,
+          source,
+          notes,
+          createdAt,
+        );
 
       const insertedRow =
         await transaction.getFirstAsync<InventoryTransactionRow>(
@@ -259,7 +320,8 @@ export async function createInventoryTransaction(
         );
       }
 
-      createdTransaction = mapTransactionRow(insertedRow);
+      createdTransaction =
+        mapTransactionRow(insertedRow);
     },
   );
 
@@ -275,6 +337,13 @@ export async function createInventoryTransaction(
 export async function getTransactionsForProduct(
   productId: number,
 ): Promise<InventoryTransaction[]> {
+  if (
+    !Number.isInteger(productId) ||
+    productId <= 0
+  ) {
+    throw new Error("A valid product ID is required.");
+  }
+
   const database = await getDatabase();
 
   const rows =
@@ -337,4 +406,57 @@ export async function getRecentInventoryTransactions(
     );
 
   return rows.map(mapTransactionRow);
+}
+
+export async function getTransactionHistoryForProduct(
+  productId: number,
+): Promise<TransactionHistoryItem[]> {
+  if (
+    !Number.isInteger(productId) ||
+    productId <= 0
+  ) {
+    throw new Error("A valid product ID is required.");
+  }
+
+  const database = await getDatabase();
+
+  const rows =
+    await database.getAllAsync<TransactionHistoryRow>(
+      `
+        SELECT
+          transactions.id,
+          transactions.product_id,
+
+          products.name AS product_name,
+          products.brand AS product_brand,
+          products.barcode AS product_barcode,
+          products.department AS product_department,
+          products.category AS product_category,
+
+          transactions.transaction_type,
+          transactions.quantity,
+          transactions.stock_before,
+          transactions.stock_after,
+          transactions.unit_cost,
+          transactions.unit_price,
+          transactions.transaction_value,
+          transactions.source,
+          transactions.notes,
+          transactions.created_at
+
+        FROM inventory_transactions AS transactions
+
+        INNER JOIN products
+          ON products.id = transactions.product_id
+
+        WHERE transactions.product_id = ?
+
+        ORDER BY
+          transactions.created_at DESC,
+          transactions.id DESC
+      `,
+      productId,
+    );
+
+  return rows.map(mapTransactionHistoryRow);
 }
