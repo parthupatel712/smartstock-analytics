@@ -106,10 +106,81 @@ async function createProductIndexes(
   `);
 }
 
+async function createInventoryTransactionTable(
+  database: SQLiteDatabase,
+): Promise<void> {
+  await database.execAsync(`
+    CREATE TABLE IF NOT EXISTS inventory_transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+      product_id INTEGER NOT NULL,
+
+      transaction_type TEXT NOT NULL
+        CHECK (
+          transaction_type IN (
+            'stock_in',
+            'sale',
+            'return',
+            'damage',
+            'adjustment'
+          )
+        ),
+
+      quantity INTEGER NOT NULL
+        CHECK (quantity > 0),
+
+      stock_before INTEGER NOT NULL
+        CHECK (stock_before >= 0),
+
+      stock_after INTEGER NOT NULL
+        CHECK (stock_after >= 0),
+
+      unit_cost REAL NOT NULL
+        CHECK (unit_cost >= 0),
+
+      unit_price REAL NOT NULL
+        CHECK (unit_price >= 0),
+
+      transaction_value REAL NOT NULL
+        CHECK (transaction_value >= 0),
+
+      source TEXT NOT NULL DEFAULT 'manual'
+        CHECK (
+          source IN (
+            'manual',
+            'camera',
+            'bluetooth',
+            'usb',
+            'esp32'
+          )
+        ),
+
+      notes TEXT,
+      created_at TEXT NOT NULL,
+
+      FOREIGN KEY (product_id)
+        REFERENCES products(id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_transactions_product_id
+      ON inventory_transactions(product_id);
+
+    CREATE INDEX IF NOT EXISTS idx_transactions_type
+      ON inventory_transactions(transaction_type);
+
+    CREATE INDEX IF NOT EXISTS idx_transactions_created_at
+      ON inventory_transactions(created_at);
+
+    CREATE INDEX IF NOT EXISTS idx_transactions_product_created
+      ON inventory_transactions(product_id, created_at);
+  `);
+}
+
 export async function initializeDatabase(): Promise<void> {
   const database = await getDatabase();
 
-  // Step 1: Create the latest table structure for new installations.
   await database.execAsync(`
     CREATE TABLE IF NOT EXISTS products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -140,9 +211,7 @@ export async function initializeDatabase(): Promise<void> {
     );
   `);
 
-  // Step 2: Upgrade existing installations before using new columns.
   await migrateProductsTable(database);
-
-  // Step 3: Create indexes only after all required columns exist.
   await createProductIndexes(database);
+  await createInventoryTransactionTable(database);
 }
