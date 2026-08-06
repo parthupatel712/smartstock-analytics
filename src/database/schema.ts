@@ -127,7 +127,7 @@ async function createInventoryTransactionTable(
         ),
 
       quantity INTEGER NOT NULL
-        CHECK (quantity > 0),
+        CHECK (quantity >= 0),
 
       stock_before INTEGER NOT NULL
         CHECK (stock_before >= 0),
