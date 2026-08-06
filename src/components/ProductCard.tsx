@@ -1,9 +1,15 @@
-import { StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import type { Product } from "../types/product";
 
 interface ProductCardProps {
   product: Product;
+  onUpdateInventory: (product: Product) => void;
 }
 
 function formatCurrency(value: number): string {
@@ -15,6 +21,7 @@ function formatCurrency(value: number): string {
 
 export function ProductCard({
   product,
+  onUpdateInventory,
 }: ProductCardProps) {
   const isLowStock =
     product.currentStock <= product.reorderLevel;
@@ -23,7 +30,9 @@ export function ProductCard({
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <View style={styles.titleContainer}>
-          <Text style={styles.name}>{product.name}</Text>
+          <Text style={styles.name}>
+            {product.name}
+          </Text>
 
           <Text style={styles.brand}>
             {product.brand}
@@ -62,9 +71,23 @@ export function ProductCard({
 
       {isLowStock ? (
         <Text style={styles.lowStockText}>
-          Low stock — reorder level: {product.reorderLevel}
+          Low stock — reorder level:{" "}
+          {product.reorderLevel}
         </Text>
       ) : null}
+
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => onUpdateInventory(product)}
+        style={({ pressed }) => [
+          styles.updateButton,
+          pressed && styles.updateButtonPressed,
+        ]}
+      >
+        <Text style={styles.updateButtonText}>
+          Update Inventory
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -137,5 +160,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: "#8A5A00",
+  },
+  updateButton: {
+    marginTop: 16,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+    backgroundColor: "#20252B",
+  },
+  updateButtonPressed: {
+    opacity: 0.8,
+  },
+  updateButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });

@@ -1,5 +1,9 @@
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -12,8 +16,10 @@ import {
 } from "react-native";
 
 import { BarcodeScanner } from "./src/components/BarcodeScanner";
+import { InventoryTransactionForm } from "./src/components/InventoryTransactionForm";
 import { ProductCard } from "./src/components/ProductCard";
 import { ProductForm } from "./src/components/ProductForm";
+import { createInventoryTransaction } from "./src/database/inventoryTransactionRepository";
 import {
   createProduct,
   getAllProducts,
@@ -21,6 +27,7 @@ import {
 } from "./src/database/productRepository";
 import { initializeDatabase } from "./src/database/schema";
 import { seedDatabase } from "./src/database/seed";
+import type { CreateInventoryTransactionInput } from "./src/types/inventoryTransaction";
 import type { Product } from "./src/types/product";
 import type { ProductFormValues } from "./src/types/productForm";
 
@@ -29,7 +36,8 @@ type AppStatus = "loading" | "ready" | "error";
 type AppView =
   | "inventory"
   | "add-product"
-  | "scanner";
+  | "scanner"
+  | "inventory-transaction";
 
 export default function App() {
   const [status, setStatus] =
@@ -38,14 +46,33 @@ export default function App() {
   const [currentView, setCurrentView] =
     useState<AppView>("inventory");
 
-  const [products, setProducts] = useState<Product[]>([]);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [scannedBarcode, setScannedBarcode] = useState("");
+  const [products, setProducts] =
+    useState<Product[]>([]);
+
+  const [selectedProduct, setSelectedProduct] =
+    useState<Product | null>(null);
+
+  const [errorMessage, setErrorMessage] =
+    useState("");
+
+  const [isRefreshing, setIsRefreshing] =
+    useState(false);
+
+  const [isSubmitting, setIsSubmitting] =
+    useState(false);
+
+  const [
+    isTransactionSubmitting,
+    setIsTransactionSubmitting,
+  ] = useState(false);
+
+  const [scannedBarcode, setScannedBarcode] =
+    useState("");
 
   const loadProducts = useCallback(
-    async (isPullToRefresh = false): Promise<void> => {
+    async (
+      isPullToRefresh = false,
+    ): Promise<void> => {
       try {
         if (isPullToRefresh) {
           setIsRefreshing(true);
@@ -58,12 +85,16 @@ export default function App() {
         await initializeDatabase();
         await seedDatabase();
 
-        const storedProducts = await getAllProducts();
+        const storedProducts =
+          await getAllProducts();
 
         setProducts(storedProducts);
         setStatus("ready");
       } catch (error) {
-        console.error("Could not load inventory:", error);
+        console.error(
+          "Could not load inventory:",
+          error,
+        );
 
         setErrorMessage(
           error instanceof Error
@@ -99,11 +130,16 @@ export default function App() {
         brand: values.brand,
         unitCost: Number(values.unitCost),
         unitPrice: Number(values.unitPrice),
-        currentStock: Number(values.currentStock),
-        reorderLevel: Number(values.reorderLevel),
+        currentStock: Number(
+          values.currentStock,
+        ),
+        reorderLevel: Number(
+          values.reorderLevel,
+        ),
       });
 
-      const updatedProducts = await getAllProducts();
+      const updatedProducts =
+        await getAllProducts();
 
       setProducts(updatedProducts);
       setScannedBarcode("");
@@ -114,7 +150,10 @@ export default function App() {
         `${values.name.trim()} was added successfully.`,
       );
     } catch (error) {
-      console.error("Could not create product:", error);
+      console.error(
+        "Could not create product:",
+        error,
+      );
 
       const message =
         error instanceof Error
@@ -122,8 +161,12 @@ export default function App() {
           : "The product could not be saved.";
 
       const isDuplicateBarcode =
-        message.toLowerCase().includes("unique") ||
-        message.toLowerCase().includes("constraint");
+        message
+          .toLowerCase()
+          .includes("unique") ||
+        message
+          .toLowerCase()
+          .includes("constraint");
 
       Alert.alert(
         isDuplicateBarcode
@@ -162,7 +205,10 @@ export default function App() {
       setScannedBarcode(barcode);
       setCurrentView("add-product");
     } catch (error) {
-      console.error("Could not look up barcode:", error);
+      console.error(
+        "Could not look up barcode:",
+        error,
+      );
 
       Alert.alert(
         "Barcode lookup failed",
@@ -170,6 +216,55 @@ export default function App() {
           ? error.message
           : "The barcode could not be processed.",
       );
+    }
+  }
+
+  function openTransactionForm(
+    product: Product,
+  ): void {
+    setSelectedProduct(product);
+    setCurrentView("inventory-transaction");
+  }
+
+  function closeTransactionForm(): void {
+    setSelectedProduct(null);
+    setCurrentView("inventory");
+  }
+
+  async function handleInventoryTransaction(
+    input: CreateInventoryTransactionInput,
+  ): Promise<void> {
+    try {
+      setIsTransactionSubmitting(true);
+
+      const transaction =
+        await createInventoryTransaction(input);
+
+      const updatedProducts =
+        await getAllProducts();
+
+      setProducts(updatedProducts);
+      setSelectedProduct(null);
+      setCurrentView("inventory");
+
+      Alert.alert(
+        "Inventory updated",
+        `Stock changed from ${transaction.stockBefore} to ${transaction.stockAfter} units.`,
+      );
+    } catch (error) {
+      console.error(
+        "Could not save inventory transaction:",
+        error,
+      );
+
+      Alert.alert(
+        "Could not update inventory",
+        error instanceof Error
+          ? error.message
+          : "The inventory transaction could not be saved.",
+      );
+    } finally {
+      setIsTransactionSubmitting(false);
     }
   }
 
@@ -216,7 +311,9 @@ export default function App() {
             onPress={() => void loadProducts()}
             style={styles.primaryButton}
           >
-            <Text style={styles.primaryButtonText}>
+            <Text
+              style={styles.primaryButtonText}
+            >
               Try again
             </Text>
           </Pressable>
@@ -230,8 +327,58 @@ export default function App() {
   if (currentView === "scanner") {
     return (
       <BarcodeScanner
-        onBarcodeDetected={handleBarcodeDetected}
-        onClose={() => setCurrentView("inventory")}
+        onBarcodeDetected={
+          handleBarcodeDetected
+        }
+        onClose={() =>
+          setCurrentView("inventory")
+        }
+      />
+    );
+  }
+
+  if (
+    currentView ===
+    "inventory-transaction"
+  ) {
+    if (!selectedProduct) {
+      return (
+        <SafeAreaView style={styles.screen}>
+          <View
+            style={styles.centeredContainer}
+          >
+            <Text style={styles.errorTitle}>
+              Product not selected
+            </Text>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                setCurrentView("inventory")
+              }
+              style={styles.primaryButton}
+            >
+              <Text
+                style={styles.primaryButtonText}
+              >
+                Return to inventory
+              </Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    return (
+      <InventoryTransactionForm
+        product={selectedProduct}
+        isSubmitting={
+          isTransactionSubmitting
+        }
+        onCancel={closeTransactionForm}
+        onSubmit={
+          handleInventoryTransaction
+        }
       />
     );
   }
@@ -245,7 +392,9 @@ export default function App() {
             onPress={closeProductForm}
             style={styles.secondaryButton}
           >
-            <Text style={styles.secondaryButtonText}>
+            <Text
+              style={styles.secondaryButtonText}
+            >
               Cancel
             </Text>
           </Pressable>
@@ -266,25 +415,41 @@ export default function App() {
     <SafeAreaView style={styles.screen}>
       <FlatList
         data={products}
-        keyExtractor={(product) => product.id.toString()}
-        contentContainerStyle={styles.listContent}
+        keyExtractor={(product) =>
+          product.id.toString()
+        }
+        contentContainerStyle={
+          styles.listContent
+        }
         renderItem={({ item }) => (
-          <ProductCard product={item} />
+          <ProductCard
+            product={item}
+            onUpdateInventory={
+              openTransactionForm
+            }
+          />
         )}
         ListHeaderComponent={
           <View style={styles.header}>
             <View style={styles.headerRow}>
-              <View style={styles.headerTextContainer}>
+              <View
+                style={
+                  styles.headerTextContainer
+                }
+              >
                 <Text style={styles.title}>
                   SmartStock Inventory
                 </Text>
 
                 <Text style={styles.summary}>
-                  {products.length} active products
+                  {products.length} active
+                  products
                 </Text>
               </View>
 
-              <View style={styles.headerActions}>
+              <View
+                style={styles.headerActions}
+              >
                 <Pressable
                   accessibilityRole="button"
                   onPress={() =>
@@ -292,17 +457,27 @@ export default function App() {
                   }
                   style={styles.scanButton}
                 >
-                  <Text style={styles.scanButtonText}>
+                  <Text
+                    style={
+                      styles.scanButtonText
+                    }
+                  >
                     Scan Barcode
                   </Text>
                 </Pressable>
 
                 <Pressable
                   accessibilityRole="button"
-                  onPress={openManualProductForm}
+                  onPress={
+                    openManualProductForm
+                  }
                   style={styles.addButton}
                 >
-                  <Text style={styles.addButtonText}>
+                  <Text
+                    style={
+                      styles.addButtonText
+                    }
+                  >
                     Add Product
                   </Text>
                 </Pressable>
@@ -311,28 +486,39 @@ export default function App() {
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
+          <View
+            style={styles.emptyContainer}
+          >
             <Text style={styles.emptyTitle}>
               No products found
             </Text>
 
             <Text style={styles.statusText}>
-              Add a product to begin tracking inventory.
+              Add a product to begin
+              tracking inventory.
             </Text>
 
             <Pressable
               accessibilityRole="button"
-              onPress={openManualProductForm}
+              onPress={
+                openManualProductForm
+              }
               style={styles.primaryButton}
             >
-              <Text style={styles.primaryButtonText}>
+              <Text
+                style={
+                  styles.primaryButtonText
+                }
+              >
                 Add first product
               </Text>
             </Pressable>
           </View>
         }
         refreshing={isRefreshing}
-        onRefresh={() => void loadProducts(true)}
+        onRefresh={() =>
+          void loadProducts(true)
+        }
       />
 
       <StatusBar style="auto" />
