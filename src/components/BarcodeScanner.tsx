@@ -1,10 +1,13 @@
 import {
+  type BarcodeScanningResult,
   CameraView,
   useCameraPermissions,
 } from "expo-camera";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
+  SafeAreaView,
   StyleSheet,
   Text,
   View,
@@ -12,13 +15,48 @@ import {
 
 interface BarcodeScannerProps {
   onClose: () => void;
+  onBarcodeDetected: (barcode: string) => Promise<void>;
 }
 
 export function BarcodeScanner({
   onClose,
+  onBarcodeDetected,
 }: BarcodeScannerProps) {
   const [permission, requestPermission] =
     useCameraPermissions();
+
+  const [hasScanned, setHasScanned] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  async function handleBarcodeScanned(
+    result: BarcodeScanningResult,
+  ): Promise<void> {
+    if (hasScanned || isProcessing) {
+      return;
+    }
+
+    const barcode = result.data.trim();
+
+    if (!barcode) {
+      return;
+    }
+
+    setHasScanned(true);
+    setIsProcessing(true);
+
+    try {
+      await onBarcodeDetected(barcode);
+    } catch (error) {
+      console.error("Could not process barcode:", error);
+      setHasScanned(false);
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  function scanAgain(): void {
+    setHasScanned(false);
+  }
 
   if (!permission) {
     return (
@@ -34,52 +72,78 @@ export function BarcodeScanner({
 
   if (!permission.granted) {
     return (
-      <View style={styles.centeredContainer}>
-        <Text style={styles.title}>
-          Camera permission required
-        </Text>
-
-        <Text style={styles.description}>
-          SmartStock needs camera access to scan product
-          barcodes.
-        </Text>
-
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => void requestPermission()}
-          style={styles.primaryButton}
-        >
-          <Text style={styles.primaryButtonText}>
-            Allow camera access
+      <SafeAreaView style={styles.permissionScreen}>
+        <View style={styles.centeredContainer}>
+          <Text style={styles.title}>
+            Camera permission required
           </Text>
-        </Pressable>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={onClose}
-          style={styles.secondaryButton}
-        >
-          <Text style={styles.secondaryButtonText}>
-            Cancel
+          <Text style={styles.description}>
+            SmartStock needs camera access to scan product
+            barcodes.
           </Text>
-        </Pressable>
-      </View>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void requestPermission()}
+            style={styles.primaryButton}
+          >
+            <Text style={styles.primaryButtonText}>
+              Allow camera access
+            </Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={onClose}
+            style={styles.secondaryButton}
+          >
+            <Text style={styles.secondaryButtonText}>
+              Cancel
+            </Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
     <View style={styles.screen}>
       <CameraView
+        barcodeScannerSettings={{
+          barcodeTypes: [
+            "ean13",
+            "ean8",
+            "upc_a",
+            "upc_e",
+            "code128",
+          ],
+        }}
         facing="back"
-        style={styles.camera}
+        onBarcodeScanned={
+          hasScanned
+            ? undefined
+            : (result) => void handleBarcodeScanned(result)
+        }
+        style={StyleSheet.absoluteFill}
       />
 
-      <View style={styles.overlay}>
-        <View style={styles.topBar}>
+      <SafeAreaView
+        pointerEvents="box-none"
+        style={styles.overlay}
+      >
+        <View
+          pointerEvents="box-none"
+          style={styles.topBar}
+        >
           <Pressable
             accessibilityRole="button"
+            hitSlop={12}
             onPress={onClose}
-            style={styles.closeButton}
+            style={({ pressed }) => [
+              styles.closeButton,
+              pressed && styles.buttonPressed,
+            ]}
           >
             <Text style={styles.closeButtonText}>
               Close
@@ -87,14 +151,42 @@ export function BarcodeScanner({
           </Pressable>
         </View>
 
-        <View style={styles.scannerArea}>
-          <View style={styles.scanFrame} />
+        <View
+          pointerEvents="box-none"
+          style={styles.scannerArea}
+        >
+          <View
+            pointerEvents="none"
+            style={styles.scanFrame}
+          />
 
           <Text style={styles.instructions}>
             Position the product barcode inside the frame
           </Text>
+
+          {isProcessing ? (
+            <View style={styles.processingCard}>
+              <ActivityIndicator color="#FFFFFF" />
+
+              <Text style={styles.processingText}>
+                Looking up product…
+              </Text>
+            </View>
+          ) : null}
+
+          {hasScanned && !isProcessing ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={scanAgain}
+              style={styles.scanAgainButton}
+            >
+              <Text style={styles.scanAgainButtonText}>
+                Scan again
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
-      </View>
+      </SafeAreaView>
     </View>
   );
 }
@@ -104,26 +196,31 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#000000",
   },
-  camera: {
-    flex: 1,
-  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
   },
   topBar: {
+    zIndex: 20,
     alignItems: "flex-end",
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 8,
   },
   closeButton: {
+    minWidth: 76,
+    alignItems: "center",
     borderRadius: 10,
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    paddingVertical: 11,
+    backgroundColor: "rgba(0, 0, 0, 0.78)",
   },
   closeButtonText: {
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "800",
     color: "#FFFFFF",
+  },
+  buttonPressed: {
+    opacity: 0.7,
   },
   scannerArea: {
     flex: 1,
@@ -146,6 +243,36 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     textAlign: "center",
     color: "#FFFFFF",
+  },
+  processingCard: {
+    marginTop: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "rgba(0, 0, 0, 0.75)",
+  },
+  processingText: {
+    marginLeft: 10,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  scanAgainButton: {
+    marginTop: 18,
+    borderRadius: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    backgroundColor: "#FFFFFF",
+  },
+  scanAgainButtonText: {
+    fontWeight: "800",
+    color: "#20252B",
+  },
+  permissionScreen: {
+    flex: 1,
+    backgroundColor: "#F4F6F8",
   },
   centeredContainer: {
     flex: 1,

@@ -25,6 +25,7 @@ import { validateProductForm } from "../utils/validateProductForm";
 interface ProductFormProps {
   onSubmit: (values: ProductFormValues) => Promise<void>;
   isSubmitting?: boolean;
+  initialBarcode?: string;
 }
 
 type PickerType = "department" | "category" | null;
@@ -44,9 +45,13 @@ const INITIAL_VALUES: ProductFormValues = {
 export function ProductForm({
   onSubmit,
   isSubmitting = false,
+  initialBarcode = "",
 }: ProductFormProps) {
   const [values, setValues] =
-    useState<ProductFormValues>(INITIAL_VALUES);
+    useState<ProductFormValues>({
+      ...INITIAL_VALUES,
+      barcode: initialBarcode,
+    });
 
   const [errors, setErrors] =
     useState<ProductFormErrors>({});
@@ -125,8 +130,7 @@ export function ProductForm({
         <Text style={styles.title}>Add Product</Text>
 
         <Text style={styles.description}>
-          Enter the product details below. Barcode scanning will be
-          added in a later feature.
+          Enter the remaining product details below.
         </Text>
 
         <FormField
@@ -148,6 +152,7 @@ export function ProductForm({
           }
           placeholder="Example: Coca-Cola Zero 355 mL"
           error={errors.name}
+          autoCapitalize="words"
         />
 
         <DropdownField
