@@ -10,6 +10,7 @@ import type { Product } from "../types/product";
 interface ProductCardProps {
   product: Product;
   onUpdateInventory: (product: Product) => void;
+  onViewHistory: (product: Product) => void;
 }
 
 function formatCurrency(value: number): string {
@@ -22,6 +23,7 @@ function formatCurrency(value: number): string {
 export function ProductCard({
   product,
   onUpdateInventory,
+  onViewHistory,
 }: ProductCardProps) {
   const isLowStock =
     product.currentStock <= product.reorderLevel;
@@ -76,28 +78,43 @@ export function ProductCard({
         </Text>
       ) : null}
 
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => onUpdateInventory(product)}
-        style={({ pressed }) => [
-          styles.updateButton,
-          pressed && styles.updateButtonPressed,
-        ]}
-      >
-        <Text style={styles.updateButtonText}>
-          Update Inventory
-        </Text>
-      </Pressable>
+      <View style={styles.actionRow}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => onViewHistory(product)}
+          style={({ pressed }) => [
+            styles.secondaryActionButton,
+            pressed && styles.buttonPressed,
+          ]}
+        >
+          <Text style={styles.secondaryActionText}>
+            View History
+          </Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => onUpdateInventory(product)}
+          style={({ pressed }) => [
+            styles.primaryActionButton,
+            pressed && styles.buttonPressed,
+          ]}
+        >
+          <Text style={styles.primaryActionText}>
+            Update Inventory
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    marginBottom: 12,
+    marginBottom: 14,
     borderWidth: 1,
     borderColor: "#D7DCE2",
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
     backgroundColor: "#FFFFFF",
   },
@@ -112,6 +129,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 18,
     fontWeight: "700",
+    color: "#111827",
   },
   brand: {
     marginTop: 4,
@@ -161,20 +179,40 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#8A5A00",
   },
-  updateButton: {
+  actionRow: {
     marginTop: 16,
+    flexDirection: "row",
+    gap: 10,
+  },
+  secondaryActionButton: {
+    flex: 1,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#20252B",
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+  },
+  primaryActionButton: {
+    flex: 1.25,
     minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 10,
     backgroundColor: "#20252B",
   },
-  updateButtonPressed: {
-    opacity: 0.8,
+  secondaryActionText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#20252B",
   },
-  updateButtonText: {
+  primaryActionText: {
     fontSize: 14,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+  buttonPressed: {
+    opacity: 0.78,
   },
 });

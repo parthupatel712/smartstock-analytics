@@ -19,17 +19,26 @@ import { BarcodeScanner } from "./src/components/BarcodeScanner";
 import { InventoryTransactionForm } from "./src/components/InventoryTransactionForm";
 import { ProductCard } from "./src/components/ProductCard";
 import { ProductForm } from "./src/components/ProductForm";
-import { createInventoryTransaction } from "./src/database/inventoryTransactionRepository";
+import { ProductTransactionHistory } from "./src/components/ProductTransactionHistory";
+
+import {
+  createInventoryTransaction,
+  getTransactionHistoryForProduct,
+} from "./src/database/inventoryTransactionRepository";
+
 import {
   createProduct,
   getAllProducts,
   getProductByBarcode,
 } from "./src/database/productRepository";
+
 import { initializeDatabase } from "./src/database/schema";
 import { seedDatabase } from "./src/database/seed";
+
 import type { CreateInventoryTransactionInput } from "./src/types/inventoryTransaction";
 import type { Product } from "./src/types/product";
 import type { ProductFormValues } from "./src/types/productForm";
+import type { TransactionHistoryItem } from "./src/types/transactionHistory";
 
 type AppStatus = "loading" | "ready" | "error";
 
@@ -37,7 +46,8 @@ type AppView =
   | "inventory"
   | "add-product"
   | "scanner"
-  | "inventory-transaction";
+  | "inventory-transaction"
+  | "transaction-history";
 
 export default function App() {
   const [status, setStatus] =
@@ -52,6 +62,11 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] =
     useState<Product | null>(null);
 
+  const [
+    transactionHistory,
+    setTransactionHistory,
+  ] = useState<TransactionHistoryItem[]>([]);
+
   const [errorMessage, setErrorMessage] =
     useState("");
 
@@ -65,6 +80,9 @@ export default function App() {
     isTransactionSubmitting,
     setIsTransactionSubmitting,
   ] = useState(false);
+
+  const [isHistoryLoading, setIsHistoryLoading] =
+    useState(false);
 
   const [scannedBarcode, setScannedBarcode] =
     useState("");
@@ -268,6 +286,47 @@ export default function App() {
     }
   }
 
+  async function openTransactionHistory(
+    product: Product,
+  ): Promise<void> {
+    try {
+      setSelectedProduct(product);
+      setTransactionHistory([]);
+      setIsHistoryLoading(true);
+      setCurrentView("transaction-history");
+
+      const history =
+        await getTransactionHistoryForProduct(
+          product.id,
+        );
+
+      setTransactionHistory(history);
+    } catch (error) {
+      console.error(
+        "Could not load transaction history:",
+        error,
+      );
+
+      setCurrentView("inventory");
+      setSelectedProduct(null);
+
+      Alert.alert(
+        "Could not load history",
+        error instanceof Error
+          ? error.message
+          : "Transaction history could not be loaded.",
+      );
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  }
+
+  function closeTransactionHistory(): void {
+    setTransactionHistory([]);
+    setSelectedProduct(null);
+    setCurrentView("inventory");
+  }
+
   function openManualProductForm(): void {
     setScannedBarcode("");
     setCurrentView("add-product");
@@ -311,9 +370,7 @@ export default function App() {
             onPress={() => void loadProducts()}
             style={styles.primaryButton}
           >
-            <Text
-              style={styles.primaryButtonText}
-            >
+            <Text style={styles.primaryButtonText}>
               Try again
             </Text>
           </Pressable>
@@ -383,6 +440,63 @@ export default function App() {
     );
   }
 
+  if (currentView === "transaction-history") {
+    if (!selectedProduct) {
+      return (
+        <SafeAreaView style={styles.screen}>
+          <View
+            style={styles.centeredContainer}
+          >
+            <Text style={styles.errorTitle}>
+              Product not selected
+            </Text>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                setCurrentView("inventory")
+              }
+              style={styles.primaryButton}
+            >
+              <Text
+                style={styles.primaryButtonText}
+              >
+                Return to inventory
+              </Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    if (isHistoryLoading) {
+      return (
+        <SafeAreaView style={styles.screen}>
+          <View
+            style={styles.centeredContainer}
+          >
+            <ActivityIndicator size="large" />
+
+            <Text style={styles.statusText}>
+              Loading transaction history…
+            </Text>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    return (
+      <ProductTransactionHistory
+        productName={selectedProduct.name}
+        currentStock={
+          selectedProduct.currentStock
+        }
+        transactions={transactionHistory}
+        onClose={closeTransactionHistory}
+      />
+    );
+  }
+
   if (currentView === "add-product") {
     return (
       <SafeAreaView style={styles.screen}>
@@ -427,6 +541,9 @@ export default function App() {
             onUpdateInventory={
               openTransactionForm
             }
+            onViewHistory={(product) =>
+              void openTransactionHistory(product)
+            }
           />
         )}
         ListHeaderComponent={
@@ -442,8 +559,7 @@ export default function App() {
                 </Text>
 
                 <Text style={styles.summary}>
-                  {products.length} active
-                  products
+                  {products.length} active products
                 </Text>
               </View>
 
@@ -494,8 +610,7 @@ export default function App() {
             </Text>
 
             <Text style={styles.statusText}>
-              Add a product to begin
-              tracking inventory.
+              Add a product to begin tracking inventory.
             </Text>
 
             <Pressable
