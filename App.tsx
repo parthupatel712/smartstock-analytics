@@ -81,14 +81,16 @@ export default function App() {
       setIsSubmitting(true);
 
       await createProduct({
-        barcode: values.barcode,
-        name: values.name,
-        category: values.category,
-        unitCost: Number(values.unitCost),
-        unitPrice: Number(values.unitPrice),
-        currentStock: Number(values.currentStock),
-        reorderLevel: Number(values.reorderLevel),
-      });
+  barcode: values.barcode,
+  name: values.name,
+  department: values.department as Product["department"],
+  category: values.category as Product["category"],
+  brand: values.brand,
+  unitCost: Number(values.unitCost),
+  unitPrice: Number(values.unitPrice),
+  currentStock: Number(values.currentStock),
+  reorderLevel: Number(values.reorderLevel),
+});
 
       const updatedProducts = await getAllProducts();
 

@@ -56,12 +56,12 @@ async function migrateProductsTable(
     UPDATE products
     SET
       department = CASE
-        WHEN category = 'Beverages'
+        WHEN name = 'Sparkling Water 500 mL'
           THEN 'Beverages'
 
-        WHEN category IN (
-          'Snacks',
-          'Confectionery'
+        WHEN name IN (
+          'Potato Chips',
+          'Chocolate Bar'
         )
           THEN 'Snacks & Confectionery'
 
@@ -85,9 +85,31 @@ async function migrateProductsTable(
   `);
 }
 
+async function createProductIndexes(
+  database: SQLiteDatabase,
+): Promise<void> {
+  await database.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_products_barcode
+      ON products(barcode);
+
+    CREATE INDEX IF NOT EXISTS idx_products_name
+      ON products(name);
+
+    CREATE INDEX IF NOT EXISTS idx_products_department
+      ON products(department);
+
+    CREATE INDEX IF NOT EXISTS idx_products_category
+      ON products(category);
+
+    CREATE INDEX IF NOT EXISTS idx_products_brand
+      ON products(brand);
+  `);
+}
+
 export async function initializeDatabase(): Promise<void> {
   const database = await getDatabase();
 
+  // Step 1: Create the latest table structure for new installations.
   await database.execAsync(`
     CREATE TABLE IF NOT EXISTS products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -116,22 +138,11 @@ export async function initializeDatabase(): Promise<void> {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
-
-    CREATE INDEX IF NOT EXISTS idx_products_barcode
-      ON products(barcode);
-
-    CREATE INDEX IF NOT EXISTS idx_products_name
-      ON products(name);
-
-    CREATE INDEX IF NOT EXISTS idx_products_department
-      ON products(department);
-
-    CREATE INDEX IF NOT EXISTS idx_products_category
-      ON products(category);
-
-    CREATE INDEX IF NOT EXISTS idx_products_brand
-      ON products(brand);
   `);
 
+  // Step 2: Upgrade existing installations before using new columns.
   await migrateProductsTable(database);
+
+  // Step 3: Create indexes only after all required columns exist.
+  await createProductIndexes(database);
 }
