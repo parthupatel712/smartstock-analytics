@@ -1,8 +1,17 @@
+import type {
+  ProductCategory,
+  ProductDepartment,
+} from "../constants/productTaxonomy";
+
 export interface Product {
   id: number;
   barcode: string;
   name: string;
-  category: string;
+
+  department: ProductDepartment;
+  category: ProductCategory;
+  brand: string;
+
   unitCost: number;
   unitPrice: number;
   currentStock: number;
@@ -15,7 +24,11 @@ export interface Product {
 export interface CreateProductInput {
   barcode: string;
   name: string;
-  category: string;
+
+  department: ProductDepartment;
+  category: ProductCategory;
+  brand: string;
+
   unitCost: number;
   unitPrice: number;
   currentStock?: number;
