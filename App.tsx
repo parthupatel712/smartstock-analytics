@@ -17,32 +17,33 @@ import {
 } from "react-native";
 
 import { BarcodeScanner } from "./src/components/BarcodeScanner";
+import { InventoryDashboard } from "./src/components/InventoryDashboard";
 import { InventoryToolbar } from "./src/components/InventoryToolbar";
 import { InventoryTransactionForm } from "./src/components/InventoryTransactionForm";
 import { ProductCard } from "./src/components/ProductCard";
 import { ProductForm } from "./src/components/ProductForm";
 import { ProductTransactionHistory } from "./src/components/ProductTransactionHistory";
 
+import { getInventoryDashboardSummary } from "./src/database/inventoryDashboardRepository";
 import {
   createInventoryTransaction,
   getLatestDeliveriesByProduct,
   getTransactionHistoryForProduct,
 } from "./src/database/inventoryTransactionRepository";
-
 import {
   createProduct,
   getAllProducts,
   getProductByBarcode,
 } from "./src/database/productRepository";
-
 import { initializeDatabase } from "./src/database/schema";
 import { seedDatabase } from "./src/database/seed";
 
-import type { CreateInventoryTransactionInput } from "./src/types/inventoryTransaction";
+import type { InventoryDashboardSummary } from "./src/types/inventoryDashboard";
 import {
   DEFAULT_INVENTORY_FILTERS,
   type InventoryFilterState,
 } from "./src/types/inventoryFilter";
+import type { CreateInventoryTransactionInput } from "./src/types/inventoryTransaction";
 import type { Product } from "./src/types/product";
 import type { ProductDeliverySummary } from "./src/types/productDelivery";
 import type { ProductFormValues } from "./src/types/productForm";
@@ -55,7 +56,22 @@ type AppView =
   | "add-product"
   | "scanner"
   | "inventory-transaction"
-  | "transaction-history";
+  | "transaction-history"
+  | "dashboard";
+
+const INITIAL_DASHBOARD_SUMMARY: InventoryDashboardSummary = {
+  totalProducts: 0,
+  totalStockUnits: 0,
+  totalInventoryCostValue: 0,
+  totalInventoryRetailValue: 0,
+  potentialGrossProfit: 0,
+  lowStockProductCount: 0,
+  outOfStockProductCount: 0,
+  recentSalesValue: 0,
+  recentStockInValue: 0,
+  recentDamageValue: 0,
+  recentTransactionCount: 0,
+};
 
 export default function App() {
   const [status, setStatus] =
@@ -87,6 +103,13 @@ export default function App() {
     Map<number, ProductDeliverySummary>
   >(new Map());
 
+  const [
+    dashboardSummary,
+    setDashboardSummary,
+  ] = useState<InventoryDashboardSummary>(
+    INITIAL_DASHBOARD_SUMMARY,
+  );
+
   const [errorMessage, setErrorMessage] =
     useState("");
 
@@ -102,6 +125,9 @@ export default function App() {
   ] = useState(false);
 
   const [isHistoryLoading, setIsHistoryLoading] =
+    useState(false);
+
+  const [isDashboardLoading, setIsDashboardLoading] =
     useState(false);
 
   const [scannedBarcode, setScannedBarcode] =
@@ -189,13 +215,16 @@ export default function App() {
       const [
         storedProducts,
         deliveryMap,
+        summary,
       ] = await Promise.all([
         getAllProducts(),
         getLatestDeliveriesByProduct(),
+        getInventoryDashboardSummary(),
       ]);
 
       setProducts(storedProducts);
       setLatestDeliveries(deliveryMap);
+      setDashboardSummary(summary);
     },
     [],
   );
@@ -433,6 +462,34 @@ export default function App() {
     setCurrentView("inventory");
   }
 
+  async function openDashboard(): Promise<void> {
+    try {
+      setIsDashboardLoading(true);
+      setCurrentView("dashboard");
+
+      const summary =
+        await getInventoryDashboardSummary();
+
+      setDashboardSummary(summary);
+    } catch (error) {
+      console.error(
+        "Could not load inventory dashboard:",
+        error,
+      );
+
+      setCurrentView("inventory");
+
+      Alert.alert(
+        "Could not load dashboard",
+        error instanceof Error
+          ? error.message
+          : "The dashboard summary could not be loaded.",
+      );
+    } finally {
+      setIsDashboardLoading(false);
+    }
+  }
+
   function openManualProductForm(): void {
     setScannedBarcode("");
     setCurrentView("add-product");
@@ -497,6 +554,32 @@ export default function App() {
         onBarcodeDetected={
           handleBarcodeDetected
         }
+        onClose={() =>
+          setCurrentView("inventory")
+        }
+      />
+    );
+  }
+
+  if (currentView === "dashboard") {
+    if (isDashboardLoading) {
+      return (
+        <SafeAreaView style={styles.screen}>
+          <View style={styles.centeredContainer}>
+            <ActivityIndicator size="large" />
+
+            <Text style={styles.statusText}>
+              Loading dashboard…
+            </Text>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    return (
+      <InventoryDashboard
+        summary={dashboardSummary}
+        recentDays={30}
         onClose={() =>
           setCurrentView("inventory")
         }
@@ -683,6 +766,22 @@ export default function App() {
                   <Pressable
                     accessibilityRole="button"
                     onPress={() =>
+                      void openDashboard()
+                    }
+                    style={styles.dashboardButton}
+                  >
+                    <Text
+                      style={
+                        styles.dashboardButtonText
+                      }
+                    >
+                      Dashboard
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() =>
                       setCurrentView("scanner")
                     }
                     style={styles.scanButton}
@@ -820,6 +919,17 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     paddingHorizontal: 20,
     paddingTop: 8,
+  },
+  dashboardButton: {
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "#1D4ED8",
+  },
+  dashboardButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   scanButton: {
     borderWidth: 1,
