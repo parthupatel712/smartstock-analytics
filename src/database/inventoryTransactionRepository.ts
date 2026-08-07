@@ -4,7 +4,7 @@ import type {
   InventoryTransactionType,
 } from "../types/inventoryTransaction";
 import type { TransactionHistoryItem } from "../types/transactionHistory";
-
+import type { ProductDeliverySummary } from "../types/productDelivery";
 import { getDatabase } from "./database";
 
 interface ProductStockRow {
@@ -50,6 +50,18 @@ interface TransactionHistoryRow {
   source: InventoryTransaction["source"];
   notes: string | null;
   created_at: string;
+}
+interface ProductDeliverySummaryRow {
+  transaction_id: number;
+  product_id: number;
+  quantity_received: number;
+  stock_before: number;
+  stock_after: number;
+  unit_cost: number;
+  delivery_value: number;
+  source: ProductDeliverySummary["source"];
+  notes: string | null;
+  received_at: string;
 }
 
 function mapTransactionRow(
@@ -183,6 +195,23 @@ function calculateTransactionValue(
       );
     }
   }
+}
+
+function mapProductDeliverySummaryRow(
+  row: ProductDeliverySummaryRow,
+): ProductDeliverySummary {
+  return {
+    transactionId: row.transaction_id,
+    productId: row.product_id,
+    quantityReceived: row.quantity_received,
+    stockBefore: row.stock_before,
+    stockAfter: row.stock_after,
+    unitCost: row.unit_cost,
+    deliveryValue: row.delivery_value,
+    source: row.source,
+    notes: row.notes,
+    receivedAt: row.received_at,
+  };
 }
 
 export async function createInventoryTransaction(
@@ -459,4 +488,51 @@ export async function getTransactionHistoryForProduct(
     );
 
   return rows.map(mapTransactionHistoryRow);
+}
+
+export async function getLatestDeliveriesByProduct(): Promise<
+  Map<number, ProductDeliverySummary>
+> {
+  const database = await getDatabase();
+
+  const rows =
+    await database.getAllAsync<ProductDeliverySummaryRow>(`
+      SELECT
+        transactions.id AS transaction_id,
+        transactions.product_id,
+        transactions.quantity AS quantity_received,
+        transactions.stock_before,
+        transactions.stock_after,
+        transactions.unit_cost,
+        transactions.transaction_value AS delivery_value,
+        transactions.source,
+        transactions.notes,
+        transactions.created_at AS received_at
+
+      FROM inventory_transactions AS transactions
+
+      INNER JOIN (
+        SELECT
+          product_id,
+          MAX(id) AS latest_transaction_id
+        FROM inventory_transactions
+        WHERE transaction_type = 'stock_in'
+        GROUP BY product_id
+      ) AS latest_deliveries
+        ON latest_deliveries.latest_transaction_id =
+          transactions.id
+
+      ORDER BY transactions.created_at DESC;
+    `);
+
+  const deliveryMap =
+    new Map<number, ProductDeliverySummary>();
+
+  rows.forEach((row) => {
+    const delivery = mapProductDeliverySummaryRow(row);
+
+    deliveryMap.set(delivery.productId, delivery);
+  });
+
+  return deliveryMap;
 }
