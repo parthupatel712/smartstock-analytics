@@ -23,6 +23,7 @@ import { ProductTransactionHistory } from "./src/components/ProductTransactionHi
 
 import {
   createInventoryTransaction,
+  getLatestDeliveriesByProduct,
   getTransactionHistoryForProduct,
 } from "./src/database/inventoryTransactionRepository";
 
@@ -37,6 +38,7 @@ import { seedDatabase } from "./src/database/seed";
 
 import type { CreateInventoryTransactionInput } from "./src/types/inventoryTransaction";
 import type { Product } from "./src/types/product";
+import type { ProductDeliverySummary } from "./src/types/productDelivery";
 import type { ProductFormValues } from "./src/types/productForm";
 import type { TransactionHistoryItem } from "./src/types/transactionHistory";
 
@@ -67,6 +69,13 @@ export default function App() {
     setTransactionHistory,
   ] = useState<TransactionHistoryItem[]>([]);
 
+  const [
+    latestDeliveries,
+    setLatestDeliveries,
+  ] = useState<
+    Map<number, ProductDeliverySummary>
+  >(new Map());
+
   const [errorMessage, setErrorMessage] =
     useState("");
 
@@ -87,6 +96,22 @@ export default function App() {
   const [scannedBarcode, setScannedBarcode] =
     useState("");
 
+  const loadInventoryData = useCallback(
+    async (): Promise<void> => {
+      const [
+        storedProducts,
+        deliveryMap,
+      ] = await Promise.all([
+        getAllProducts(),
+        getLatestDeliveriesByProduct(),
+      ]);
+
+      setProducts(storedProducts);
+      setLatestDeliveries(deliveryMap);
+    },
+    [],
+  );
+
   const loadProducts = useCallback(
     async (
       isPullToRefresh = false,
@@ -102,11 +127,8 @@ export default function App() {
 
         await initializeDatabase();
         await seedDatabase();
+        await loadInventoryData();
 
-        const storedProducts =
-          await getAllProducts();
-
-        setProducts(storedProducts);
         setStatus("ready");
       } catch (error) {
         console.error(
@@ -125,7 +147,7 @@ export default function App() {
         setIsRefreshing(false);
       }
     },
-    [],
+    [loadInventoryData],
   );
 
   useEffect(() => {
@@ -156,10 +178,8 @@ export default function App() {
         ),
       });
 
-      const updatedProducts =
-        await getAllProducts();
+      await loadInventoryData();
 
-      setProducts(updatedProducts);
       setScannedBarcode("");
       setCurrentView("inventory");
 
@@ -258,10 +278,8 @@ export default function App() {
       const transaction =
         await createInventoryTransaction(input);
 
-      const updatedProducts =
-        await getAllProducts();
+      await loadInventoryData();
 
-      setProducts(updatedProducts);
       setSelectedProduct(null);
       setCurrentView("inventory");
 
@@ -538,6 +556,9 @@ export default function App() {
         renderItem={({ item }) => (
           <ProductCard
             product={item}
+            latestDelivery={
+              latestDeliveries.get(item.id)
+            }
             onUpdateInventory={
               openTransactionForm
             }
