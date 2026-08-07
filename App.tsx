@@ -2,6 +2,7 @@ import { StatusBar } from "expo-status-bar";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import {
@@ -16,6 +17,7 @@ import {
 } from "react-native";
 
 import { BarcodeScanner } from "./src/components/BarcodeScanner";
+import { InventoryToolbar } from "./src/components/InventoryToolbar";
 import { InventoryTransactionForm } from "./src/components/InventoryTransactionForm";
 import { ProductCard } from "./src/components/ProductCard";
 import { ProductForm } from "./src/components/ProductForm";
@@ -37,6 +39,10 @@ import { initializeDatabase } from "./src/database/schema";
 import { seedDatabase } from "./src/database/seed";
 
 import type { CreateInventoryTransactionInput } from "./src/types/inventoryTransaction";
+import {
+  DEFAULT_INVENTORY_FILTERS,
+  type InventoryFilterState,
+} from "./src/types/inventoryFilter";
 import type { Product } from "./src/types/product";
 import type { ProductDeliverySummary } from "./src/types/productDelivery";
 import type { ProductFormValues } from "./src/types/productForm";
@@ -60,6 +66,11 @@ export default function App() {
 
   const [products, setProducts] =
     useState<Product[]>([]);
+
+  const [filters, setFilters] =
+    useState<InventoryFilterState>(
+      DEFAULT_INVENTORY_FILTERS,
+    );
 
   const [selectedProduct, setSelectedProduct] =
     useState<Product | null>(null);
@@ -95,6 +106,83 @@ export default function App() {
 
   const [scannedBarcode, setScannedBarcode] =
     useState("");
+
+  const visibleProducts = useMemo(() => {
+    const normalizedSearch =
+      filters.searchQuery.trim().toLowerCase();
+
+    const filteredProducts = products.filter(
+      (product) => {
+        const matchesSearch =
+          normalizedSearch === "" ||
+          product.name
+            .toLowerCase()
+            .includes(normalizedSearch) ||
+          product.brand
+            .toLowerCase()
+            .includes(normalizedSearch) ||
+          product.barcode
+            .toLowerCase()
+            .includes(normalizedSearch);
+
+        const matchesDepartment =
+          filters.department === "all" ||
+          product.department === filters.department;
+
+        const matchesLowStock =
+          !filters.lowStockOnly ||
+          product.currentStock <=
+            product.reorderLevel;
+
+        return (
+          matchesSearch &&
+          matchesDepartment &&
+          matchesLowStock
+        );
+      },
+    );
+
+    return [...filteredProducts].sort(
+      (firstProduct, secondProduct) => {
+        switch (filters.sortBy) {
+          case "name-desc":
+            return secondProduct.name.localeCompare(
+              firstProduct.name,
+            );
+
+          case "stock-asc":
+            return (
+              firstProduct.currentStock -
+              secondProduct.currentStock
+            );
+
+          case "stock-desc":
+            return (
+              secondProduct.currentStock -
+              firstProduct.currentStock
+            );
+
+          case "price-asc":
+            return (
+              firstProduct.unitPrice -
+              secondProduct.unitPrice
+            );
+
+          case "price-desc":
+            return (
+              secondProduct.unitPrice -
+              firstProduct.unitPrice
+            );
+
+          case "name-asc":
+          default:
+            return firstProduct.name.localeCompare(
+              secondProduct.name,
+            );
+        }
+      },
+    );
+  }, [filters, products]);
 
   const loadInventoryData = useCallback(
     async (): Promise<void> => {
@@ -355,6 +443,10 @@ export default function App() {
     setCurrentView("inventory");
   }
 
+  function clearInventoryFilters(): void {
+    setFilters(DEFAULT_INVENTORY_FILTERS);
+  }
+
   if (status === "loading") {
     return (
       <SafeAreaView style={styles.screen}>
@@ -546,7 +638,7 @@ export default function App() {
   return (
     <SafeAreaView style={styles.screen}>
       <FlatList
-        data={products}
+        data={visibleProducts}
         keyExtractor={(product) =>
           product.id.toString()
         }
@@ -568,87 +660,115 @@ export default function App() {
           />
         )}
         ListHeaderComponent={
-          <View style={styles.header}>
-            <View style={styles.headerRow}>
-              <View
-                style={
-                  styles.headerTextContainer
-                }
-              >
-                <Text style={styles.title}>
-                  SmartStock Inventory
-                </Text>
-
-                <Text style={styles.summary}>
-                  {products.length} active products
-                </Text>
-              </View>
-
-              <View
-                style={styles.headerActions}
-              >
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() =>
-                    setCurrentView("scanner")
+          <View>
+            <View style={styles.header}>
+              <View style={styles.headerRow}>
+                <View
+                  style={
+                    styles.headerTextContainer
                   }
-                  style={styles.scanButton}
                 >
-                  <Text
-                    style={
-                      styles.scanButtonText
-                    }
-                  >
-                    Scan Barcode
+                  <Text style={styles.title}>
+                    SmartStock Inventory
                   </Text>
-                </Pressable>
 
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={
-                    openManualProductForm
-                  }
-                  style={styles.addButton}
-                >
-                  <Text
-                    style={
-                      styles.addButtonText
-                    }
-                  >
-                    Add Product
+                  <Text style={styles.summary}>
+                    {products.length} active products
                   </Text>
-                </Pressable>
+                </View>
+
+                <View
+                  style={styles.headerActions}
+                >
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() =>
+                      setCurrentView("scanner")
+                    }
+                    style={styles.scanButton}
+                  >
+                    <Text
+                      style={
+                        styles.scanButtonText
+                      }
+                    >
+                      Scan Barcode
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={
+                      openManualProductForm
+                    }
+                    style={styles.addButton}
+                  >
+                    <Text
+                      style={
+                        styles.addButtonText
+                      }
+                    >
+                      Add Product
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
+
+            <InventoryToolbar
+              filters={filters}
+              resultCount={visibleProducts.length}
+              totalCount={products.length}
+              onFiltersChange={setFilters}
+              onClearFilters={clearInventoryFilters}
+            />
           </View>
         }
         ListEmptyComponent={
-          <View
-            style={styles.emptyContainer}
-          >
+          <View style={styles.emptyContainer}>
             <Text style={styles.emptyTitle}>
-              No products found
+              {products.length === 0
+                ? "No products found"
+                : "No matching products"}
             </Text>
 
             <Text style={styles.statusText}>
-              Add a product to begin tracking inventory.
+              {products.length === 0
+                ? "Add a product to begin tracking inventory."
+                : "Try changing or clearing your inventory filters."}
             </Text>
 
-            <Pressable
-              accessibilityRole="button"
-              onPress={
-                openManualProductForm
-              }
-              style={styles.primaryButton}
-            >
-              <Text
-                style={
-                  styles.primaryButtonText
+            {products.length === 0 ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={
+                  openManualProductForm
                 }
+                style={styles.primaryButton}
               >
-                Add first product
-              </Text>
-            </Pressable>
+                <Text
+                  style={
+                    styles.primaryButtonText
+                  }
+                >
+                  Add first product
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                onPress={clearInventoryFilters}
+                style={styles.primaryButton}
+              >
+                <Text
+                  style={
+                    styles.primaryButtonText
+                  }
+                >
+                  Clear filters
+                </Text>
+              </Pressable>
+            )}
           </View>
         }
         refreshing={isRefreshing}
