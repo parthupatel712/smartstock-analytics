@@ -43,19 +43,19 @@ const TRANSACTION_FILTERS: {
     value: "sale",
   },
   {
-    label: "Stock In",
+    label: "Stock Added",
     value: "stock_in",
   },
   {
-    label: "Damage",
+    label: "Damaged",
     value: "damage",
   },
   {
-    label: "Returns",
+    label: "Returned",
     value: "return",
   },
   {
-    label: "Counts",
+    label: "Stock Count",
     value: "physical_count",
   },
 ];
@@ -163,9 +163,8 @@ export function GlobalTransactions({
 
   const transactionSummary =
     useMemo(() => {
-      let unitsAdded = 0;
-      let unitsRemoved = 0;
-      let totalMovementValue = 0;
+      let stockAdded = 0;
+      let stockRemoved = 0;
 
       filteredTransactions.forEach(
         (transaction) => {
@@ -174,30 +173,28 @@ export function GlobalTransactions({
             transaction.stockBefore;
 
           if (stockChange > 0) {
-            unitsAdded += stockChange;
+            stockAdded +=
+              stockChange;
           }
 
           if (stockChange < 0) {
-            unitsRemoved +=
+            stockRemoved +=
               Math.abs(stockChange);
           }
-
-          totalMovementValue +=
-            Math.abs(
-              transaction.transactionValue,
-            );
         },
       );
 
       return {
-        transactionCount:
+        updateCount:
           filteredTransactions.length,
 
-        unitsAdded,
+        stockAdded,
 
-        unitsRemoved,
+        stockRemoved,
 
-        totalMovementValue,
+        netStockChange:
+          stockAdded -
+          stockRemoved,
       };
     }, [filteredTransactions]);
 
@@ -239,13 +236,13 @@ export function GlobalTransactions({
             <Text
               style={styles.title}
             >
-              Transactions
+              Stock History
             </Text>
 
             <Text
               style={styles.subtitle}
             >
-              Review inventory activity across all products.
+              See every stock change across your products.
             </Text>
           </View>
 
@@ -285,7 +282,7 @@ export function GlobalTransactions({
             onChangeText={
               setSearchQuery
             }
-            placeholder="Search product, brand, barcode, category..."
+            placeholder="Search product, brand, barcode or category"
             placeholderTextColor="#9CA3AF"
             autoCapitalize="none"
             autoCorrect={false}
@@ -297,6 +294,7 @@ export function GlobalTransactions({
           {searchQuery ? (
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Clear search"
               onPress={() =>
                 setSearchQuery("")
               }
@@ -323,7 +321,7 @@ export function GlobalTransactions({
               styles.filterSectionLabel
             }
           >
-            Transaction Type
+            Stock Change
           </Text>
 
           <ScrollView
@@ -398,7 +396,7 @@ export function GlobalTransactions({
                 styles.filterSectionLabel
               }
             >
-              Date Range
+              Time Period
             </Text>
 
             {hasActiveFilters ? (
@@ -512,7 +510,7 @@ export function GlobalTransactions({
               styles.summarySectionTitle
             }
           >
-            Summary
+            Stock Summary
           </Text>
 
           <Text
@@ -520,7 +518,7 @@ export function GlobalTransactions({
               styles.summarySectionSubtitle
             }
           >
-            Based on the currently selected filters
+            Based on your current search and filters
           </Text>
 
           <View
@@ -529,33 +527,42 @@ export function GlobalTransactions({
             }
           >
             <SummaryCard
-              label="Transactions"
+              label="Stock Updates"
               value={
-                transactionSummary.transactionCount.toString()
+                transactionSummary.updateCount.toString()
               }
               icon="receipt-outline"
             />
 
             <SummaryCard
-              label="Units Added"
-              value={`+${transactionSummary.unitsAdded}`}
-              icon="arrow-up-circle-outline"
+              label="Stock Added"
+              value={`+${transactionSummary.stockAdded}`}
+              icon="add-circle-outline"
               tone="positive"
             />
 
             <SummaryCard
-              label="Units Removed"
-              value={`-${transactionSummary.unitsRemoved}`}
-              icon="arrow-down-circle-outline"
+              label="Stock Removed"
+              value={`-${transactionSummary.stockRemoved}`}
+              icon="remove-circle-outline"
               tone="negative"
             />
 
             <SummaryCard
-              label="Movement Value"
-              value={formatCurrency(
-                transactionSummary.totalMovementValue,
+              label="Net Stock Change"
+              value={formatSignedNumber(
+                transactionSummary.netStockChange,
               )}
-              icon="cash-outline"
+              icon="swap-vertical-outline"
+              tone={
+                transactionSummary.netStockChange >
+                0
+                  ? "positive"
+                  : transactionSummary.netStockChange <
+                      0
+                    ? "negative"
+                    : "normal"
+              }
             />
           </View>
         </View>
@@ -575,7 +582,7 @@ export function GlobalTransactions({
                 styles.resultsTitle
               }
             >
-              Recent Activity
+              Stock Changes
             </Text>
 
             <Text
@@ -599,7 +606,7 @@ export function GlobalTransactions({
             {
               filteredTransactions.length
             }{" "}
-            transaction
+            update
             {filteredTransactions.length ===
             1
               ? ""
@@ -640,7 +647,7 @@ export function GlobalTransactions({
                 styles.emptyTitle
               }
             >
-              No transactions found
+              No stock changes found
             </Text>
 
             <Text
@@ -648,7 +655,7 @@ export function GlobalTransactions({
                 styles.emptyText
               }
             >
-              No inventory activity matches the selected search, transaction type, and date range.
+              Try changing your search, stock-change filter, or time period.
             </Text>
 
             {hasActiveFilters ? (
@@ -694,9 +701,9 @@ function SummaryCard({
 
   icon:
     | "receipt-outline"
-    | "arrow-up-circle-outline"
-    | "arrow-down-circle-outline"
-    | "cash-outline";
+    | "add-circle-outline"
+    | "remove-circle-outline"
+    | "swap-vertical-outline";
 
   tone?:
     | "normal"
@@ -788,7 +795,6 @@ function TransactionCard({
           <View
             style={[
               styles.iconContainer,
-
               {
                 backgroundColor:
                   activityStyle.background,
@@ -914,11 +920,9 @@ function TransactionCard({
       >
         <Metric
           label="Change"
-          value={
-            stockChange > 0
-              ? `+${stockChange}`
-              : `${stockChange}`
-          }
+          value={formatSignedNumber(
+            stockChange,
+          )}
           tone={
             stockChange > 0
               ? "positive"
@@ -929,7 +933,7 @@ function TransactionCard({
         />
 
         <Metric
-          label="Stock"
+          label="Before → After"
           value={`${transaction.stockBefore} → ${transaction.stockAfter}`}
         />
 
@@ -973,6 +977,7 @@ function TransactionCard({
             styles.sourceText
           }
         >
+          Added by:{" "}
           {formatSource(
             transaction.source,
           )}
@@ -1103,16 +1108,16 @@ function getDateFilterDescription(
 ): string {
   switch (filter) {
     case "today":
-      return "Transactions recorded today";
+      return "Stock changes made today";
 
     case "7-days":
-      return "Transactions from the last 7 days";
+      return "Stock changes from the last 7 days";
 
     case "30-days":
-      return "Transactions from the last 30 days";
+      return "Stock changes from the last 30 days";
 
     case "all-time":
-      return "Complete transaction history";
+      return "All recorded stock changes";
   }
 }
 
@@ -1123,10 +1128,10 @@ function getActivityStyle(
     case "stock_in":
       return {
         label:
-          "Stock In",
+          "Stock Added",
 
         icon:
-          "arrow-down-circle-outline" as const,
+          "add-circle-outline" as const,
 
         color:
           "#15803D",
@@ -1153,7 +1158,7 @@ function getActivityStyle(
     case "damage":
       return {
         label:
-          "Damage",
+          "Damaged",
 
         icon:
           "warning-outline" as const,
@@ -1168,7 +1173,7 @@ function getActivityStyle(
     case "return":
       return {
         label:
-          "Return",
+          "Returned",
 
         icon:
           "return-down-back-outline" as const,
@@ -1183,7 +1188,7 @@ function getActivityStyle(
     case "physical_count":
       return {
         label:
-          "Physical Count",
+          "Stock Count",
 
         icon:
           "calculator-outline" as const,
@@ -1195,6 +1200,16 @@ function getActivityStyle(
           "#FFF7ED",
       };
   }
+}
+
+function formatSignedNumber(
+  value: number,
+): string {
+  if (value > 0) {
+    return `+${value}`;
+  }
+
+  return `${value}`;
 }
 
 function formatCurrency(
@@ -1218,17 +1233,17 @@ function formatSource(
       return "Camera";
 
     case "bluetooth":
-      return "Bluetooth";
+      return "Bluetooth scanner";
 
     case "usb":
-      return "USB";
+      return "USB scanner";
 
     case "esp32":
-      return "ESP32";
+      return "Scanner device";
 
     case "manual":
     default:
-      return "Manual";
+      return "Manual entry";
   }
 }
 

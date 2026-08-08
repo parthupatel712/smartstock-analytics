@@ -1833,7 +1833,7 @@ export default function App() {
                   />
 
                   <ActionMenuItem
-                    label="Transactions"
+                    label="Stock History"
                     onPress={() =>
                       void openGlobalTransactions()
                     }
