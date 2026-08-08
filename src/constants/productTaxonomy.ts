@@ -130,6 +130,6 @@ export const PRODUCT_DEPARTMENTS =
 
 export function getCategoriesForDepartment(
   department: ProductDepartment,
-): readonly string[] {
+): readonly ProductCategory[] {
   return PRODUCT_TAXONOMY[department];
 }
