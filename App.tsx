@@ -40,6 +40,10 @@ import {
 import { initializeDatabase } from "./src/database/schema";
 import { seedDatabase } from "./src/database/seed";
 
+import {
+  DEFAULT_ANALYTICS_PERIOD,
+  type AnalyticsPeriodDays,
+} from "./src/types/analyticsPeriod";
 import type { InventoryAnalyticsSummary } from "./src/types/inventoryAnalytics";
 import type { InventoryDashboardSummary } from "./src/types/inventoryDashboard";
 import {
@@ -125,6 +129,13 @@ export default function App() {
     setAnalyticsSummary,
   ] = useState<InventoryAnalyticsSummary>(
     INITIAL_ANALYTICS_SUMMARY,
+  );
+
+  const [
+    analyticsPeriod,
+    setAnalyticsPeriod,
+  ] = useState<AnalyticsPeriodDays>(
+    DEFAULT_ANALYTICS_PERIOD,
   );
 
   const [errorMessage, setErrorMessage] =
@@ -236,18 +247,15 @@ export default function App() {
         storedProducts,
         deliveryMap,
         dashboard,
-        analytics,
       ] = await Promise.all([
         getAllProducts(),
         getLatestDeliveriesByProduct(),
         getInventoryDashboardSummary(),
-        getInventoryAnalyticsSummary(),
       ]);
 
       setProducts(storedProducts);
       setLatestDeliveries(deliveryMap);
       setDashboardSummary(dashboard);
-      setAnalyticsSummary(analytics);
     },
     [],
   );
@@ -513,18 +521,24 @@ export default function App() {
     }
   }
 
+  async function loadAnalytics(
+    period: AnalyticsPeriodDays,
+  ): Promise<void> {
+    const summary =
+      await getInventoryAnalyticsSummary(
+        period,
+        5,
+      );
+
+    setAnalyticsSummary(summary);
+  }
+
   async function openAnalytics(): Promise<void> {
     try {
       setIsAnalyticsLoading(true);
       setCurrentView("analytics");
 
-      const summary =
-        await getInventoryAnalyticsSummary(
-          30,
-          5,
-        );
-
-      setAnalyticsSummary(summary);
+      await loadAnalytics(analyticsPeriod);
     } catch (error) {
       console.error(
         "Could not load analytics:",
@@ -538,6 +552,35 @@ export default function App() {
         error instanceof Error
           ? error.message
           : "Inventory analytics could not be loaded.",
+      );
+    } finally {
+      setIsAnalyticsLoading(false);
+    }
+  }
+
+  async function handleAnalyticsPeriodChange(
+    period: AnalyticsPeriodDays,
+  ): Promise<void> {
+    if (period === analyticsPeriod) {
+      return;
+    }
+
+    try {
+      setAnalyticsPeriod(period);
+      setIsAnalyticsLoading(true);
+
+      await loadAnalytics(period);
+    } catch (error) {
+      console.error(
+        "Could not change analytics period:",
+        error,
+      );
+
+      Alert.alert(
+        "Could not update analytics",
+        error instanceof Error
+          ? error.message
+          : "Analytics could not be loaded for the selected period.",
       );
     } finally {
       setIsAnalyticsLoading(false);
@@ -659,7 +702,10 @@ export default function App() {
     return (
       <InventoryAnalytics
         summary={analyticsSummary}
-        days={30}
+        selectedPeriod={analyticsPeriod}
+        onPeriodChange={(period) =>
+          void handleAnalyticsPeriodChange(period)
+        }
         onClose={() =>
           setCurrentView("inventory")
         }
