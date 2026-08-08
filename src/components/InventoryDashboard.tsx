@@ -44,8 +44,7 @@ export function InventoryDashboard({
             </Text>
 
             <Text style={styles.subtitle}>
-              Overview of stock, inventory value, and
-              recent activity.
+              See how your store and stock are doing right now.
             </Text>
           </View>
 
@@ -81,7 +80,7 @@ export function InventoryDashboard({
             value={formatNumber(
               summary.totalStockUnits,
             )}
-            description="Total units in inventory"
+            description="Total units currently in stock"
           />
 
           <SummaryCard
@@ -89,7 +88,7 @@ export function InventoryDashboard({
             value={formatCurrency(
               summary.totalInventoryCostValue,
             )}
-            description="Current stock at cost"
+            description="Current stock at your cost"
           />
 
           <SummaryCard
@@ -101,7 +100,7 @@ export function InventoryDashboard({
           />
 
           <SummaryCard
-            label="Potential Profit"
+            label="Estimated Profit"
             value={formatCurrency(
               summary.potentialGrossProfit,
             )}
@@ -126,7 +125,7 @@ export function InventoryDashboard({
             value={formatNumber(
               summary.outOfStockProductCount,
             )}
-            description="Products with zero stock"
+            description="Products with no stock left"
             tone={
               summary.outOfStockProductCount > 0
                 ? "danger"
@@ -138,11 +137,11 @@ export function InventoryDashboard({
         <View style={styles.periodHeader}>
           <View>
             <Text style={styles.sectionTitle}>
-              Recent Performance
+              Last {recentDays} Days
             </Text>
 
             <Text style={styles.sectionSubtitle}>
-              Last {recentDays} days
+              A quick look at recent store activity
             </Text>
           </View>
         </View>
@@ -158,19 +157,19 @@ export function InventoryDashboard({
           />
 
           <SummaryCard
-            label="Stock Received"
+            label="Stock Added"
             value={formatCurrency(
               summary.recentStockInValue,
             )}
-            description={`Inventory received in the last ${recentDays} days`}
+            description={`Stock received in the last ${recentDays} days`}
           />
 
           <SummaryCard
-            label="Damage"
+            label="Damaged Stock"
             value={formatCurrency(
               summary.recentDamageValue,
             )}
-            description={`Damaged inventory in the last ${recentDays} days`}
+            description={`Damaged stock recorded in the last ${recentDays} days`}
             tone={
               summary.recentDamageValue > 0
                 ? "danger"
@@ -179,11 +178,11 @@ export function InventoryDashboard({
           />
 
           <SummaryCard
-            label="Transactions"
+            label="Stock Updates"
             value={formatNumber(
               summary.recentTransactionCount,
             )}
-            description={`Inventory movements in the last ${recentDays} days`}
+            description={`Stock changes recorded in the last ${recentDays} days`}
           />
         </View>
 
@@ -195,8 +194,7 @@ export function InventoryDashboard({
               </Text>
 
               <Text style={styles.sectionSubtitle}>
-                Latest sales, deliveries, damage,
-                returns, and stock adjustments
+                Latest stock changes across your products
               </Text>
             </View>
 
@@ -210,9 +208,7 @@ export function InventoryDashboard({
                     styles.viewAllButtonPressed,
                 ]}
               >
-                <Text
-                  style={styles.viewAllButtonText}
-                >
+                <Text style={styles.viewAllButtonText}>
                   View All →
                 </Text>
               </Pressable>
@@ -232,19 +228,14 @@ export function InventoryDashboard({
             </View>
           ) : (
             <View style={styles.emptyActivityCard}>
-              <Text
-                style={styles.emptyActivityTitle}
-              >
+              <Text style={styles.emptyActivityTitle}>
                 No recent activity
               </Text>
 
-              <Text
-                style={styles.emptyActivityText}
-              >
-                Sales, deliveries, damage, returns,
-                and physical counts will appear here
-                after inventory transactions are
-                recorded.
+              <Text style={styles.emptyActivityText}>
+                Sales, stock added, damaged items, returns,
+                and stock counts will appear here after
+                stock changes are recorded.
               </Text>
             </View>
           )}
@@ -339,71 +330,50 @@ function formatNumber(
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-
-    backgroundColor:
-      "#F4F6F8",
+    backgroundColor: "#F4F6F8",
   },
 
   content: {
     padding: 18,
-
     paddingBottom: 50,
   },
 
   headerRow: {
     flexDirection: "row",
-
     alignItems: "flex-start",
-
-    justifyContent:
-      "space-between",
+    justifyContent: "space-between",
   },
 
   headerTextContainer: {
     flex: 1,
-
     marginRight: 16,
   },
 
   title: {
     fontSize: 30,
-
     fontWeight: "800",
-
     color: "#111827",
   },
 
   subtitle: {
     marginTop: 6,
-
     fontSize: 14,
-
     lineHeight: 20,
-
     color: "#6B7280",
   },
 
   closeButton: {
     borderWidth: 1,
-
-    borderColor:
-      "#CBD2DA",
-
+    borderColor: "#CBD2DA",
     borderRadius: 10,
-
     paddingHorizontal: 14,
-
     paddingVertical: 9,
-
-    backgroundColor:
-      "#FFFFFF",
+    backgroundColor: "#FFFFFF",
   },
 
   closeButtonText: {
     fontSize: 14,
-
     fontWeight: "700",
-
     color: "#20252B",
   },
 
@@ -413,21 +383,15 @@ const styles = StyleSheet.create({
 
   sectionTitle: {
     marginTop: 26,
-
     fontSize: 20,
-
     fontWeight: "800",
-
     color: "#111827",
   },
 
   sectionSubtitle: {
     marginTop: 4,
-
     fontSize: 13,
-
     lineHeight: 18,
-
     color: "#6B7280",
   },
 
@@ -437,74 +401,47 @@ const styles = StyleSheet.create({
 
   summaryGrid: {
     marginTop: 14,
-
     flexDirection: "row",
-
     flexWrap: "wrap",
-
     gap: 12,
   },
 
   summaryCard: {
     width: "48%",
-
     minHeight: 135,
-
     borderWidth: 1,
-
-    borderColor:
-      "#E0E4E8",
-
+    borderColor: "#E0E4E8",
     borderRadius: 16,
-
     padding: 15,
-
-    backgroundColor:
-      "#FFFFFF",
+    backgroundColor: "#FFFFFF",
   },
 
   summaryCardPositive: {
-    borderColor:
-      "#D1FAE5",
-
-    backgroundColor:
-      "#F7FEFA",
+    borderColor: "#D1FAE5",
+    backgroundColor: "#F7FEFA",
   },
 
   summaryCardWarning: {
-    borderColor:
-      "#FDE7B2",
-
-    backgroundColor:
-      "#FFFCF2",
+    borderColor: "#FDE7B2",
+    backgroundColor: "#FFFCF2",
   },
 
   summaryCardDanger: {
-    borderColor:
-      "#FECACA",
-
-    backgroundColor:
-      "#FFF8F7",
+    borderColor: "#FECACA",
+    backgroundColor: "#FFF8F7",
   },
 
   summaryLabel: {
     fontSize: 12,
-
     fontWeight: "700",
-
-    textTransform:
-      "uppercase",
-
+    textTransform: "uppercase",
     color: "#6B7280",
   },
 
   summaryValue: {
     marginTop: 9,
-
     fontSize: 22,
-
     fontWeight: "800",
-
     color: "#111827",
   },
 
@@ -522,11 +459,8 @@ const styles = StyleSheet.create({
 
   summaryDescription: {
     marginTop: 7,
-
     fontSize: 11,
-
     lineHeight: 16,
-
     color: "#6B7280",
   },
 
@@ -536,41 +470,30 @@ const styles = StyleSheet.create({
 
   sectionHeaderRow: {
     flexDirection: "row",
-
     alignItems: "flex-start",
-
-    justifyContent:
-      "space-between",
-
+    justifyContent: "space-between",
     marginBottom: 14,
   },
 
   sectionHeaderText: {
     flex: 1,
-
     marginRight: 12,
   },
 
   viewAllButton: {
     marginTop: 22,
-
     paddingHorizontal: 10,
-
     paddingVertical: 7,
-
     borderRadius: 9,
   },
 
   viewAllButtonPressed: {
-    backgroundColor:
-      "#E5E7EB",
+    backgroundColor: "#E5E7EB",
   },
 
   viewAllButtonText: {
     fontSize: 13,
-
     fontWeight: "800",
-
     color: "#2563EB",
   },
 
@@ -580,39 +503,25 @@ const styles = StyleSheet.create({
 
   emptyActivityCard: {
     borderWidth: 1,
-
-    borderColor:
-      "#E5E7EB",
-
+    borderColor: "#E5E7EB",
     borderRadius: 16,
-
     padding: 24,
-
     alignItems: "center",
-
-    backgroundColor:
-      "#FFFFFF",
+    backgroundColor: "#FFFFFF",
   },
 
   emptyActivityTitle: {
     fontSize: 16,
-
     fontWeight: "800",
-
     color: "#111827",
   },
 
   emptyActivityText: {
     marginTop: 7,
-
     maxWidth: 320,
-
     fontSize: 13,
-
     lineHeight: 19,
-
     textAlign: "center",
-
     color: "#6B7280",
   },
 });
