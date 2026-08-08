@@ -21,6 +21,7 @@ import { ArchivedProducts } from "./src/components/ArchivedProducts";
 import { BarcodeScanner } from "./src/components/BarcodeScanner";
 import { EditProductForm } from "./src/components/EditProductForm";
 import { ExportReports } from "./src/components/ExportReports";
+import { GlobalTransactions } from "./src/components/GlobalTransactions";
 import { InventoryAnalytics } from "./src/components/InventoryAnalytics";
 import { InventoryDashboard } from "./src/components/InventoryDashboard";
 import { InventoryToolbar } from "./src/components/InventoryToolbar";
@@ -36,6 +37,7 @@ import {
 } from "./src/database/inventoryDashboardRepository";
 import {
   createInventoryTransaction,
+  getGlobalTransactions,
   getLatestDeliveriesByProduct,
   getTransactionHistoryForProduct,
 } from "./src/database/inventoryTransactionRepository";
@@ -78,6 +80,7 @@ import type {
   ExportFileFormat,
   ExportReportType,
 } from "./src/types/exportReport";
+import type { GlobalTransaction } from "./src/types/globalTransaction";
 import type { InventoryAnalyticsSummary } from "./src/types/inventoryAnalytics";
 import type { InventoryDashboardSummary } from "./src/types/inventoryDashboard";
 import {
@@ -103,6 +106,7 @@ type AppView =
   | "scanner"
   | "inventory-transaction"
   | "transaction-history"
+  | "global-transactions"
   | "dashboard"
   | "analytics"
   | "export-reports"
@@ -142,6 +146,11 @@ export default function App() {
     archivedProducts,
     setArchivedProducts,
   ] = useState<Product[]>([]);
+
+  const [
+    globalTransactions,
+    setGlobalTransactions,
+  ] = useState<GlobalTransaction[]>([]);
 
   const [filters, setFilters] =
     useState<InventoryFilterState>(
@@ -251,6 +260,11 @@ export default function App() {
   ] = useState(false);
 
   const [
+    isGlobalTransactionsLoading,
+    setIsGlobalTransactionsLoading,
+  ] = useState(false);
+
+  const [
     isExporting,
     setIsExporting,
   ] = useState(false);
@@ -281,8 +295,7 @@ export default function App() {
             .includes(normalizedSearch);
 
         const matchesDepartment =
-          filters.department ===
-            "all" ||
+          filters.department === "all" ||
           product.department ===
             filters.department;
 
@@ -495,13 +508,14 @@ export default function App() {
       const isDuplicateBarcode =
         message
           .toLowerCase()
-          .includes(
-            "unique",
-          ) ||
+          .includes("unique") ||
+        message
+          .toLowerCase()
+          .includes("constraint") ||
         message
           .toLowerCase()
           .includes(
-            "constraint",
+            "already uses this barcode",
           );
 
       Alert.alert(
@@ -510,7 +524,7 @@ export default function App() {
           : "Could not save product",
 
         isDuplicateBarcode
-          ? "Another active product already uses this barcode."
+          ? "Another product already uses this barcode."
           : message,
       );
     } finally {
@@ -535,7 +549,11 @@ export default function App() {
         Alert.alert(
           "Product found",
           `${existingProduct.name}\n\n` +
-            `Brand: ${existingProduct.brand}\n` +
+            `${
+              existingProduct.brand.trim()
+                ? `Brand: ${existingProduct.brand}\n`
+                : ""
+            }` +
             `Stock: ${existingProduct.currentStock} units\n` +
             `Barcode: ${existingProduct.barcode}`,
         );
@@ -579,7 +597,9 @@ export default function App() {
   }
 
   function closeEditProduct(): void {
-    setSelectedProduct(null);
+    setSelectedProduct(
+      null,
+    );
 
     setCurrentView(
       "inventory",
@@ -795,6 +815,48 @@ export default function App() {
         error instanceof Error
           ? error.message
           : "The product could not be restored.",
+      );
+    }
+  }
+
+  async function openGlobalTransactions(): Promise<void> {
+    try {
+      setIsGlobalTransactionsLoading(
+        true,
+      );
+
+      setCurrentView(
+        "global-transactions",
+      );
+
+      const transactions =
+        await getGlobalTransactions(
+          500,
+        );
+
+      setGlobalTransactions(
+        transactions,
+      );
+    } catch (error) {
+      console.error(
+        "Could not load global transactions:",
+        error,
+      );
+
+      setCurrentView(
+        "inventory",
+      );
+
+      Alert.alert(
+        "Could not load transactions",
+
+        error instanceof Error
+          ? error.message
+          : "Global transaction history could not be loaded.",
+      );
+    } finally {
+      setIsGlobalTransactionsLoading(
+        false,
       );
     }
   }
@@ -1242,29 +1304,15 @@ export default function App() {
 
   if (status === "loading") {
     return (
-      <SafeAreaView
-        style={styles.screen}
-      >
-        <View
-          style={
-            styles.centeredContainer
-          }
-        >
-          <ActivityIndicator
-            size="large"
-          />
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.centeredContainer}>
+          <ActivityIndicator size="large" />
 
-          <Text
-            style={
-              styles.statusText
-            }
-          >
+          <Text style={styles.statusText}>
             Loading inventory…
           </Text>
 
-          <StatusBar
-            style="auto"
-          />
+          <StatusBar style="auto" />
         </View>
       </SafeAreaView>
     );
@@ -1272,27 +1320,13 @@ export default function App() {
 
   if (status === "error") {
     return (
-      <SafeAreaView
-        style={styles.screen}
-      >
-        <View
-          style={
-            styles.centeredContainer
-          }
-        >
-          <Text
-            style={
-              styles.errorTitle
-            }
-          >
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.centeredContainer}>
+          <Text style={styles.errorTitle}>
             Could not load inventory
           </Text>
 
-          <Text
-            style={
-              styles.errorMessage
-            }
-          >
+          <Text style={styles.errorMessage}>
             {errorMessage}
           </Text>
 
@@ -1301,22 +1335,14 @@ export default function App() {
             onPress={() =>
               void loadProducts()
             }
-            style={
-              styles.primaryButton
-            }
+            style={styles.primaryButton}
           >
-            <Text
-              style={
-                styles.primaryButtonText
-              }
-            >
+            <Text style={styles.primaryButtonText}>
               Try again
             </Text>
           </Pressable>
 
-          <StatusBar
-            style="auto"
-          />
+          <StatusBar style="auto" />
         </View>
       </SafeAreaView>
     );
@@ -1348,23 +1374,11 @@ export default function App() {
       isDashboardLoading
     ) {
       return (
-        <SafeAreaView
-          style={styles.screen}
-        >
-          <View
-            style={
-              styles.centeredContainer
-            }
-          >
-            <ActivityIndicator
-              size="large"
-            />
+        <SafeAreaView style={styles.screen}>
+          <View style={styles.centeredContainer}>
+            <ActivityIndicator size="large" />
 
-            <Text
-              style={
-                styles.statusText
-              }
-            >
+            <Text style={styles.statusText}>
               Loading dashboard…
             </Text>
           </View>
@@ -1380,6 +1394,43 @@ export default function App() {
         recentDays={30}
         recentActivity={
           dashboardRecentActivity
+        }
+        onViewAllActivity={() =>
+          void openGlobalTransactions()
+        }
+        onClose={() =>
+          setCurrentView(
+            "inventory",
+          )
+        }
+      />
+    );
+  }
+
+  if (
+    currentView ===
+    "global-transactions"
+  ) {
+    if (
+      isGlobalTransactionsLoading
+    ) {
+      return (
+        <SafeAreaView style={styles.screen}>
+          <View style={styles.centeredContainer}>
+            <ActivityIndicator size="large" />
+
+            <Text style={styles.statusText}>
+              Loading transactions…
+            </Text>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    return (
+      <GlobalTransactions
+        transactions={
+          globalTransactions
         }
         onClose={() =>
           setCurrentView(
@@ -1398,23 +1449,11 @@ export default function App() {
       isAnalyticsLoading
     ) {
       return (
-        <SafeAreaView
-          style={styles.screen}
-        >
-          <View
-            style={
-              styles.centeredContainer
-            }
-          >
-            <ActivityIndicator
-              size="large"
-            />
+        <SafeAreaView style={styles.screen}>
+          <View style={styles.centeredContainer}>
+            <ActivityIndicator size="large" />
 
-            <Text
-              style={
-                styles.statusText
-              }
-            >
+            <Text style={styles.statusText}>
               Loading analytics…
             </Text>
           </View>
@@ -1487,23 +1526,11 @@ export default function App() {
       isArchivedProductsLoading
     ) {
       return (
-        <SafeAreaView
-          style={styles.screen}
-        >
-          <View
-            style={
-              styles.centeredContainer
-            }
-          >
-            <ActivityIndicator
-              size="large"
-            />
+        <SafeAreaView style={styles.screen}>
+          <View style={styles.centeredContainer}>
+            <ActivityIndicator size="large" />
 
-            <Text
-              style={
-                styles.statusText
-              }
-            >
+            <Text style={styles.statusText}>
               Loading archived products…
             </Text>
           </View>
@@ -1534,19 +1561,9 @@ export default function App() {
   ) {
     if (!selectedProduct) {
       return (
-        <SafeAreaView
-          style={styles.screen}
-        >
-          <View
-            style={
-              styles.centeredContainer
-            }
-          >
-            <Text
-              style={
-                styles.errorTitle
-              }
-            >
+        <SafeAreaView style={styles.screen}>
+          <View style={styles.centeredContainer}>
+            <Text style={styles.errorTitle}>
               Product not selected
             </Text>
 
@@ -1557,15 +1574,9 @@ export default function App() {
                   "inventory",
                 )
               }
-              style={
-                styles.primaryButton
-              }
+              style={styles.primaryButton}
             >
-              <Text
-                style={
-                  styles.primaryButtonText
-                }
-              >
+              <Text style={styles.primaryButtonText}>
                 Return to inventory
               </Text>
             </Pressable>
@@ -1598,19 +1609,9 @@ export default function App() {
   ) {
     if (!selectedProduct) {
       return (
-        <SafeAreaView
-          style={styles.screen}
-        >
-          <View
-            style={
-              styles.centeredContainer
-            }
-          >
-            <Text
-              style={
-                styles.errorTitle
-              }
-            >
+        <SafeAreaView style={styles.screen}>
+          <View style={styles.centeredContainer}>
+            <Text style={styles.errorTitle}>
               Product not selected
             </Text>
 
@@ -1621,15 +1622,9 @@ export default function App() {
                   "inventory",
                 )
               }
-              style={
-                styles.primaryButton
-              }
+              style={styles.primaryButton}
             >
-              <Text
-                style={
-                  styles.primaryButtonText
-                }
-              >
+              <Text style={styles.primaryButtonText}>
                 Return to inventory
               </Text>
             </Pressable>
@@ -1642,23 +1637,11 @@ export default function App() {
       isHistoryLoading
     ) {
       return (
-        <SafeAreaView
-          style={styles.screen}
-        >
-          <View
-            style={
-              styles.centeredContainer
-            }
-          >
-            <ActivityIndicator
-              size="large"
-            />
+        <SafeAreaView style={styles.screen}>
+          <View style={styles.centeredContainer}>
+            <ActivityIndicator size="large" />
 
-            <Text
-              style={
-                styles.statusText
-              }
-            >
+            <Text style={styles.statusText}>
               Loading transaction history…
             </Text>
           </View>
@@ -1690,19 +1673,9 @@ export default function App() {
   ) {
     if (!selectedProduct) {
       return (
-        <SafeAreaView
-          style={styles.screen}
-        >
-          <View
-            style={
-              styles.centeredContainer
-            }
-          >
-            <Text
-              style={
-                styles.errorTitle
-              }
-            >
+        <SafeAreaView style={styles.screen}>
+          <View style={styles.centeredContainer}>
+            <Text style={styles.errorTitle}>
               Product not selected
             </Text>
 
@@ -1713,15 +1686,9 @@ export default function App() {
                   "inventory",
                 )
               }
-              style={
-                styles.primaryButton
-              }
+              style={styles.primaryButton}
             >
-              <Text
-                style={
-                  styles.primaryButtonText
-                }
-              >
+              <Text style={styles.primaryButtonText}>
                 Return to inventory
               </Text>
             </Pressable>
@@ -1753,12 +1720,8 @@ export default function App() {
     "add-product"
   ) {
     return (
-      <SafeAreaView
-        style={styles.screen}
-      >
-        <View
-          style={styles.topBar}
-        >
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.topBar}>
           <Pressable
             accessibilityRole="button"
             onPress={
@@ -1790,17 +1753,13 @@ export default function App() {
           }
         />
 
-        <StatusBar
-          style="auto"
-        />
+        <StatusBar style="auto" />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView
-      style={styles.screen}
-    >
+    <SafeAreaView style={styles.screen}>
       <FlatList
         data={
           visibleProducts
@@ -1843,24 +1802,12 @@ export default function App() {
         )}
         ListHeaderComponent={
           <View>
-            <View
-              style={
-                styles.header
-              }
-            >
-              <Text
-                style={
-                  styles.title
-                }
-              >
+            <View style={styles.header}>
+              <Text style={styles.title}>
                 SmartStock Inventory
               </Text>
 
-              <Text
-                style={
-                  styles.summary
-                }
-              >
+              <Text style={styles.summary}>
                 {products.length} active products
               </Text>
 
@@ -1882,6 +1829,13 @@ export default function App() {
                     label="Dashboard"
                     onPress={() =>
                       void openDashboard()
+                    }
+                  />
+
+                  <ActionMenuItem
+                    label="Stock History"
+                    onPress={() =>
+                      void openGlobalTransactions()
                     }
                   />
 
@@ -1947,29 +1901,15 @@ export default function App() {
           </View>
         }
         ListEmptyComponent={
-          <View
-            style={
-              styles.emptyContainer
-            }
-          >
-            <Text
-              style={
-                styles.emptyTitle
-              }
-            >
-              {products.length ===
-              0
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyTitle}>
+              {products.length === 0
                 ? "No products found"
                 : "No matching products"}
             </Text>
 
-            <Text
-              style={
-                styles.statusText
-              }
-            >
-              {products.length ===
-              0
+            <Text style={styles.statusText}>
+              {products.length === 0
                 ? "Add a product to begin tracking inventory."
                 : "Try changing or clearing your inventory filters."}
             </Text>
@@ -2024,9 +1964,7 @@ export default function App() {
         }
       />
 
-      <StatusBar
-        style="auto"
-      />
+      <StatusBar style="auto" />
     </SafeAreaView>
   );
 }
@@ -2044,9 +1982,7 @@ function ActionMenuItem({
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({
-        pressed,
-      }) => [
+      style={({ pressed }) => [
         styles.actionMenuItem,
 
         pressed &&

@@ -5,6 +5,7 @@ import type {
 } from "../types/inventoryTransaction";
 import type { TransactionHistoryItem } from "../types/transactionHistory";
 import type { ProductDeliverySummary } from "../types/productDelivery";
+import type { GlobalTransaction } from "../types/globalTransaction";
 import { getDatabase } from "./database";
 
 interface ProductStockRow {
@@ -535,4 +536,80 @@ export async function getLatestDeliveriesByProduct(): Promise<
   });
 
   return deliveryMap;
+}
+
+export async function getGlobalTransactions(
+  limit = 100,
+): Promise<GlobalTransaction[]> {
+  const database = await getDatabase();
+
+  const safeLimit = Math.max(
+    1,
+    Math.min(
+      Math.floor(limit),
+      500,
+    ),
+  );
+
+  const rows =
+    await database.getAllAsync<GlobalTransaction>(
+      `
+        SELECT
+          t.id AS transactionId,
+
+          t.product_id AS productId,
+
+          p.name AS productName,
+
+          p.brand AS productBrand,
+
+          p.department AS department,
+
+          p.category AS category,
+
+          p.barcode AS barcode,
+
+          t.transaction_type AS transactionType,
+
+          t.quantity AS quantity,
+
+          t.stock_before AS stockBefore,
+
+          t.stock_after AS stockAfter,
+
+          t.unit_cost AS unitCost,
+
+          t.unit_price AS unitPrice,
+
+          t.transaction_value AS transactionValue,
+
+          t.notes AS notes,
+
+          t.source AS source,
+
+          t.created_at AS createdAt
+
+        FROM inventory_transactions AS t
+
+        INNER JOIN products AS p
+          ON p.id = t.product_id
+
+        WHERE t.transaction_type IN (
+          'sale',
+          'stock_in',
+          'damage',
+          'return',
+          'physical_count'
+        )
+
+        ORDER BY
+          datetime(t.created_at) DESC,
+          t.id DESC
+
+        LIMIT ?;
+      `,
+      safeLimit,
+    );
+
+  return rows;
 }
