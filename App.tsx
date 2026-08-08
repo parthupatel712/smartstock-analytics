@@ -1,4 +1,3 @@
-import { BlurView } from "expo-blur";
 import { StatusBar } from "expo-status-bar";
 import {
   useCallback,
@@ -10,8 +9,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -159,17 +156,16 @@ export default function App() {
     INITIAL_ANALYTICS_SUMMARY,
   );
 
-  const [
-    analyticsPeriod,
-    setAnalyticsPeriod,
-  ] = useState<AnalyticsPeriodDays>(
-    DEFAULT_ANALYTICS_PERIOD,
-  );
+  const [analyticsPeriod, setAnalyticsPeriod] =
+    useState<AnalyticsPeriodDays>(
+      DEFAULT_ANALYTICS_PERIOD,
+    );
 
   const [
     selectedExportReportType,
     setSelectedExportReportType,
-  ] = useState<ExportReportType>("inventory");
+  ] =
+    useState<ExportReportType>("inventory");
 
   const [
     selectedExportFormat,
@@ -204,31 +200,6 @@ export default function App() {
 
   const [scannedBarcode, setScannedBarcode] =
     useState("");
-
-  /*
-   * Horizontal action-bar measurements.
-   *
-   * These let us determine whether more buttons exist
-   * beyond the right side of the screen.
-   */
-  const [
-    actionViewportWidth,
-    setActionViewportWidth,
-  ] = useState(0);
-
-  const [
-    actionContentWidth,
-    setActionContentWidth,
-  ] = useState(0);
-
-  const [
-    actionScrollX,
-    setActionScrollX,
-  ] = useState(0);
-
-  const showActionBlur =
-    actionContentWidth >
-    actionViewportWidth + actionScrollX + 6;
 
   const visibleProducts = useMemo(() => {
     const normalizedSearch =
@@ -414,9 +385,7 @@ export default function App() {
           : "The product could not be saved.";
 
       const isDuplicateBarcode =
-        message
-          .toLowerCase()
-          .includes("unique") ||
+        message.toLowerCase().includes("unique") ||
         message
           .toLowerCase()
           .includes("constraint");
@@ -491,9 +460,7 @@ export default function App() {
       setIsTransactionSubmitting(true);
 
       const transaction =
-        await createInventoryTransaction(
-          input,
-        );
+        await createInventoryTransaction(input);
 
       await loadInventoryData();
 
@@ -528,9 +495,7 @@ export default function App() {
       setSelectedProduct(product);
       setTransactionHistory([]);
       setIsHistoryLoading(true);
-      setCurrentView(
-        "transaction-history",
-      );
+      setCurrentView("transaction-history");
 
       const history =
         await getTransactionHistoryForProduct(
@@ -609,9 +574,7 @@ export default function App() {
       setIsAnalyticsLoading(true);
       setCurrentView("analytics");
 
-      await loadAnalytics(
-        analyticsPeriod,
-      );
+      await loadAnalytics(analyticsPeriod);
     } catch (error) {
       console.error(
         "Could not load analytics:",
@@ -660,13 +623,6 @@ export default function App() {
     }
   }
 
-  /*
-   * For the transaction export we need transaction
-   * history from every product.
-   *
-   * Later, when the dataset becomes large, we can
-   * replace this with one optimized joined SQL query.
-   */
   async function loadAllTransactionsForExport(): Promise<
     TransactionHistoryItem[]
   > {
@@ -691,18 +647,14 @@ export default function App() {
       );
   }
 
-  async function generateExport(): Promise<
-    ExportedReport
-  > {
+  async function generateExport(): Promise<ExportedReport> {
     if (
       selectedExportReportType ===
       "inventory"
     ) {
       switch (selectedExportFormat) {
         case "csv":
-          return exportInventoryCsv(
-            products,
-          );
+          return exportInventoryCsv(products);
 
         case "xlsx":
           return exportInventoryExcel(
@@ -710,9 +662,7 @@ export default function App() {
           );
 
         case "pdf":
-          return exportInventoryPdf(
-            products,
-          );
+          return exportInventoryPdf(products);
       }
     }
 
@@ -749,9 +699,7 @@ export default function App() {
 
     switch (selectedExportFormat) {
       case "csv":
-        return exportAnalyticsCsv(
-          analytics,
-        );
+        return exportAnalyticsCsv(analytics);
 
       case "xlsx":
         return exportAnalyticsExcel(
@@ -790,14 +738,6 @@ export default function App() {
     }
   }
 
-  function handleActionScroll(
-    event: NativeSyntheticEvent<NativeScrollEvent>,
-  ): void {
-    setActionScrollX(
-      event.nativeEvent.contentOffset.x,
-    );
-  }
-
   function openManualProductForm(): void {
     setScannedBarcode("");
     setCurrentView("add-product");
@@ -817,9 +757,7 @@ export default function App() {
   if (status === "loading") {
     return (
       <SafeAreaView style={styles.screen}>
-        <View
-          style={styles.centeredContainer}
-        >
+        <View style={styles.centeredContainer}>
           <ActivityIndicator size="large" />
 
           <Text style={styles.statusText}>
@@ -835,9 +773,7 @@ export default function App() {
   if (status === "error") {
     return (
       <SafeAreaView style={styles.screen}>
-        <View
-          style={styles.centeredContainer}
-        >
+        <View style={styles.centeredContainer}>
           <Text style={styles.errorTitle}>
             Could not load inventory
           </Text>
@@ -847,22 +783,13 @@ export default function App() {
           </Text>
 
           <Pressable
-            accessibilityRole="button"
-            onPress={() =>
-              void loadProducts()
-            }
+            onPress={() => void loadProducts()}
             style={styles.primaryButton}
           >
-            <Text
-              style={
-                styles.primaryButtonText
-              }
-            >
+            <Text style={styles.primaryButtonText}>
               Try again
             </Text>
           </Pressable>
-
-          <StatusBar style="auto" />
         </View>
       </SafeAreaView>
     );
@@ -885,18 +812,10 @@ export default function App() {
     if (isDashboardLoading) {
       return (
         <SafeAreaView style={styles.screen}>
-          <View
-            style={
-              styles.centeredContainer
-            }
-          >
-            <ActivityIndicator
-              size="large"
-            />
+          <View style={styles.centeredContainer}>
+            <ActivityIndicator size="large" />
 
-            <Text
-              style={styles.statusText}
-            >
+            <Text style={styles.statusText}>
               Loading dashboard…
             </Text>
           </View>
@@ -919,18 +838,10 @@ export default function App() {
     if (isAnalyticsLoading) {
       return (
         <SafeAreaView style={styles.screen}>
-          <View
-            style={
-              styles.centeredContainer
-            }
-          >
-            <ActivityIndicator
-              size="large"
-            />
+          <View style={styles.centeredContainer}>
+            <ActivityIndicator size="large" />
 
-            <Text
-              style={styles.statusText}
-            >
+            <Text style={styles.statusText}>
               Loading analytics…
             </Text>
           </View>
@@ -941,9 +852,7 @@ export default function App() {
     return (
       <InventoryAnalytics
         summary={analyticsSummary}
-        selectedPeriod={
-          analyticsPeriod
-        }
+        selectedPeriod={analyticsPeriod}
         onPeriodChange={(period) =>
           void handleAnalyticsPeriodChange(
             period,
@@ -957,8 +866,7 @@ export default function App() {
   }
 
   if (
-    currentView ===
-    "export-reports"
+    currentView === "export-reports"
   ) {
     return (
       <ExportReports
@@ -992,30 +900,19 @@ export default function App() {
     if (!selectedProduct) {
       return (
         <SafeAreaView style={styles.screen}>
-          <View
-            style={
-              styles.centeredContainer
-            }
-          >
-            <Text
-              style={styles.errorTitle}
-            >
+          <View style={styles.centeredContainer}>
+            <Text style={styles.errorTitle}>
               Product not selected
             </Text>
 
             <Pressable
-              accessibilityRole="button"
               onPress={() =>
-                setCurrentView(
-                  "inventory",
-                )
+                setCurrentView("inventory")
               }
               style={styles.primaryButton}
             >
               <Text
-                style={
-                  styles.primaryButtonText
-                }
+                style={styles.primaryButtonText}
               >
                 Return to inventory
               </Text>
@@ -1031,9 +928,7 @@ export default function App() {
         isSubmitting={
           isTransactionSubmitting
         }
-        onCancel={
-          closeTransactionForm
-        }
+        onCancel={closeTransactionForm}
         onSubmit={
           handleInventoryTransaction
         }
@@ -1048,30 +943,19 @@ export default function App() {
     if (!selectedProduct) {
       return (
         <SafeAreaView style={styles.screen}>
-          <View
-            style={
-              styles.centeredContainer
-            }
-          >
-            <Text
-              style={styles.errorTitle}
-            >
+          <View style={styles.centeredContainer}>
+            <Text style={styles.errorTitle}>
               Product not selected
             </Text>
 
             <Pressable
-              accessibilityRole="button"
               onPress={() =>
-                setCurrentView(
-                  "inventory",
-                )
+                setCurrentView("inventory")
               }
               style={styles.primaryButton}
             >
               <Text
-                style={
-                  styles.primaryButtonText
-                }
+                style={styles.primaryButtonText}
               >
                 Return to inventory
               </Text>
@@ -1084,18 +968,10 @@ export default function App() {
     if (isHistoryLoading) {
       return (
         <SafeAreaView style={styles.screen}>
-          <View
-            style={
-              styles.centeredContainer
-            }
-          >
-            <ActivityIndicator
-              size="large"
-            />
+          <View style={styles.centeredContainer}>
+            <ActivityIndicator size="large" />
 
-            <Text
-              style={styles.statusText}
-            >
+            <Text style={styles.statusText}>
               Loading transaction history…
             </Text>
           </View>
@@ -1105,18 +981,12 @@ export default function App() {
 
     return (
       <ProductTransactionHistory
-        productName={
-          selectedProduct.name
-        }
+        productName={selectedProduct.name}
         currentStock={
           selectedProduct.currentStock
         }
-        transactions={
-          transactionHistory
-        }
-        onClose={
-          closeTransactionHistory
-        }
+        transactions={transactionHistory}
+        onClose={closeTransactionHistory}
       />
     );
   }
@@ -1126,16 +996,11 @@ export default function App() {
       <SafeAreaView style={styles.screen}>
         <View style={styles.topBar}>
           <Pressable
-            accessibilityRole="button"
             onPress={closeProductForm}
-            style={
-              styles.secondaryButton
-            }
+            style={styles.secondaryButton}
           >
             <Text
-              style={
-                styles.secondaryButtonText
-              }
+              style={styles.secondaryButtonText}
             >
               Cancel
             </Text>
@@ -1143,13 +1008,9 @@ export default function App() {
         </View>
 
         <ProductForm
-          initialBarcode={
-            scannedBarcode
-          }
+          initialBarcode={scannedBarcode}
           isSubmitting={isSubmitting}
-          onSubmit={
-            handleCreateProduct
-          }
+          onSubmit={handleCreateProduct}
         />
 
         <StatusBar style="auto" />
@@ -1171,9 +1032,7 @@ export default function App() {
           <ProductCard
             product={item}
             latestDelivery={
-              latestDeliveries.get(
-                item.id,
-              )
+              latestDeliveries.get(item.id)
             }
             onUpdateInventory={
               openTransactionForm
@@ -1192,157 +1051,57 @@ export default function App() {
                 SmartStock Inventory
               </Text>
 
-              <Text
-                style={styles.summary}
-              >
-                {products.length} active
-                products
+              <Text style={styles.summary}>
+                {products.length} active products
               </Text>
 
-              <View
-                style={
-                  styles.actionBarContainer
-                }
-                onLayout={(event) =>
-                  setActionViewportWidth(
-                    event.nativeEvent.layout
-                      .width,
-                  )
-                }
-              >
+              <View style={styles.actionMenuWrapper}>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={
                     false
                   }
-                  onContentSizeChange={(
-                    width,
-                  ) =>
-                    setActionContentWidth(
-                      width,
-                    )
-                  }
-                  onScroll={
-                    handleActionScroll
-                  }
-                  scrollEventThrottle={16}
                   contentContainerStyle={
-                    styles.headerActions
+                    styles.actionMenu
                   }
                 >
-                  <Pressable
-                    accessibilityRole="button"
+                  <ActionMenuItem
+                    label="Dashboard"
                     onPress={() =>
                       void openDashboard()
                     }
-                    style={
-                      styles.dashboardButton
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.dashboardButtonText
-                      }
-                    >
-                      Dashboard
-                    </Text>
-                  </Pressable>
+                  />
 
-                  <Pressable
-                    accessibilityRole="button"
+                  <ActionMenuItem
+                    label="Analytics"
                     onPress={() =>
                       void openAnalytics()
                     }
-                    style={
-                      styles.analyticsButton
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.analyticsButtonText
-                      }
-                    >
-                      Analytics
-                    </Text>
-                  </Pressable>
+                  />
 
-                  <Pressable
-                    accessibilityRole="button"
+                  <ActionMenuItem
+                    label="Scan Barcode"
                     onPress={() =>
-                      setCurrentView(
-                        "scanner",
-                      )
+                      setCurrentView("scanner")
                     }
-                    style={
-                      styles.scanButton
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.scanButtonText
-                      }
-                    >
-                      Scan Barcode
-                    </Text>
-                  </Pressable>
+                  />
 
-                  <Pressable
-                    accessibilityRole="button"
+                  <ActionMenuItem
+                    label="Add Product"
                     onPress={
                       openManualProductForm
                     }
-                    style={
-                      styles.addButton
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.addButtonText
-                      }
-                    >
-                      Add Product
-                    </Text>
-                  </Pressable>
+                  />
 
-                  <Pressable
-                    accessibilityRole="button"
+                  <ActionMenuItem
+                    label="Export Reports"
                     onPress={() =>
                       setCurrentView(
                         "export-reports",
                       )
                     }
-                    style={
-                      styles.exportButton
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.exportButtonText
-                      }
-                    >
-                      Export Reports
-                    </Text>
-                  </Pressable>
+                  />
                 </ScrollView>
-
-                {showActionBlur ? (
-                  <BlurView
-                    pointerEvents="none"
-                    intensity={70}
-                    tint="light"
-                    style={
-                      styles.actionBlur
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.actionBlurArrow
-                      }
-                    >
-                      ›
-                    </Text>
-                  </BlurView>
-                ) : null}
               </View>
             </View>
 
@@ -1351,12 +1110,8 @@ export default function App() {
               resultCount={
                 visibleProducts.length
               }
-              totalCount={
-                products.length
-              }
-              onFiltersChange={
-                setFilters
-              }
+              totalCount={products.length}
+              onFiltersChange={setFilters}
               onClearFilters={
                 clearInventoryFilters
               }
@@ -1364,64 +1119,18 @@ export default function App() {
           </View>
         }
         ListEmptyComponent={
-          <View
-            style={
-              styles.emptyContainer
-            }
-          >
-            <Text
-              style={styles.emptyTitle}
-            >
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyTitle}>
               {products.length === 0
                 ? "No products found"
                 : "No matching products"}
             </Text>
 
-            <Text
-              style={styles.statusText}
-            >
+            <Text style={styles.statusText}>
               {products.length === 0
                 ? "Add a product to begin tracking inventory."
                 : "Try changing or clearing your inventory filters."}
             </Text>
-
-            {products.length === 0 ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={
-                  openManualProductForm
-                }
-                style={
-                  styles.primaryButton
-                }
-              >
-                <Text
-                  style={
-                    styles.primaryButtonText
-                  }
-                >
-                  Add first product
-                </Text>
-              </Pressable>
-            ) : (
-              <Pressable
-                accessibilityRole="button"
-                onPress={
-                  clearInventoryFilters
-                }
-                style={
-                  styles.primaryButton
-                }
-              >
-                <Text
-                  style={
-                    styles.primaryButtonText
-                  }
-                >
-                  Clear filters
-                </Text>
-              </Pressable>
-            )}
           </View>
         }
         refreshing={isRefreshing}
@@ -1432,6 +1141,32 @@ export default function App() {
 
       <StatusBar style="auto" />
     </SafeAreaView>
+  );
+}
+
+interface ActionMenuItemProps {
+  label: string;
+  onPress: () => void;
+}
+
+function ActionMenuItem({
+  label,
+  onPress,
+}: ActionMenuItemProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.actionMenuItem,
+        pressed &&
+          styles.actionMenuItemPressed,
+      ]}
+    >
+      <Text style={styles.actionMenuText}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -1462,114 +1197,52 @@ const styles = StyleSheet.create({
     color: "#5D6673",
   },
 
-  actionBarContainer: {
-    position: "relative",
-    marginTop: 16,
-    overflow: "hidden",
-    borderRadius: 12,
+  /*
+   * Horizontal menu similar to your reference.
+   */
+
+  actionMenuWrapper: {
+    marginTop: 18,
+    marginHorizontal: -16,
+    backgroundColor: "#FFFFFF",
   },
 
-  headerActions: {
+  actionMenu: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingRight: 48,
+
+    /*
+     * Intentionally leaves limited edge padding
+     * so partially-visible items suggest scrolling.
+     */
+    paddingHorizontal: 8,
   },
 
-  actionBlur: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    width: 46,
+  actionMenuItem: {
+    minHeight: 54,
     alignItems: "center",
     justifyContent: "center",
-    overflow: "hidden",
+
+    paddingHorizontal: 20,
+
+    backgroundColor: "#FFFFFF",
   },
 
-  actionBlurArrow: {
-    marginLeft: 12,
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#374151",
+  actionMenuItemPressed: {
+    backgroundColor: "#EEF1F3",
+  },
+
+  actionMenuText: {
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+    color: "#7A858B",
   },
 
   topBar: {
     alignItems: "flex-end",
     paddingHorizontal: 20,
     paddingTop: 8,
-  },
-
-  dashboardButton: {
-    minHeight: 42,
-    justifyContent: "center",
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    backgroundColor: "#1D4ED8",
-  },
-
-  dashboardButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-
-  analyticsButton: {
-    minHeight: 42,
-    justifyContent: "center",
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    backgroundColor: "#0F766E",
-  },
-
-  analyticsButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-
-  scanButton: {
-    minHeight: 42,
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#20252B",
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    backgroundColor: "#FFFFFF",
-  },
-
-  scanButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#20252B",
-  },
-
-  addButton: {
-    minHeight: 42,
-    justifyContent: "center",
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    backgroundColor: "#20252B",
-  },
-
-  addButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-
-  exportButton: {
-    minHeight: 42,
-    justifyContent: "center",
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    backgroundColor: "#7C3AED",
-  },
-
-  exportButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
   },
 
   centeredContainer: {
