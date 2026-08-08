@@ -11,12 +11,14 @@ import {
   FlatList,
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
 import { BarcodeScanner } from "./src/components/BarcodeScanner";
+import { ExportReports } from "./src/components/ExportReports";
 import { InventoryAnalytics } from "./src/components/InventoryAnalytics";
 import { InventoryDashboard } from "./src/components/InventoryDashboard";
 import { InventoryToolbar } from "./src/components/InventoryToolbar";
@@ -41,6 +43,23 @@ import { initializeDatabase } from "./src/database/schema";
 import { seedDatabase } from "./src/database/seed";
 
 import {
+  exportAnalyticsCsv,
+  exportInventoryCsv,
+  exportTransactionsCsv,
+} from "./src/services/csvExportService";
+import {
+  exportAnalyticsExcel,
+  exportInventoryExcel,
+  exportTransactionsExcel,
+} from "./src/services/excelExportService";
+import {
+  exportAnalyticsPdf,
+  exportInventoryPdf,
+  exportTransactionsPdf,
+} from "./src/services/pdfExportService";
+import { shareExportedReport } from "./src/services/reportSharingService";
+
+import {
   DEFAULT_ANALYTICS_PERIOD,
   type AnalyticsPeriodDays,
 } from "./src/types/analyticsPeriod";
@@ -53,6 +72,11 @@ import {
 import type { CreateInventoryTransactionInput } from "./src/types/inventoryTransaction";
 import type { Product } from "./src/types/product";
 import type { ProductDeliverySummary } from "./src/types/productDelivery";
+import type {
+  ExportFileFormat,
+  ExportReportType,
+  ExportedReport,
+} from "./src/types/exportReport";
 import type { ProductFormValues } from "./src/types/productForm";
 import type { TransactionHistoryItem } from "./src/types/transactionHistory";
 
@@ -65,7 +89,8 @@ type AppView =
   | "inventory-transaction"
   | "transaction-history"
   | "dashboard"
-  | "analytics";
+  | "analytics"
+  | "export-reports";
 
 const INITIAL_DASHBOARD_SUMMARY: InventoryDashboardSummary = {
   totalProducts: 0,
@@ -131,12 +156,24 @@ export default function App() {
     INITIAL_ANALYTICS_SUMMARY,
   );
 
+  const [analyticsPeriod, setAnalyticsPeriod] =
+    useState<AnalyticsPeriodDays>(
+      DEFAULT_ANALYTICS_PERIOD,
+    );
+
   const [
-    analyticsPeriod,
-    setAnalyticsPeriod,
-  ] = useState<AnalyticsPeriodDays>(
-    DEFAULT_ANALYTICS_PERIOD,
-  );
+    selectedExportReportType,
+    setSelectedExportReportType,
+  ] =
+    useState<ExportReportType>("inventory");
+
+  const [
+    selectedExportFormat,
+    setSelectedExportFormat,
+  ] = useState<ExportFileFormat>("csv");
+
+  const [isExporting, setIsExporting] =
+    useState(false);
 
   const [errorMessage, setErrorMessage] =
     useState("");
@@ -184,7 +221,8 @@ export default function App() {
 
         const matchesDepartment =
           filters.department === "all" ||
-          product.department === filters.department;
+          product.department ===
+            filters.department;
 
         const matchesLowStock =
           !filters.lowStockOnly ||
@@ -347,9 +385,7 @@ export default function App() {
           : "The product could not be saved.";
 
       const isDuplicateBarcode =
-        message
-          .toLowerCase()
-          .includes("unique") ||
+        message.toLowerCase().includes("unique") ||
         message
           .toLowerCase()
           .includes("constraint");
@@ -587,6 +623,121 @@ export default function App() {
     }
   }
 
+  async function loadAllTransactionsForExport(): Promise<
+    TransactionHistoryItem[]
+  > {
+    const histories = await Promise.all(
+      products.map((product) =>
+        getTransactionHistoryForProduct(
+          product.id,
+        ),
+      ),
+    );
+
+    return histories
+      .flat()
+      .sort(
+        (first, second) =>
+          new Date(
+            second.createdAt,
+          ).getTime() -
+          new Date(
+            first.createdAt,
+          ).getTime(),
+      );
+  }
+
+  async function generateExport(): Promise<ExportedReport> {
+    if (
+      selectedExportReportType ===
+      "inventory"
+    ) {
+      switch (selectedExportFormat) {
+        case "csv":
+          return exportInventoryCsv(products);
+
+        case "xlsx":
+          return exportInventoryExcel(
+            products,
+          );
+
+        case "pdf":
+          return exportInventoryPdf(products);
+      }
+    }
+
+    if (
+      selectedExportReportType ===
+      "transactions"
+    ) {
+      const transactions =
+        await loadAllTransactionsForExport();
+
+      switch (selectedExportFormat) {
+        case "csv":
+          return exportTransactionsCsv(
+            transactions,
+          );
+
+        case "xlsx":
+          return exportTransactionsExcel(
+            transactions,
+          );
+
+        case "pdf":
+          return exportTransactionsPdf(
+            transactions,
+          );
+      }
+    }
+
+    const analytics =
+      await getInventoryAnalyticsSummary(
+        analyticsPeriod,
+        50,
+      );
+
+    switch (selectedExportFormat) {
+      case "csv":
+        return exportAnalyticsCsv(analytics);
+
+      case "xlsx":
+        return exportAnalyticsExcel(
+          analytics,
+        );
+
+      case "pdf":
+        return exportAnalyticsPdf(
+          analytics,
+        );
+    }
+  }
+
+  async function handleExport(): Promise<void> {
+    try {
+      setIsExporting(true);
+
+      const report =
+        await generateExport();
+
+      await shareExportedReport(report);
+    } catch (error) {
+      console.error(
+        "Could not export report:",
+        error,
+      );
+
+      Alert.alert(
+        "Export failed",
+        error instanceof Error
+          ? error.message
+          : "The report could not be generated.",
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
   function openManualProductForm(): void {
     setScannedBarcode("");
     setCurrentView("add-product");
@@ -598,7 +749,9 @@ export default function App() {
   }
 
   function clearInventoryFilters(): void {
-    setFilters(DEFAULT_INVENTORY_FILTERS);
+    setFilters(
+      DEFAULT_INVENTORY_FILTERS,
+    );
   }
 
   if (status === "loading") {
@@ -630,7 +783,6 @@ export default function App() {
           </Text>
 
           <Pressable
-            accessibilityRole="button"
             onPress={() => void loadProducts()}
             style={styles.primaryButton}
           >
@@ -638,8 +790,6 @@ export default function App() {
               Try again
             </Text>
           </Pressable>
-
-          <StatusBar style="auto" />
         </View>
       </SafeAreaView>
     );
@@ -704,7 +854,37 @@ export default function App() {
         summary={analyticsSummary}
         selectedPeriod={analyticsPeriod}
         onPeriodChange={(period) =>
-          void handleAnalyticsPeriodChange(period)
+          void handleAnalyticsPeriodChange(
+            period,
+          )
+        }
+        onClose={() =>
+          setCurrentView("inventory")
+        }
+      />
+    );
+  }
+
+  if (
+    currentView === "export-reports"
+  ) {
+    return (
+      <ExportReports
+        selectedReportType={
+          selectedExportReportType
+        }
+        selectedFormat={
+          selectedExportFormat
+        }
+        isExporting={isExporting}
+        onReportTypeChange={
+          setSelectedExportReportType
+        }
+        onFormatChange={
+          setSelectedExportFormat
+        }
+        onExport={() =>
+          void handleExport()
         }
         onClose={() =>
           setCurrentView("inventory")
@@ -720,15 +900,12 @@ export default function App() {
     if (!selectedProduct) {
       return (
         <SafeAreaView style={styles.screen}>
-          <View
-            style={styles.centeredContainer}
-          >
+          <View style={styles.centeredContainer}>
             <Text style={styles.errorTitle}>
               Product not selected
             </Text>
 
             <Pressable
-              accessibilityRole="button"
               onPress={() =>
                 setCurrentView("inventory")
               }
@@ -759,19 +936,19 @@ export default function App() {
     );
   }
 
-  if (currentView === "transaction-history") {
+  if (
+    currentView ===
+    "transaction-history"
+  ) {
     if (!selectedProduct) {
       return (
         <SafeAreaView style={styles.screen}>
-          <View
-            style={styles.centeredContainer}
-          >
+          <View style={styles.centeredContainer}>
             <Text style={styles.errorTitle}>
               Product not selected
             </Text>
 
             <Pressable
-              accessibilityRole="button"
               onPress={() =>
                 setCurrentView("inventory")
               }
@@ -791,9 +968,7 @@ export default function App() {
     if (isHistoryLoading) {
       return (
         <SafeAreaView style={styles.screen}>
-          <View
-            style={styles.centeredContainer}
-          >
+          <View style={styles.centeredContainer}>
             <ActivityIndicator size="large" />
 
             <Text style={styles.statusText}>
@@ -821,7 +996,6 @@ export default function App() {
       <SafeAreaView style={styles.screen}>
         <View style={styles.topBar}>
           <Pressable
-            accessibilityRole="button"
             onPress={closeProductForm}
             style={styles.secondaryButton}
           >
@@ -864,104 +1038,83 @@ export default function App() {
               openTransactionForm
             }
             onViewHistory={(product) =>
-              void openTransactionHistory(product)
+              void openTransactionHistory(
+                product,
+              )
             }
           />
         )}
         ListHeaderComponent={
           <View>
             <View style={styles.header}>
-              <View style={styles.headerRow}>
-                <View
-                  style={
-                    styles.headerTextContainer
+              <Text style={styles.title}>
+                SmartStock Inventory
+              </Text>
+
+              <Text style={styles.summary}>
+                {products.length} active products
+              </Text>
+
+              <View style={styles.actionMenuWrapper}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={
+                    false
+                  }
+                  contentContainerStyle={
+                    styles.actionMenu
                   }
                 >
-                  <Text style={styles.title}>
-                    SmartStock Inventory
-                  </Text>
-
-                  <Text style={styles.summary}>
-                    {products.length} active products
-                  </Text>
-                </View>
-
-                <View
-                  style={styles.headerActions}
-                >
-                  <Pressable
-                    accessibilityRole="button"
+                  <ActionMenuItem
+                    label="Dashboard"
                     onPress={() =>
                       void openDashboard()
                     }
-                    style={styles.dashboardButton}
-                  >
-                    <Text
-                      style={
-                        styles.dashboardButtonText
-                      }
-                    >
-                      Dashboard
-                    </Text>
-                  </Pressable>
+                  />
 
-                  <Pressable
-                    accessibilityRole="button"
+                  <ActionMenuItem
+                    label="Analytics"
                     onPress={() =>
                       void openAnalytics()
                     }
-                    style={styles.analyticsButton}
-                  >
-                    <Text
-                      style={
-                        styles.analyticsButtonText
-                      }
-                    >
-                      Analytics
-                    </Text>
-                  </Pressable>
+                  />
 
-                  <Pressable
-                    accessibilityRole="button"
+                  <ActionMenuItem
+                    label="Scan Barcode"
                     onPress={() =>
                       setCurrentView("scanner")
                     }
-                    style={styles.scanButton}
-                  >
-                    <Text
-                      style={
-                        styles.scanButtonText
-                      }
-                    >
-                      Scan Barcode
-                    </Text>
-                  </Pressable>
+                  />
 
-                  <Pressable
-                    accessibilityRole="button"
+                  <ActionMenuItem
+                    label="Add Product"
                     onPress={
                       openManualProductForm
                     }
-                    style={styles.addButton}
-                  >
-                    <Text
-                      style={
-                        styles.addButtonText
-                      }
-                    >
-                      Add Product
-                    </Text>
-                  </Pressable>
-                </View>
+                  />
+
+                  <ActionMenuItem
+                    label="Export Reports"
+                    onPress={() =>
+                      setCurrentView(
+                        "export-reports",
+                      )
+                    }
+                  />
+                </ScrollView>
               </View>
             </View>
 
             <InventoryToolbar
               filters={filters}
-              resultCount={visibleProducts.length}
+              resultCount={
+                visibleProducts.length
+              }
               totalCount={products.length}
               onFiltersChange={setFilters}
-              onClearFilters={clearInventoryFilters}
+              onClearFilters={
+                clearInventoryFilters
+              }
             />
           </View>
         }
@@ -978,38 +1131,6 @@ export default function App() {
                 ? "Add a product to begin tracking inventory."
                 : "Try changing or clearing your inventory filters."}
             </Text>
-
-            {products.length === 0 ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={
-                  openManualProductForm
-                }
-                style={styles.primaryButton}
-              >
-                <Text
-                  style={
-                    styles.primaryButtonText
-                  }
-                >
-                  Add first product
-                </Text>
-              </Pressable>
-            ) : (
-              <Pressable
-                accessibilityRole="button"
-                onPress={clearInventoryFilters}
-                style={styles.primaryButton}
-              >
-                <Text
-                  style={
-                    styles.primaryButtonText
-                  }
-                >
-                  Clear filters
-                </Text>
-              </Pressable>
-            )}
           </View>
         }
         refreshing={isRefreshing}
@@ -1023,108 +1144,127 @@ export default function App() {
   );
 }
 
+interface ActionMenuItemProps {
+  label: string;
+  onPress: () => void;
+}
+
+function ActionMenuItem({
+  label,
+  onPress,
+}: ActionMenuItemProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.actionMenuItem,
+        pressed &&
+          styles.actionMenuItemPressed,
+      ]}
+    >
+      <Text style={styles.actionMenuText}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#F4F6F8",
   },
+
   listContent: {
     padding: 16,
     paddingBottom: 40,
   },
+
   header: {
     marginBottom: 18,
   },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-  },
-  headerTextContainer: {
-    flex: 1,
-    marginRight: 14,
-  },
-  headerActions: {
-    alignItems: "flex-end",
-    gap: 8,
-  },
+
   title: {
     fontSize: 30,
     fontWeight: "800",
+    color: "#111827",
   },
+
   summary: {
     marginTop: 4,
     fontSize: 15,
     color: "#5D6673",
   },
+
+  /*
+   * Horizontal menu similar to your reference.
+   */
+
+  actionMenuWrapper: {
+    marginTop: 18,
+    marginHorizontal: -16,
+    backgroundColor: "#FFFFFF",
+  },
+
+  actionMenu: {
+    flexDirection: "row",
+    alignItems: "center",
+
+    /*
+     * Intentionally leaves limited edge padding
+     * so partially-visible items suggest scrolling.
+     */
+    paddingHorizontal: 8,
+  },
+
+  actionMenuItem: {
+    minHeight: 54,
+    alignItems: "center",
+    justifyContent: "center",
+
+    paddingHorizontal: 20,
+
+    backgroundColor: "#FFFFFF",
+  },
+
+  actionMenuItemPressed: {
+    backgroundColor: "#EEF1F3",
+  },
+
+  actionMenuText: {
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+    color: "#7A858B",
+  },
+
   topBar: {
     alignItems: "flex-end",
     paddingHorizontal: 20,
     paddingTop: 8,
   },
-  dashboardButton: {
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: "#1D4ED8",
-  },
-  dashboardButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  analyticsButton: {
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: "#0F766E",
-  },
-  analyticsButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  scanButton: {
-    borderWidth: 1,
-    borderColor: "#20252B",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: "#FFFFFF",
-  },
-  scanButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#20252B",
-  },
-  addButton: {
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: "#20252B",
-  },
-  addButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
+
   centeredContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
   },
+
   statusText: {
     marginTop: 10,
     fontSize: 15,
     textAlign: "center",
     color: "#5D6673",
   },
+
   errorTitle: {
     fontSize: 21,
     fontWeight: "700",
     textAlign: "center",
   },
+
   errorMessage: {
     marginTop: 12,
     fontSize: 15,
@@ -1132,6 +1272,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#5D6673",
   },
+
   primaryButton: {
     marginTop: 18,
     minHeight: 46,
@@ -1141,10 +1282,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     backgroundColor: "#20252B",
   },
+
   primaryButtonText: {
     fontWeight: "700",
     color: "#FFFFFF",
   },
+
   secondaryButton: {
     borderWidth: 1,
     borderColor: "#C8CED6",
@@ -1153,14 +1296,17 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     backgroundColor: "#FFFFFF",
   },
+
   secondaryButtonText: {
     fontWeight: "700",
     color: "#20252B",
   },
+
   emptyContainer: {
     paddingVertical: 60,
     alignItems: "center",
   },
+
   emptyTitle: {
     fontSize: 20,
     fontWeight: "700",
