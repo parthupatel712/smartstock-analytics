@@ -161,6 +161,46 @@ export function GlobalTransactions({
       selectedDateFilter,
     ]);
 
+  const transactionSummary =
+    useMemo(() => {
+      let unitsAdded = 0;
+      let unitsRemoved = 0;
+      let totalMovementValue = 0;
+
+      filteredTransactions.forEach(
+        (transaction) => {
+          const stockChange =
+            transaction.stockAfter -
+            transaction.stockBefore;
+
+          if (stockChange > 0) {
+            unitsAdded += stockChange;
+          }
+
+          if (stockChange < 0) {
+            unitsRemoved +=
+              Math.abs(stockChange);
+          }
+
+          totalMovementValue +=
+            Math.abs(
+              transaction.transactionValue,
+            );
+        },
+      );
+
+      return {
+        transactionCount:
+          filteredTransactions.length,
+
+        unitsAdded,
+
+        unitsRemoved,
+
+        totalMovementValue,
+      };
+    }, [filteredTransactions]);
+
   function clearAllFilters(): void {
     setSearchQuery("");
     setSelectedFilter("all");
@@ -464,10 +504,72 @@ export function GlobalTransactions({
 
         <View
           style={
+            styles.summarySection
+          }
+        >
+          <Text
+            style={
+              styles.summarySectionTitle
+            }
+          >
+            Summary
+          </Text>
+
+          <Text
+            style={
+              styles.summarySectionSubtitle
+            }
+          >
+            Based on the currently selected filters
+          </Text>
+
+          <View
+            style={
+              styles.summaryGrid
+            }
+          >
+            <SummaryCard
+              label="Transactions"
+              value={
+                transactionSummary.transactionCount.toString()
+              }
+              icon="receipt-outline"
+            />
+
+            <SummaryCard
+              label="Units Added"
+              value={`+${transactionSummary.unitsAdded}`}
+              icon="arrow-up-circle-outline"
+              tone="positive"
+            />
+
+            <SummaryCard
+              label="Units Removed"
+              value={`-${transactionSummary.unitsRemoved}`}
+              icon="arrow-down-circle-outline"
+              tone="negative"
+            />
+
+            <SummaryCard
+              label="Movement Value"
+              value={formatCurrency(
+                transactionSummary.totalMovementValue,
+              )}
+              icon="cash-outline"
+            />
+          </View>
+        </View>
+
+        <View
+          style={
             styles.resultsHeader
           }
         >
-          <View>
+          <View
+            style={
+              styles.resultsHeaderText
+            }
+          >
             <Text
               style={
                 styles.resultsTitle
@@ -577,6 +679,79 @@ export function GlobalTransactions({
         )}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  icon,
+  tone = "normal",
+}: {
+  label: string;
+
+  value: string;
+
+  icon:
+    | "receipt-outline"
+    | "arrow-up-circle-outline"
+    | "arrow-down-circle-outline"
+    | "cash-outline";
+
+  tone?:
+    | "normal"
+    | "positive"
+    | "negative";
+}) {
+  const iconColor =
+    tone === "positive"
+      ? "#15803D"
+      : tone === "negative"
+        ? "#B42318"
+        : "#52606D";
+
+  return (
+    <View
+      style={
+        styles.summaryCard
+      }
+    >
+      <View
+        style={
+          styles.summaryCardHeader
+        }
+      >
+        <Ionicons
+          name={icon}
+          size={18}
+          color={iconColor}
+        />
+
+        <Text
+          style={
+            styles.summaryCardLabel
+          }
+        >
+          {label}
+        </Text>
+      </View>
+
+      <Text
+        style={[
+          styles.summaryCardValue,
+
+          tone ===
+            "positive" &&
+            styles.summaryCardValuePositive,
+
+          tone ===
+            "negative" &&
+            styles.summaryCardValueNegative,
+        ]}
+      >
+        {value}
+      </Text>
+    </View>
   );
 }
 
@@ -1329,6 +1504,71 @@ const styles =
       color: "#FFFFFF",
     },
 
+    summarySection: {
+      marginTop: 24,
+    },
+
+    summarySectionTitle: {
+      fontSize: 20,
+      fontWeight: "800",
+      color: "#111827",
+    },
+
+    summarySectionSubtitle: {
+      marginTop: 3,
+      fontSize: 12,
+      color: "#8B949E",
+    },
+
+    summaryGrid: {
+      marginTop: 12,
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 10,
+    },
+
+    summaryCard: {
+      width: "48%",
+      minHeight: 105,
+      borderWidth: 1,
+      borderColor:
+        "#E0E4E8",
+      borderRadius: 15,
+      padding: 13,
+      backgroundColor:
+        "#FFFFFF",
+    },
+
+    summaryCardHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+
+    summaryCardLabel: {
+      flex: 1,
+      fontSize: 11,
+      fontWeight: "700",
+      textTransform:
+        "uppercase",
+      color: "#6B7280",
+    },
+
+    summaryCardValue: {
+      marginTop: 11,
+      fontSize: 21,
+      fontWeight: "800",
+      color: "#111827",
+    },
+
+    summaryCardValuePositive: {
+      color: "#15803D",
+    },
+
+    summaryCardValueNegative: {
+      color: "#B42318",
+    },
+
     resultsHeader: {
       marginTop: 26,
       marginBottom: 12,
@@ -1337,6 +1577,11 @@ const styles =
         "flex-end",
       justifyContent:
         "space-between",
+    },
+
+    resultsHeaderText: {
+      flex: 1,
+      marginRight: 12,
     },
 
     resultsTitle: {
@@ -1352,9 +1597,9 @@ const styles =
     },
 
     resultsCount: {
-      marginLeft: 12,
       fontSize: 12,
       fontWeight: "600",
+      textAlign: "right",
       color: "#7A838E",
     },
 
