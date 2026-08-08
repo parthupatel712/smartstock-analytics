@@ -4,7 +4,9 @@ export type ExportReportType =
   | "analytics";
 
 export type ExportFileFormat =
-  | "csv";
+  | "csv"
+  | "xlsx"
+  | "pdf";
 
 export interface ExportReportRequest {
   reportType: ExportReportType;
