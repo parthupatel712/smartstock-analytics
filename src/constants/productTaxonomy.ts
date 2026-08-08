@@ -71,6 +71,56 @@ export const PRODUCT_TAXONOMY = {
     "Microwave Meals",
   ],
 
+  Alcohol: [
+    "Beer - Single",
+    "Beer - 4 Pack",
+    "Beer - 6 Pack",
+    "Beer - 8 Pack",
+    "Beer - 12 Pack",
+    "Beer - 15 Pack",
+    "Beer - 24 Pack",
+
+    "RTD - Single",
+    "RTD - 4 Pack",
+    "RTD - 6 Pack",
+    "RTD - 8 Pack",
+    "RTD - 12 Pack",
+
+    "Wine - Bottle",
+    "Wine - Multi Pack",
+
+    "Other Alcohol",
+  ],
+
+  "Smoke & Vape": [
+    "Cigarettes",
+    "Cigars",
+    "Vape",
+    "Other Tobacco",
+  ],
+
+  "Smoke Accessories": [
+    "Lighters",
+    "Rolling Papers",
+    "Filters",
+    "Rolling Machines",
+    "Ashtrays",
+    "Other Smoke Accessories",
+  ],
+
+  Stationery: [
+    "Pens",
+    "Pencils",
+    "Markers",
+    "Notebooks",
+    "Paper",
+    "Envelopes",
+    "Tape",
+    "Glue",
+    "Scissors",
+    "Other Stationery",
+  ],
+
   "Health & Beauty": [
     "Soap",
     "Shampoo",
@@ -126,7 +176,9 @@ export type ProductCategory =
   (typeof PRODUCT_TAXONOMY)[ProductDepartment][number];
 
 export const PRODUCT_DEPARTMENTS =
-  Object.keys(PRODUCT_TAXONOMY) as ProductDepartment[];
+  Object.keys(
+    PRODUCT_TAXONOMY,
+  ) as ProductDepartment[];
 
 export function getCategoriesForDepartment(
   department: ProductDepartment,

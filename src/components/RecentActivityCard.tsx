@@ -88,9 +88,11 @@ export function RecentActivityCard({
           </View>
         </View>
 
-        <Text style={styles.brand}>
-          {activity.productBrand}
-        </Text>
+        {activity.productBrand.trim() ? (
+    <Text style={styles.brand}>
+        {activity.productBrand}
+    </Text>
+    ) : null}
 
         <View style={styles.metrics}>
           <Metric

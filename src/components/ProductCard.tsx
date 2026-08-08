@@ -62,9 +62,11 @@ export function ProductCard({
             {product.name}
           </Text>
 
-          <Text style={styles.brand}>
-            {product.brand}
-          </Text>
+         {product.brand.trim() ? (
+  <Text style={styles.brand}>
+    {product.brand}
+  </Text>
+) : null}
         </View>
 
         <View
