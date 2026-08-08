@@ -17,6 +17,7 @@ import {
 } from "react-native";
 
 import { BarcodeScanner } from "./src/components/BarcodeScanner";
+import { InventoryAnalytics } from "./src/components/InventoryAnalytics";
 import { InventoryDashboard } from "./src/components/InventoryDashboard";
 import { InventoryToolbar } from "./src/components/InventoryToolbar";
 import { InventoryTransactionForm } from "./src/components/InventoryTransactionForm";
@@ -24,6 +25,7 @@ import { ProductCard } from "./src/components/ProductCard";
 import { ProductForm } from "./src/components/ProductForm";
 import { ProductTransactionHistory } from "./src/components/ProductTransactionHistory";
 
+import { getInventoryAnalyticsSummary } from "./src/database/inventoryAnalyticsRepository";
 import { getInventoryDashboardSummary } from "./src/database/inventoryDashboardRepository";
 import {
   createInventoryTransaction,
@@ -38,6 +40,7 @@ import {
 import { initializeDatabase } from "./src/database/schema";
 import { seedDatabase } from "./src/database/seed";
 
+import type { InventoryAnalyticsSummary } from "./src/types/inventoryAnalytics";
 import type { InventoryDashboardSummary } from "./src/types/inventoryDashboard";
 import {
   DEFAULT_INVENTORY_FILTERS,
@@ -57,7 +60,8 @@ type AppView =
   | "scanner"
   | "inventory-transaction"
   | "transaction-history"
-  | "dashboard";
+  | "dashboard"
+  | "analytics";
 
 const INITIAL_DASHBOARD_SUMMARY: InventoryDashboardSummary = {
   totalProducts: 0,
@@ -71,6 +75,12 @@ const INITIAL_DASHBOARD_SUMMARY: InventoryDashboardSummary = {
   recentStockInValue: 0,
   recentDamageValue: 0,
   recentTransactionCount: 0,
+};
+
+const INITIAL_ANALYTICS_SUMMARY: InventoryAnalyticsSummary = {
+  dailyMetrics: [],
+  topProducts: [],
+  topCategories: [],
 };
 
 export default function App() {
@@ -110,6 +120,13 @@ export default function App() {
     INITIAL_DASHBOARD_SUMMARY,
   );
 
+  const [
+    analyticsSummary,
+    setAnalyticsSummary,
+  ] = useState<InventoryAnalyticsSummary>(
+    INITIAL_ANALYTICS_SUMMARY,
+  );
+
   const [errorMessage, setErrorMessage] =
     useState("");
 
@@ -128,6 +145,9 @@ export default function App() {
     useState(false);
 
   const [isDashboardLoading, setIsDashboardLoading] =
+    useState(false);
+
+  const [isAnalyticsLoading, setIsAnalyticsLoading] =
     useState(false);
 
   const [scannedBarcode, setScannedBarcode] =
@@ -215,16 +235,19 @@ export default function App() {
       const [
         storedProducts,
         deliveryMap,
-        summary,
+        dashboard,
+        analytics,
       ] = await Promise.all([
         getAllProducts(),
         getLatestDeliveriesByProduct(),
         getInventoryDashboardSummary(),
+        getInventoryAnalyticsSummary(),
       ]);
 
       setProducts(storedProducts);
       setLatestDeliveries(deliveryMap);
-      setDashboardSummary(summary);
+      setDashboardSummary(dashboard);
+      setAnalyticsSummary(analytics);
     },
     [],
   );
@@ -490,6 +513,37 @@ export default function App() {
     }
   }
 
+  async function openAnalytics(): Promise<void> {
+    try {
+      setIsAnalyticsLoading(true);
+      setCurrentView("analytics");
+
+      const summary =
+        await getInventoryAnalyticsSummary(
+          30,
+          5,
+        );
+
+      setAnalyticsSummary(summary);
+    } catch (error) {
+      console.error(
+        "Could not load analytics:",
+        error,
+      );
+
+      setCurrentView("inventory");
+
+      Alert.alert(
+        "Could not load analytics",
+        error instanceof Error
+          ? error.message
+          : "Inventory analytics could not be loaded.",
+      );
+    } finally {
+      setIsAnalyticsLoading(false);
+    }
+  }
+
   function openManualProductForm(): void {
     setScannedBarcode("");
     setCurrentView("add-product");
@@ -580,6 +634,32 @@ export default function App() {
       <InventoryDashboard
         summary={dashboardSummary}
         recentDays={30}
+        onClose={() =>
+          setCurrentView("inventory")
+        }
+      />
+    );
+  }
+
+  if (currentView === "analytics") {
+    if (isAnalyticsLoading) {
+      return (
+        <SafeAreaView style={styles.screen}>
+          <View style={styles.centeredContainer}>
+            <ActivityIndicator size="large" />
+
+            <Text style={styles.statusText}>
+              Loading analytics…
+            </Text>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    return (
+      <InventoryAnalytics
+        summary={analyticsSummary}
+        days={30}
         onClose={() =>
           setCurrentView("inventory")
         }
@@ -782,6 +862,22 @@ export default function App() {
                   <Pressable
                     accessibilityRole="button"
                     onPress={() =>
+                      void openAnalytics()
+                    }
+                    style={styles.analyticsButton}
+                  >
+                    <Text
+                      style={
+                        styles.analyticsButtonText
+                      }
+                    >
+                      Analytics
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() =>
                       setCurrentView("scanner")
                     }
                     style={styles.scanButton}
@@ -927,6 +1023,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#1D4ED8",
   },
   dashboardButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  analyticsButton: {
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "#0F766E",
+  },
+  analyticsButtonText: {
     fontSize: 14,
     fontWeight: "700",
     color: "#FFFFFF",
