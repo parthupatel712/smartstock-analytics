@@ -7,24 +7,28 @@ import {
   View,
 } from "react-native";
 
+import { RecentActivityCard } from "./RecentActivityCard";
+
+import type { DashboardRecentActivity } from "../types/dashboardRecentActivity";
 import type { InventoryDashboardSummary } from "../types/inventoryDashboard";
 
 interface InventoryDashboardProps {
   summary: InventoryDashboardSummary;
-  recentDays?: number;
-  onClose: () => void;
-}
 
-interface MetricCardProps {
-  label: string;
-  value: string;
-  description?: string;
-  emphasis?: "default" | "positive" | "warning" | "danger";
+  recentDays: number;
+
+  recentActivity?: DashboardRecentActivity[];
+
+  onViewAllActivity?: () => void;
+
+  onClose: () => void;
 }
 
 export function InventoryDashboard({
   summary,
-  recentDays = 30,
+  recentDays,
+  recentActivity = [],
+  onViewAllActivity,
   onClose,
 }: InventoryDashboardProps) {
   return (
@@ -40,7 +44,8 @@ export function InventoryDashboard({
             </Text>
 
             <Text style={styles.subtitle}>
-              Business performance and stock overview
+              Overview of stock, inventory value, and
+              recent activity.
             </Text>
           </View>
 
@@ -58,596 +63,556 @@ export function InventoryDashboard({
           </Pressable>
         </View>
 
-        <View style={styles.heroCard}>
-          <Text style={styles.heroLabel}>
-            Potential inventory profit
-          </Text>
-
-          <Text style={styles.heroValue}>
-            {formatCurrency(summary.potentialGrossProfit)}
-          </Text>
-
-          <Text style={styles.heroDescription}>
-            Retail value minus current inventory cost
-          </Text>
-        </View>
-
         <Text style={styles.sectionTitle}>
-          Inventory overview
+          Inventory Overview
         </Text>
 
-        <View style={styles.metricGrid}>
-          <MetricCard
-            label="Active products"
-            value={formatNumber(summary.totalProducts)}
-            description="Products currently tracked"
-          />
-
-          <MetricCard
-            label="Stock units"
-            value={formatNumber(summary.totalStockUnits)}
-            description="Units available across inventory"
-          />
-
-          <MetricCard
-            label="Low stock"
+        <View style={styles.summaryGrid}>
+          <SummaryCard
+            label="Active Products"
             value={formatNumber(
-              summary.lowStockProductCount,
+              summary.totalProducts,
             )}
-            description="At or below reorder level"
-            emphasis={
-              summary.lowStockProductCount > 0
-                ? "warning"
-                : "positive"
-            }
+            description="Products currently available"
           />
 
-          <MetricCard
-            label="Out of stock"
+          <SummaryCard
+            label="Stock Units"
             value={formatNumber(
-              summary.outOfStockProductCount,
+              summary.totalStockUnits,
             )}
-            description="Products with zero inventory"
-            emphasis={
-              summary.outOfStockProductCount > 0
-                ? "danger"
-                : "positive"
-            }
+            description="Total units in inventory"
           />
-        </View>
 
-        <Text style={styles.sectionTitle}>
-          Inventory valuation
-        </Text>
-
-        <View style={styles.metricGrid}>
-          <MetricCard
-            label="Cost value"
+          <SummaryCard
+            label="Inventory Cost"
             value={formatCurrency(
               summary.totalInventoryCostValue,
             )}
-            description="Current stock valued at unit cost"
+            description="Current stock at cost"
           />
 
-          <MetricCard
-            label="Retail value"
+          <SummaryCard
+            label="Retail Value"
             value={formatCurrency(
               summary.totalInventoryRetailValue,
             )}
-            description="Potential revenue at selling price"
-            emphasis="positive"
-          />
-        </View>
-
-        <View style={styles.marginCard}>
-          <View style={styles.marginHeader}>
-            <Text style={styles.marginTitle}>
-              Potential gross margin
-            </Text>
-
-            <Text style={styles.marginPercent}>
-              {formatPercentage(
-                calculateMarginPercentage(
-                  summary.totalInventoryRetailValue,
-                  summary.potentialGrossProfit,
-                ),
-              )}
-            </Text>
-          </View>
-
-          <Text style={styles.marginValue}>
-            {formatCurrency(summary.potentialGrossProfit)}
-          </Text>
-
-          <View style={styles.marginTrack}>
-            <View
-              style={[
-                styles.marginFill,
-                {
-                  width: `${calculateProgressPercentage(
-                    summary.totalInventoryRetailValue,
-                    summary.potentialGrossProfit,
-                  )}%`,
-                },
-              ]}
-            />
-          </View>
-        </View>
-
-        <View style={styles.recentHeader}>
-          <View>
-            <Text style={styles.sectionTitle}>
-              Recent activity
-            </Text>
-
-            <Text style={styles.sectionDescription}>
-              Last {recentDays} days
-            </Text>
-          </View>
-
-          <View style={styles.transactionBadge}>
-            <Text style={styles.transactionBadgeValue}>
-              {formatNumber(
-                summary.recentTransactionCount,
-              )}
-            </Text>
-
-            <Text style={styles.transactionBadgeLabel}>
-              transactions
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.activityCard}>
-          <ActivityRow
-            label="Sales value"
-            value={formatCurrency(
-              summary.recentSalesValue,
-            )}
-            description="Revenue recorded from sales"
-            emphasis="positive"
+            description="Current stock at selling price"
           />
 
-          <View style={styles.divider} />
-
-          <ActivityRow
-            label="Stock received"
+          <SummaryCard
+            label="Potential Profit"
             value={formatCurrency(
-              summary.recentStockInValue,
+              summary.potentialGrossProfit,
             )}
-            description="Inventory purchased or delivered"
+            description="Retail value minus inventory cost"
           />
 
-          <View style={styles.divider} />
-
-          <ActivityRow
-            label="Damaged inventory"
-            value={formatCurrency(
-              summary.recentDamageValue,
+          <SummaryCard
+            label="Low Stock"
+            value={formatNumber(
+              summary.lowStockProductCount,
             )}
-            description="Cost value removed as damage"
-            emphasis={
-              summary.recentDamageValue > 0
+            description="Products at or below reorder level"
+            tone={
+              summary.lowStockProductCount > 0
+                ? "warning"
+                : "normal"
+            }
+          />
+
+          <SummaryCard
+            label="Out of Stock"
+            value={formatNumber(
+              summary.outOfStockProductCount,
+            )}
+            description="Products with zero stock"
+            tone={
+              summary.outOfStockProductCount > 0
                 ? "danger"
-                : "default"
+                : "normal"
             }
           />
         </View>
 
-        <View style={styles.insightCard}>
-          <Text style={styles.insightTitle}>
-            Dashboard insight
-          </Text>
+        <View style={styles.periodHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>
+              Recent Performance
+            </Text>
 
-          <Text style={styles.insightText}>
-            {buildDashboardInsight(summary)}
-          </Text>
+            <Text style={styles.sectionSubtitle}>
+              Last {recentDays} days
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.summaryGrid}>
+          <SummaryCard
+            label="Sales"
+            value={formatCurrency(
+              summary.recentSalesValue,
+            )}
+            description={`Sales recorded in the last ${recentDays} days`}
+            tone="positive"
+          />
+
+          <SummaryCard
+            label="Stock Received"
+            value={formatCurrency(
+              summary.recentStockInValue,
+            )}
+            description={`Inventory received in the last ${recentDays} days`}
+          />
+
+          <SummaryCard
+            label="Damage"
+            value={formatCurrency(
+              summary.recentDamageValue,
+            )}
+            description={`Damaged inventory in the last ${recentDays} days`}
+            tone={
+              summary.recentDamageValue > 0
+                ? "danger"
+                : "normal"
+            }
+          />
+
+          <SummaryCard
+            label="Transactions"
+            value={formatNumber(
+              summary.recentTransactionCount,
+            )}
+            description={`Inventory movements in the last ${recentDays} days`}
+          />
+        </View>
+
+        <View style={styles.recentActivitySection}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionHeaderText}>
+              <Text style={styles.sectionTitle}>
+                Recent Activity
+              </Text>
+
+              <Text style={styles.sectionSubtitle}>
+                Latest sales, deliveries, damage,
+                returns, and stock adjustments
+              </Text>
+            </View>
+
+            {onViewAllActivity ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={onViewAllActivity}
+                style={({ pressed }) => [
+                  styles.viewAllButton,
+                  pressed &&
+                    styles.viewAllButtonPressed,
+                ]}
+              >
+                <Text
+                  style={styles.viewAllButtonText}
+                >
+                  View All →
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          {recentActivity.length > 0 ? (
+            <View style={styles.activityList}>
+              {recentActivity.map(
+                (activity) => (
+                  <RecentActivityCard
+                    key={activity.transactionId}
+                    activity={activity}
+                  />
+                ),
+              )}
+            </View>
+          ) : (
+            <View style={styles.emptyActivityCard}>
+              <Text
+                style={styles.emptyActivityTitle}
+              >
+                No recent activity
+              </Text>
+
+              <Text
+                style={styles.emptyActivityText}
+              >
+                Sales, deliveries, damage, returns,
+                and physical counts will appear here
+                after inventory transactions are
+                recorded.
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function MetricCard({
+interface SummaryCardProps {
+  label: string;
+  value: string;
+  description: string;
+
+  tone?:
+    | "normal"
+    | "positive"
+    | "warning"
+    | "danger";
+}
+
+function SummaryCard({
   label,
   value,
   description,
-  emphasis = "default",
-}: MetricCardProps) {
+  tone = "normal",
+}: SummaryCardProps) {
   return (
     <View
       style={[
-        styles.metricCard,
-        emphasis === "positive" &&
-          styles.positiveMetricCard,
-        emphasis === "warning" &&
-          styles.warningMetricCard,
-        emphasis === "danger" &&
-          styles.dangerMetricCard,
+        styles.summaryCard,
+
+        tone === "positive" &&
+          styles.summaryCardPositive,
+
+        tone === "warning" &&
+          styles.summaryCardWarning,
+
+        tone === "danger" &&
+          styles.summaryCardDanger,
       ]}
     >
-      <Text style={styles.metricLabel}>
+      <Text style={styles.summaryLabel}>
         {label}
       </Text>
 
       <Text
         style={[
-          styles.metricValue,
-          emphasis === "positive" &&
-            styles.positiveText,
-          emphasis === "warning" &&
-            styles.warningText,
-          emphasis === "danger" &&
-            styles.dangerText,
+          styles.summaryValue,
+
+          tone === "positive" &&
+            styles.summaryValuePositive,
+
+          tone === "warning" &&
+            styles.summaryValueWarning,
+
+          tone === "danger" &&
+            styles.summaryValueDanger,
         ]}
       >
         {value}
       </Text>
 
-      {description ? (
-        <Text style={styles.metricDescription}>
-          {description}
-        </Text>
-      ) : null}
-    </View>
-  );
-}
-
-interface ActivityRowProps {
-  label: string;
-  value: string;
-  description: string;
-  emphasis?: "default" | "positive" | "danger";
-}
-
-function ActivityRow({
-  label,
-  value,
-  description,
-  emphasis = "default",
-}: ActivityRowProps) {
-  return (
-    <View style={styles.activityRow}>
-      <View style={styles.activityTextContainer}>
-        <Text style={styles.activityLabel}>
-          {label}
-        </Text>
-
-        <Text style={styles.activityDescription}>
-          {description}
-        </Text>
-      </View>
-
-      <Text
-        style={[
-          styles.activityValue,
-          emphasis === "positive" &&
-            styles.positiveText,
-          emphasis === "danger" &&
-            styles.dangerText,
-        ]}
-      >
-        {value}
+      <Text style={styles.summaryDescription}>
+        {description}
       </Text>
     </View>
   );
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-CA", {
-    style: "currency",
-    currency: "CAD",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat("en-CA").format(value);
-}
-
-function formatPercentage(value: number): string {
-  return new Intl.NumberFormat("en-CA", {
-    style: "percent",
-    maximumFractionDigits: 1,
-  }).format(value);
-}
-
-function calculateMarginPercentage(
-  retailValue: number,
-  grossProfit: number,
-): number {
-  if (retailValue <= 0) {
-    return 0;
-  }
-
-  return grossProfit / retailValue;
-}
-
-function calculateProgressPercentage(
-  retailValue: number,
-  grossProfit: number,
-): number {
-  const percentage =
-    calculateMarginPercentage(
-      retailValue,
-      grossProfit,
-    ) * 100;
-
-  return Math.max(0, Math.min(percentage, 100));
-}
-
-function buildDashboardInsight(
-  summary: InventoryDashboardSummary,
+function formatCurrency(
+  value: number,
 ): string {
-  if (summary.outOfStockProductCount > 0) {
-    return `${summary.outOfStockProductCount} product${
-      summary.outOfStockProductCount === 1 ? "" : "s"
-    } are out of stock. Review them before the next sales cycle.`;
-  }
+  return new Intl.NumberFormat(
+    "en-CA",
+    {
+      style: "currency",
+      currency: "CAD",
+      maximumFractionDigits: 2,
+    },
+  ).format(value);
+}
 
-  if (summary.lowStockProductCount > 0) {
-    return `${summary.lowStockProductCount} product${
-      summary.lowStockProductCount === 1 ? "" : "s"
-    } are at or below their reorder level. Consider scheduling replenishment.`;
-  }
-
-  if (summary.totalProducts === 0) {
-    return "Add products and inventory transactions to begin generating business insights.";
-  }
-
-  return "Inventory levels are currently above their configured reorder thresholds.";
+function formatNumber(
+  value: number,
+): string {
+  return new Intl.NumberFormat(
+    "en-CA",
+  ).format(value);
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#F4F6F8",
+
+    backgroundColor:
+      "#F4F6F8",
   },
+
   content: {
     padding: 18,
-    paddingBottom: 48,
+
+    paddingBottom: 50,
   },
+
   headerRow: {
     flexDirection: "row",
+
     alignItems: "flex-start",
-    justifyContent: "space-between",
+
+    justifyContent:
+      "space-between",
   },
+
   headerTextContainer: {
     flex: 1,
+
     marginRight: 16,
   },
+
   title: {
     fontSize: 30,
+
     fontWeight: "800",
+
     color: "#111827",
   },
+
   subtitle: {
     marginTop: 6,
-    fontSize: 15,
-    lineHeight: 21,
+
+    fontSize: 14,
+
+    lineHeight: 20,
+
     color: "#6B7280",
   },
+
   closeButton: {
     borderWidth: 1,
-    borderColor: "#CBD2DA",
+
+    borderColor:
+      "#CBD2DA",
+
     borderRadius: 10,
+
     paddingHorizontal: 14,
+
     paddingVertical: 9,
-    backgroundColor: "#FFFFFF",
+
+    backgroundColor:
+      "#FFFFFF",
   },
+
   closeButtonText: {
     fontSize: 14,
+
     fontWeight: "700",
+
     color: "#20252B",
   },
+
   buttonPressed: {
-    opacity: 0.72,
+    opacity: 0.7,
   },
-  heroCard: {
-    marginTop: 22,
-    borderRadius: 20,
-    padding: 22,
-    backgroundColor: "#20252B",
-  },
-  heroLabel: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#CBD5E1",
-  },
-  heroValue: {
-    marginTop: 8,
-    fontSize: 36,
-    fontWeight: "800",
-    color: "#FFFFFF",
-  },
-  heroDescription: {
-    marginTop: 7,
-    fontSize: 13,
-    lineHeight: 19,
-    color: "#AEB6C0",
-  },
+
   sectionTitle: {
-    marginTop: 24,
-    fontSize: 19,
+    marginTop: 26,
+
+    fontSize: 20,
+
     fontWeight: "800",
+
     color: "#111827",
   },
-  sectionDescription: {
+
+  sectionSubtitle: {
     marginTop: 4,
+
     fontSize: 13,
+
+    lineHeight: 18,
+
     color: "#6B7280",
   },
-  metricGrid: {
-    marginTop: 12,
+
+  periodHeader: {
+    marginTop: 2,
+  },
+
+  summaryGrid: {
+    marginTop: 14,
+
     flexDirection: "row",
+
     flexWrap: "wrap",
+
     gap: 12,
   },
-  metricCard: {
+
+  summaryCard: {
     width: "48%",
-    minHeight: 134,
+
+    minHeight: 135,
+
     borderWidth: 1,
-    borderColor: "#E0E4E8",
+
+    borderColor:
+      "#E0E4E8",
+
     borderRadius: 16,
+
     padding: 15,
-    backgroundColor: "#FFFFFF",
+
+    backgroundColor:
+      "#FFFFFF",
   },
-  positiveMetricCard: {
-    borderColor: "#CFE8D5",
-    backgroundColor: "#F2FAF4",
+
+  summaryCardPositive: {
+    borderColor:
+      "#D1FAE5",
+
+    backgroundColor:
+      "#F7FEFA",
   },
-  warningMetricCard: {
-    borderColor: "#F1D9A7",
-    backgroundColor: "#FFF8E8",
+
+  summaryCardWarning: {
+    borderColor:
+      "#FDE7B2",
+
+    backgroundColor:
+      "#FFFCF2",
   },
-  dangerMetricCard: {
-    borderColor: "#F3C5C1",
-    backgroundColor: "#FFF1F0",
+
+  summaryCardDanger: {
+    borderColor:
+      "#FECACA",
+
+    backgroundColor:
+      "#FFF8F7",
   },
-  metricLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#5D6673",
-  },
-  metricValue: {
-    marginTop: 10,
-    fontSize: 25,
-    fontWeight: "800",
-    color: "#111827",
-  },
-  metricDescription: {
-    marginTop: 8,
+
+  summaryLabel: {
     fontSize: 12,
-    lineHeight: 17,
+
+    fontWeight: "700",
+
+    textTransform:
+      "uppercase",
+
     color: "#6B7280",
   },
-  positiveText: {
+
+  summaryValue: {
+    marginTop: 9,
+
+    fontSize: 22,
+
+    fontWeight: "800",
+
+    color: "#111827",
+  },
+
+  summaryValuePositive: {
     color: "#15803D",
   },
-  warningText: {
+
+  summaryValueWarning: {
     color: "#9A6700",
   },
-  dangerText: {
+
+  summaryValueDanger: {
     color: "#B42318",
   },
-  marginCard: {
-    marginTop: 14,
-    borderWidth: 1,
-    borderColor: "#E0E4E8",
-    borderRadius: 16,
-    padding: 17,
-    backgroundColor: "#FFFFFF",
-  },
-  marginHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  marginTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#20252B",
-  },
-  marginPercent: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#15803D",
-  },
-  marginValue: {
-    marginTop: 8,
-    fontSize: 25,
-    fontWeight: "800",
-    color: "#111827",
-  },
-  marginTrack: {
-    marginTop: 14,
-    height: 9,
-    overflow: "hidden",
-    borderRadius: 5,
-    backgroundColor: "#E5E7EB",
-  },
-  marginFill: {
-    height: "100%",
-    borderRadius: 5,
-    backgroundColor: "#15803D",
-  },
-  recentHeader: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-  },
-  transactionBadge: {
-    alignItems: "flex-end",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#EAF2FF",
-  },
-  transactionBadgeValue: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#1D4ED8",
-  },
-  transactionBadgeLabel: {
-    marginTop: 1,
+
+  summaryDescription: {
+    marginTop: 7,
+
     fontSize: 11,
-    fontWeight: "700",
-    color: "#4B67A1",
-  },
-  activityCard: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: "#E0E4E8",
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    backgroundColor: "#FFFFFF",
-  },
-  activityRow: {
-    minHeight: 82,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-  },
-  activityTextContainer: {
-    flex: 1,
-    marginRight: 16,
-  },
-  activityLabel: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#20252B",
-  },
-  activityDescription: {
-    marginTop: 4,
-    fontSize: 12,
-    lineHeight: 17,
+
+    lineHeight: 16,
+
     color: "#6B7280",
   },
-  activityValue: {
-    fontSize: 17,
+
+  recentActivitySection: {
+    marginTop: 8,
+  },
+
+  sectionHeaderRow: {
+    flexDirection: "row",
+
+    alignItems: "flex-start",
+
+    justifyContent:
+      "space-between",
+
+    marginBottom: 14,
+  },
+
+  sectionHeaderText: {
+    flex: 1,
+
+    marginRight: 12,
+  },
+
+  viewAllButton: {
+    marginTop: 22,
+
+    paddingHorizontal: 10,
+
+    paddingVertical: 7,
+
+    borderRadius: 9,
+  },
+
+  viewAllButtonPressed: {
+    backgroundColor:
+      "#E5E7EB",
+  },
+
+  viewAllButtonText: {
+    fontSize: 13,
+
     fontWeight: "800",
+
+    color: "#2563EB",
+  },
+
+  activityList: {
+    marginTop: 2,
+  },
+
+  emptyActivityCard: {
+    borderWidth: 1,
+
+    borderColor:
+      "#E5E7EB",
+
+    borderRadius: 16,
+
+    padding: 24,
+
+    alignItems: "center",
+
+    backgroundColor:
+      "#FFFFFF",
+  },
+
+  emptyActivityTitle: {
+    fontSize: 16,
+
+    fontWeight: "800",
+
     color: "#111827",
   },
-  divider: {
-    height: 1,
-    backgroundColor: "#E5E7EB",
-  },
-  insightCard: {
-    marginTop: 18,
-    borderRadius: 16,
-    padding: 16,
-    backgroundColor: "#EAF2FF",
-  },
-  insightTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#1D4ED8",
-  },
-  insightText: {
+
+  emptyActivityText: {
     marginTop: 7,
-    fontSize: 14,
-    lineHeight: 21,
-    color: "#334E84",
+
+    maxWidth: 320,
+
+    fontSize: 13,
+
+    lineHeight: 19,
+
+    textAlign: "center",
+
+    color: "#6B7280",
   },
 });
