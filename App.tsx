@@ -17,7 +17,9 @@ import {
   View,
 } from "react-native";
 
+import { ArchivedProducts } from "./src/components/ArchivedProducts";
 import { BarcodeScanner } from "./src/components/BarcodeScanner";
+import { EditProductForm } from "./src/components/EditProductForm";
 import { ExportReports } from "./src/components/ExportReports";
 import { InventoryAnalytics } from "./src/components/InventoryAnalytics";
 import { InventoryDashboard } from "./src/components/InventoryDashboard";
@@ -35,9 +37,13 @@ import {
   getTransactionHistoryForProduct,
 } from "./src/database/inventoryTransactionRepository";
 import {
+  archiveProduct,
   createProduct,
   getAllProducts,
+  getArchivedProducts,
   getProductByBarcode,
+  restoreProduct,
+  updateProduct,
 } from "./src/database/productRepository";
 import { initializeDatabase } from "./src/database/schema";
 import { seedDatabase } from "./src/database/seed";
@@ -63,6 +69,11 @@ import {
   DEFAULT_ANALYTICS_PERIOD,
   type AnalyticsPeriodDays,
 } from "./src/types/analyticsPeriod";
+import type {
+  ExportedReport,
+  ExportFileFormat,
+  ExportReportType,
+} from "./src/types/exportReport";
 import type { InventoryAnalyticsSummary } from "./src/types/inventoryAnalytics";
 import type { InventoryDashboardSummary } from "./src/types/inventoryDashboard";
 import {
@@ -72,25 +83,26 @@ import {
 import type { CreateInventoryTransactionInput } from "./src/types/inventoryTransaction";
 import type { Product } from "./src/types/product";
 import type { ProductDeliverySummary } from "./src/types/productDelivery";
-import type {
-  ExportFileFormat,
-  ExportReportType,
-  ExportedReport,
-} from "./src/types/exportReport";
 import type { ProductFormValues } from "./src/types/productForm";
+import type { UpdateProductInput } from "./src/types/productUpdate";
 import type { TransactionHistoryItem } from "./src/types/transactionHistory";
 
-type AppStatus = "loading" | "ready" | "error";
+type AppStatus =
+  | "loading"
+  | "ready"
+  | "error";
 
 type AppView =
   | "inventory"
   | "add-product"
+  | "edit-product"
   | "scanner"
   | "inventory-transaction"
   | "transaction-history"
   | "dashboard"
   | "analytics"
-  | "export-reports";
+  | "export-reports"
+  | "archived-products";
 
 const INITIAL_DASHBOARD_SUMMARY: InventoryDashboardSummary = {
   totalProducts: 0,
@@ -122,13 +134,20 @@ export default function App() {
   const [products, setProducts] =
     useState<Product[]>([]);
 
+  const [
+    archivedProducts,
+    setArchivedProducts,
+  ] = useState<Product[]>([]);
+
   const [filters, setFilters] =
     useState<InventoryFilterState>(
       DEFAULT_INVENTORY_FILTERS,
     );
 
-  const [selectedProduct, setSelectedProduct] =
-    useState<Product | null>(null);
+  const [
+    selectedProduct,
+    setSelectedProduct,
+  ] = useState<Product | null>(null);
 
   const [
     transactionHistory,
@@ -156,71 +175,111 @@ export default function App() {
     INITIAL_ANALYTICS_SUMMARY,
   );
 
-  const [analyticsPeriod, setAnalyticsPeriod] =
-    useState<AnalyticsPeriodDays>(
-      DEFAULT_ANALYTICS_PERIOD,
-    );
+  const [
+    analyticsPeriod,
+    setAnalyticsPeriod,
+  ] = useState<AnalyticsPeriodDays>(
+    DEFAULT_ANALYTICS_PERIOD,
+  );
 
   const [
     selectedExportReportType,
     setSelectedExportReportType,
-  ] =
-    useState<ExportReportType>("inventory");
+  ] = useState<ExportReportType>(
+    "inventory",
+  );
 
   const [
     selectedExportFormat,
     setSelectedExportFormat,
-  ] = useState<ExportFileFormat>("csv");
+  ] = useState<ExportFileFormat>(
+    "csv",
+  );
 
-  const [isExporting, setIsExporting] =
-    useState(false);
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
-  const [errorMessage, setErrorMessage] =
-    useState("");
+  const [
+    isRefreshing,
+    setIsRefreshing,
+  ] = useState(false);
 
-  const [isRefreshing, setIsRefreshing] =
-    useState(false);
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
 
-  const [isSubmitting, setIsSubmitting] =
-    useState(false);
+  const [
+    isProductUpdating,
+    setIsProductUpdating,
+  ] = useState(false);
 
   const [
     isTransactionSubmitting,
     setIsTransactionSubmitting,
   ] = useState(false);
 
-  const [isHistoryLoading, setIsHistoryLoading] =
-    useState(false);
+  const [
+    isHistoryLoading,
+    setIsHistoryLoading,
+  ] = useState(false);
 
-  const [isDashboardLoading, setIsDashboardLoading] =
-    useState(false);
+  const [
+    isDashboardLoading,
+    setIsDashboardLoading,
+  ] = useState(false);
 
-  const [isAnalyticsLoading, setIsAnalyticsLoading] =
-    useState(false);
+  const [
+    isAnalyticsLoading,
+    setIsAnalyticsLoading,
+  ] = useState(false);
 
-  const [scannedBarcode, setScannedBarcode] =
-    useState("");
+  const [
+    isArchivedProductsLoading,
+    setIsArchivedProductsLoading,
+  ] = useState(false);
+
+  const [
+    isExporting,
+    setIsExporting,
+  ] = useState(false);
+
+  const [
+    scannedBarcode,
+    setScannedBarcode,
+  ] = useState("");
 
   const visibleProducts = useMemo(() => {
     const normalizedSearch =
-      filters.searchQuery.trim().toLowerCase();
+      filters.searchQuery
+        .trim()
+        .toLowerCase();
 
-    const filteredProducts = products.filter(
-      (product) => {
+    const filteredProducts =
+      products.filter((product) => {
         const matchesSearch =
           normalizedSearch === "" ||
           product.name
             .toLowerCase()
-            .includes(normalizedSearch) ||
+            .includes(
+              normalizedSearch,
+            ) ||
           product.brand
             .toLowerCase()
-            .includes(normalizedSearch) ||
+            .includes(
+              normalizedSearch,
+            ) ||
           product.barcode
             .toLowerCase()
-            .includes(normalizedSearch);
+            .includes(
+              normalizedSearch,
+            );
 
         const matchesDepartment =
-          filters.department === "all" ||
+          filters.department ===
+            "all" ||
           product.department ===
             filters.department;
 
@@ -234,11 +293,13 @@ export default function App() {
           matchesDepartment &&
           matchesLowStock
         );
-      },
-    );
+      });
 
     return [...filteredProducts].sort(
-      (firstProduct, secondProduct) => {
+      (
+        firstProduct,
+        secondProduct,
+      ) => {
         switch (filters.sortBy) {
           case "name-desc":
             return secondProduct.name.localeCompare(
@@ -279,62 +340,78 @@ export default function App() {
     );
   }, [filters, products]);
 
-  const loadInventoryData = useCallback(
-    async (): Promise<void> => {
-      const [
-        storedProducts,
-        deliveryMap,
-        dashboard,
-      ] = await Promise.all([
-        getAllProducts(),
-        getLatestDeliveriesByProduct(),
-        getInventoryDashboardSummary(),
-      ]);
+  const loadInventoryData =
+    useCallback(
+      async (): Promise<void> => {
+        const [
+          storedProducts,
+          deliveryMap,
+          dashboard,
+        ] = await Promise.all([
+          getAllProducts(),
+          getLatestDeliveriesByProduct(),
+          getInventoryDashboardSummary(),
+        ]);
 
-      setProducts(storedProducts);
-      setLatestDeliveries(deliveryMap);
-      setDashboardSummary(dashboard);
-    },
-    [],
-  );
+        setProducts(
+          storedProducts,
+        );
 
-  const loadProducts = useCallback(
-    async (
-      isPullToRefresh = false,
-    ): Promise<void> => {
-      try {
-        if (isPullToRefresh) {
-          setIsRefreshing(true);
-        } else {
-          setStatus("loading");
+        setLatestDeliveries(
+          deliveryMap,
+        );
+
+        setDashboardSummary(
+          dashboard,
+        );
+      },
+      [],
+    );
+
+  const loadProducts =
+    useCallback(
+      async (
+        isPullToRefresh = false,
+      ): Promise<void> => {
+        try {
+          if (isPullToRefresh) {
+            setIsRefreshing(
+              true,
+            );
+          } else {
+            setStatus(
+              "loading",
+            );
+          }
+
+          setErrorMessage("");
+
+          await initializeDatabase();
+          await seedDatabase();
+          await loadInventoryData();
+
+          setStatus("ready");
+        } catch (error) {
+          console.error(
+            "Could not load inventory:",
+            error,
+          );
+
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "An unexpected inventory error occurred.",
+          );
+
+          setStatus("error");
+        } finally {
+          setIsRefreshing(
+            false,
+          );
         }
-
-        setErrorMessage("");
-
-        await initializeDatabase();
-        await seedDatabase();
-        await loadInventoryData();
-
-        setStatus("ready");
-      } catch (error) {
-        console.error(
-          "Could not load inventory:",
-          error,
-        );
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "An unexpected inventory error occurred.",
-        );
-
-        setStatus("error");
-      } finally {
-        setIsRefreshing(false);
-      }
-    },
-    [loadInventoryData],
-  );
+      },
+      [loadInventoryData],
+    );
 
   useEffect(() => {
     void loadProducts();
@@ -347,27 +424,49 @@ export default function App() {
       setIsSubmitting(true);
 
       await createProduct({
-        barcode: values.barcode,
-        name: values.name,
+        barcode:
+          values.barcode,
+
+        name:
+          values.name,
+
         department:
           values.department as Product["department"],
+
         category:
           values.category as Product["category"],
-        brand: values.brand,
-        unitCost: Number(values.unitCost),
-        unitPrice: Number(values.unitPrice),
-        currentStock: Number(
-          values.currentStock,
-        ),
-        reorderLevel: Number(
-          values.reorderLevel,
-        ),
+
+        brand:
+          values.brand,
+
+        unitCost:
+          Number(
+            values.unitCost,
+          ),
+
+        unitPrice:
+          Number(
+            values.unitPrice,
+          ),
+
+        currentStock:
+          Number(
+            values.currentStock,
+          ),
+
+        reorderLevel:
+          Number(
+            values.reorderLevel,
+          ),
       });
 
       await loadInventoryData();
 
       setScannedBarcode("");
-      setCurrentView("inventory");
+
+      setCurrentView(
+        "inventory",
+      );
 
       Alert.alert(
         "Product saved",
@@ -385,15 +484,22 @@ export default function App() {
           : "The product could not be saved.";
 
       const isDuplicateBarcode =
-        message.toLowerCase().includes("unique") ||
         message
           .toLowerCase()
-          .includes("constraint");
+          .includes(
+            "unique",
+          ) ||
+        message
+          .toLowerCase()
+          .includes(
+            "constraint",
+          );
 
       Alert.alert(
         isDuplicateBarcode
           ? "Barcode already exists"
           : "Could not save product",
+
         isDuplicateBarcode
           ? "Another active product already uses this barcode."
           : message,
@@ -408,10 +514,14 @@ export default function App() {
   ): Promise<void> {
     try {
       const existingProduct =
-        await getProductByBarcode(barcode);
+        await getProductByBarcode(
+          barcode,
+        );
 
       if (existingProduct) {
-        setCurrentView("inventory");
+        setCurrentView(
+          "inventory",
+        );
 
         Alert.alert(
           "Product found",
@@ -424,8 +534,13 @@ export default function App() {
         return;
       }
 
-      setScannedBarcode(barcode);
-      setCurrentView("add-product");
+      setScannedBarcode(
+        barcode,
+      );
+
+      setCurrentView(
+        "add-product",
+      );
     } catch (error) {
       console.error(
         "Could not look up barcode:",
@@ -434,6 +549,7 @@ export default function App() {
 
       Alert.alert(
         "Barcode lookup failed",
+
         error instanceof Error
           ? error.message
           : "The barcode could not be processed.",
@@ -441,31 +557,283 @@ export default function App() {
     }
   }
 
+  function openEditProduct(
+    product: Product,
+  ): void {
+    setSelectedProduct(
+      product,
+    );
+
+    setCurrentView(
+      "edit-product",
+    );
+  }
+
+  function closeEditProduct(): void {
+    setSelectedProduct(null);
+
+    setCurrentView(
+      "inventory",
+    );
+  }
+
+  async function handleUpdateProduct(
+    input: UpdateProductInput,
+  ): Promise<void> {
+    try {
+      setIsProductUpdating(
+        true,
+      );
+
+      await updateProduct(
+        input,
+      );
+
+      await loadInventoryData();
+
+      setSelectedProduct(
+        null,
+      );
+
+      setCurrentView(
+        "inventory",
+      );
+
+      Alert.alert(
+        "Product updated",
+        "The product details were updated successfully.",
+      );
+    } catch (error) {
+      console.error(
+        "Could not update product:",
+        error,
+      );
+
+      Alert.alert(
+        "Could not update product",
+
+        error instanceof Error
+          ? error.message
+          : "The product could not be updated.",
+      );
+    } finally {
+      setIsProductUpdating(
+        false,
+      );
+    }
+  }
+
+  function confirmArchiveProduct(
+    product: Product,
+  ): void {
+    Alert.alert(
+      "Archive product?",
+      `${product.name} will be removed from your active inventory.\n\nIts transaction history and analytics records will be preserved.`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+
+        {
+          text: "Archive",
+          style: "destructive",
+
+          onPress: () =>
+            void handleArchiveProduct(
+              product,
+            ),
+        },
+      ],
+    );
+  }
+
+  async function handleArchiveProduct(
+    product: Product,
+  ): Promise<void> {
+    try {
+      await archiveProduct(
+        product.id,
+      );
+
+      await loadInventoryData();
+
+      if (
+        selectedProduct?.id ===
+        product.id
+      ) {
+        setSelectedProduct(
+          null,
+        );
+      }
+
+      Alert.alert(
+        "Product archived",
+        `${product.name} was removed from active inventory.`,
+      );
+    } catch (error) {
+      console.error(
+        "Could not archive product:",
+        error,
+      );
+
+      Alert.alert(
+        "Could not archive product",
+
+        error instanceof Error
+          ? error.message
+          : "The product could not be archived.",
+      );
+    }
+  }
+
+  async function openArchivedProducts(): Promise<void> {
+    try {
+      setIsArchivedProductsLoading(
+        true,
+      );
+
+      setCurrentView(
+        "archived-products",
+      );
+
+      const archived =
+        await getArchivedProducts();
+
+      setArchivedProducts(
+        archived,
+      );
+    } catch (error) {
+      console.error(
+        "Could not load archived products:",
+        error,
+      );
+
+      setCurrentView(
+        "inventory",
+      );
+
+      Alert.alert(
+        "Could not load archived products",
+
+        error instanceof Error
+          ? error.message
+          : "Archived products could not be loaded.",
+      );
+    } finally {
+      setIsArchivedProductsLoading(
+        false,
+      );
+    }
+  }
+
+  function confirmRestoreProduct(
+    product: Product,
+  ): void {
+    Alert.alert(
+      "Restore product?",
+      `${product.name} will be returned to active inventory.`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+
+        {
+          text: "Restore",
+
+          onPress: () =>
+            void handleRestoreProduct(
+              product,
+            ),
+        },
+      ],
+    );
+  }
+
+  async function handleRestoreProduct(
+    product: Product,
+  ): Promise<void> {
+    try {
+      await restoreProduct(
+        product.id,
+      );
+
+      const [
+        refreshedArchivedProducts,
+      ] = await Promise.all([
+        getArchivedProducts(),
+        loadInventoryData(),
+      ]);
+
+      setArchivedProducts(
+        refreshedArchivedProducts,
+      );
+
+      Alert.alert(
+        "Product restored",
+        `${product.name} is active again.`,
+      );
+    } catch (error) {
+      console.error(
+        "Could not restore product:",
+        error,
+      );
+
+      Alert.alert(
+        "Could not restore product",
+
+        error instanceof Error
+          ? error.message
+          : "The product could not be restored.",
+      );
+    }
+  }
+
   function openTransactionForm(
     product: Product,
   ): void {
-    setSelectedProduct(product);
-    setCurrentView("inventory-transaction");
+    setSelectedProduct(
+      product,
+    );
+
+    setCurrentView(
+      "inventory-transaction",
+    );
   }
 
   function closeTransactionForm(): void {
-    setSelectedProduct(null);
-    setCurrentView("inventory");
+    setSelectedProduct(
+      null,
+    );
+
+    setCurrentView(
+      "inventory",
+    );
   }
 
   async function handleInventoryTransaction(
     input: CreateInventoryTransactionInput,
   ): Promise<void> {
     try {
-      setIsTransactionSubmitting(true);
+      setIsTransactionSubmitting(
+        true,
+      );
 
       const transaction =
-        await createInventoryTransaction(input);
+        await createInventoryTransaction(
+          input,
+        );
 
       await loadInventoryData();
 
-      setSelectedProduct(null);
-      setCurrentView("inventory");
+      setSelectedProduct(
+        null,
+      );
+
+      setCurrentView(
+        "inventory",
+      );
 
       Alert.alert(
         "Inventory updated",
@@ -479,12 +847,15 @@ export default function App() {
 
       Alert.alert(
         "Could not update inventory",
+
         error instanceof Error
           ? error.message
           : "The inventory transaction could not be saved.",
       );
     } finally {
-      setIsTransactionSubmitting(false);
+      setIsTransactionSubmitting(
+        false,
+      );
     }
   }
 
@@ -492,68 +863,109 @@ export default function App() {
     product: Product,
   ): Promise<void> {
     try {
-      setSelectedProduct(product);
-      setTransactionHistory([]);
-      setIsHistoryLoading(true);
-      setCurrentView("transaction-history");
+      setSelectedProduct(
+        product,
+      );
+
+      setTransactionHistory(
+        [],
+      );
+
+      setIsHistoryLoading(
+        true,
+      );
+
+      setCurrentView(
+        "transaction-history",
+      );
 
       const history =
         await getTransactionHistoryForProduct(
           product.id,
         );
 
-      setTransactionHistory(history);
+      setTransactionHistory(
+        history,
+      );
     } catch (error) {
       console.error(
         "Could not load transaction history:",
         error,
       );
 
-      setCurrentView("inventory");
-      setSelectedProduct(null);
+      setCurrentView(
+        "inventory",
+      );
+
+      setSelectedProduct(
+        null,
+      );
 
       Alert.alert(
         "Could not load history",
+
         error instanceof Error
           ? error.message
           : "Transaction history could not be loaded.",
       );
     } finally {
-      setIsHistoryLoading(false);
+      setIsHistoryLoading(
+        false,
+      );
     }
   }
 
   function closeTransactionHistory(): void {
-    setTransactionHistory([]);
-    setSelectedProduct(null);
-    setCurrentView("inventory");
+    setTransactionHistory(
+      [],
+    );
+
+    setSelectedProduct(
+      null,
+    );
+
+    setCurrentView(
+      "inventory",
+    );
   }
 
   async function openDashboard(): Promise<void> {
     try {
-      setIsDashboardLoading(true);
-      setCurrentView("dashboard");
+      setIsDashboardLoading(
+        true,
+      );
+
+      setCurrentView(
+        "dashboard",
+      );
 
       const summary =
         await getInventoryDashboardSummary();
 
-      setDashboardSummary(summary);
+      setDashboardSummary(
+        summary,
+      );
     } catch (error) {
       console.error(
         "Could not load inventory dashboard:",
         error,
       );
 
-      setCurrentView("inventory");
+      setCurrentView(
+        "inventory",
+      );
 
       Alert.alert(
         "Could not load dashboard",
+
         error instanceof Error
           ? error.message
           : "The dashboard summary could not be loaded.",
       );
     } finally {
-      setIsDashboardLoading(false);
+      setIsDashboardLoading(
+        false,
+      );
     }
   }
 
@@ -566,46 +978,69 @@ export default function App() {
         5,
       );
 
-    setAnalyticsSummary(summary);
+    setAnalyticsSummary(
+      summary,
+    );
   }
 
   async function openAnalytics(): Promise<void> {
     try {
-      setIsAnalyticsLoading(true);
-      setCurrentView("analytics");
+      setIsAnalyticsLoading(
+        true,
+      );
 
-      await loadAnalytics(analyticsPeriod);
+      setCurrentView(
+        "analytics",
+      );
+
+      await loadAnalytics(
+        analyticsPeriod,
+      );
     } catch (error) {
       console.error(
         "Could not load analytics:",
         error,
       );
 
-      setCurrentView("inventory");
+      setCurrentView(
+        "inventory",
+      );
 
       Alert.alert(
         "Could not load analytics",
+
         error instanceof Error
           ? error.message
           : "Inventory analytics could not be loaded.",
       );
     } finally {
-      setIsAnalyticsLoading(false);
+      setIsAnalyticsLoading(
+        false,
+      );
     }
   }
 
   async function handleAnalyticsPeriodChange(
     period: AnalyticsPeriodDays,
   ): Promise<void> {
-    if (period === analyticsPeriod) {
+    if (
+      period === analyticsPeriod
+    ) {
       return;
     }
 
     try {
-      setAnalyticsPeriod(period);
-      setIsAnalyticsLoading(true);
+      setAnalyticsPeriod(
+        period,
+      );
 
-      await loadAnalytics(period);
+      setIsAnalyticsLoading(
+        true,
+      );
+
+      await loadAnalytics(
+        period,
+      );
     } catch (error) {
       console.error(
         "Could not change analytics period:",
@@ -614,30 +1049,38 @@ export default function App() {
 
       Alert.alert(
         "Could not update analytics",
+
         error instanceof Error
           ? error.message
           : "Analytics could not be loaded for the selected period.",
       );
     } finally {
-      setIsAnalyticsLoading(false);
+      setIsAnalyticsLoading(
+        false,
+      );
     }
   }
 
   async function loadAllTransactionsForExport(): Promise<
     TransactionHistoryItem[]
   > {
-    const histories = await Promise.all(
-      products.map((product) =>
-        getTransactionHistoryForProduct(
-          product.id,
+    const histories =
+      await Promise.all(
+        products.map(
+          (product) =>
+            getTransactionHistoryForProduct(
+              product.id,
+            ),
         ),
-      ),
-    );
+      );
 
     return histories
       .flat()
       .sort(
-        (first, second) =>
+        (
+          first,
+          second,
+        ) =>
           new Date(
             second.createdAt,
           ).getTime() -
@@ -652,9 +1095,13 @@ export default function App() {
       selectedExportReportType ===
       "inventory"
     ) {
-      switch (selectedExportFormat) {
+      switch (
+        selectedExportFormat
+      ) {
         case "csv":
-          return exportInventoryCsv(products);
+          return exportInventoryCsv(
+            products,
+          );
 
         case "xlsx":
           return exportInventoryExcel(
@@ -662,7 +1109,9 @@ export default function App() {
           );
 
         case "pdf":
-          return exportInventoryPdf(products);
+          return exportInventoryPdf(
+            products,
+          );
       }
     }
 
@@ -673,7 +1122,9 @@ export default function App() {
       const transactions =
         await loadAllTransactionsForExport();
 
-      switch (selectedExportFormat) {
+      switch (
+        selectedExportFormat
+      ) {
         case "csv":
           return exportTransactionsCsv(
             transactions,
@@ -697,9 +1148,13 @@ export default function App() {
         50,
       );
 
-    switch (selectedExportFormat) {
+    switch (
+      selectedExportFormat
+    ) {
       case "csv":
-        return exportAnalyticsCsv(analytics);
+        return exportAnalyticsCsv(
+          analytics,
+        );
 
       case "xlsx":
         return exportAnalyticsExcel(
@@ -715,12 +1170,16 @@ export default function App() {
 
   async function handleExport(): Promise<void> {
     try {
-      setIsExporting(true);
+      setIsExporting(
+        true,
+      );
 
       const report =
         await generateExport();
 
-      await shareExportedReport(report);
+      await shareExportedReport(
+        report,
+      );
     } catch (error) {
       console.error(
         "Could not export report:",
@@ -729,23 +1188,32 @@ export default function App() {
 
       Alert.alert(
         "Export failed",
+
         error instanceof Error
           ? error.message
           : "The report could not be generated.",
       );
     } finally {
-      setIsExporting(false);
+      setIsExporting(
+        false,
+      );
     }
   }
 
   function openManualProductForm(): void {
     setScannedBarcode("");
-    setCurrentView("add-product");
+
+    setCurrentView(
+      "add-product",
+    );
   }
 
   function closeProductForm(): void {
     setScannedBarcode("");
-    setCurrentView("inventory");
+
+    setCurrentView(
+      "inventory",
+    );
   }
 
   function clearInventoryFilters(): void {
@@ -756,15 +1224,29 @@ export default function App() {
 
   if (status === "loading") {
     return (
-      <SafeAreaView style={styles.screen}>
-        <View style={styles.centeredContainer}>
-          <ActivityIndicator size="large" />
+      <SafeAreaView
+        style={styles.screen}
+      >
+        <View
+          style={
+            styles.centeredContainer
+          }
+        >
+          <ActivityIndicator
+            size="large"
+          />
 
-          <Text style={styles.statusText}>
+          <Text
+            style={
+              styles.statusText
+            }
+          >
             Loading inventory…
           </Text>
 
-          <StatusBar style="auto" />
+          <StatusBar
+            style="auto"
+          />
         </View>
       </SafeAreaView>
     );
@@ -772,50 +1254,99 @@ export default function App() {
 
   if (status === "error") {
     return (
-      <SafeAreaView style={styles.screen}>
-        <View style={styles.centeredContainer}>
-          <Text style={styles.errorTitle}>
+      <SafeAreaView
+        style={styles.screen}
+      >
+        <View
+          style={
+            styles.centeredContainer
+          }
+        >
+          <Text
+            style={
+              styles.errorTitle
+            }
+          >
             Could not load inventory
           </Text>
 
-          <Text style={styles.errorMessage}>
+          <Text
+            style={
+              styles.errorMessage
+            }
+          >
             {errorMessage}
           </Text>
 
           <Pressable
-            onPress={() => void loadProducts()}
-            style={styles.primaryButton}
+            accessibilityRole="button"
+            onPress={() =>
+              void loadProducts()
+            }
+            style={
+              styles.primaryButton
+            }
           >
-            <Text style={styles.primaryButtonText}>
+            <Text
+              style={
+                styles.primaryButtonText
+              }
+            >
               Try again
             </Text>
           </Pressable>
+
+          <StatusBar
+            style="auto"
+          />
         </View>
       </SafeAreaView>
     );
   }
 
-  if (currentView === "scanner") {
+  if (
+    currentView ===
+    "scanner"
+  ) {
     return (
       <BarcodeScanner
         onBarcodeDetected={
           handleBarcodeDetected
         }
         onClose={() =>
-          setCurrentView("inventory")
+          setCurrentView(
+            "inventory",
+          )
         }
       />
     );
   }
 
-  if (currentView === "dashboard") {
-    if (isDashboardLoading) {
+  if (
+    currentView ===
+    "dashboard"
+  ) {
+    if (
+      isDashboardLoading
+    ) {
       return (
-        <SafeAreaView style={styles.screen}>
-          <View style={styles.centeredContainer}>
-            <ActivityIndicator size="large" />
+        <SafeAreaView
+          style={styles.screen}
+        >
+          <View
+            style={
+              styles.centeredContainer
+            }
+          >
+            <ActivityIndicator
+              size="large"
+            />
 
-            <Text style={styles.statusText}>
+            <Text
+              style={
+                styles.statusText
+              }
+            >
               Loading dashboard…
             </Text>
           </View>
@@ -825,23 +1356,44 @@ export default function App() {
 
     return (
       <InventoryDashboard
-        summary={dashboardSummary}
+        summary={
+          dashboardSummary
+        }
         recentDays={30}
         onClose={() =>
-          setCurrentView("inventory")
+          setCurrentView(
+            "inventory",
+          )
         }
       />
     );
   }
 
-  if (currentView === "analytics") {
-    if (isAnalyticsLoading) {
+  if (
+    currentView ===
+    "analytics"
+  ) {
+    if (
+      isAnalyticsLoading
+    ) {
       return (
-        <SafeAreaView style={styles.screen}>
-          <View style={styles.centeredContainer}>
-            <ActivityIndicator size="large" />
+        <SafeAreaView
+          style={styles.screen}
+        >
+          <View
+            style={
+              styles.centeredContainer
+            }
+          >
+            <ActivityIndicator
+              size="large"
+            />
 
-            <Text style={styles.statusText}>
+            <Text
+              style={
+                styles.statusText
+              }
+            >
               Loading analytics…
             </Text>
           </View>
@@ -851,22 +1403,31 @@ export default function App() {
 
     return (
       <InventoryAnalytics
-        summary={analyticsSummary}
-        selectedPeriod={analyticsPeriod}
-        onPeriodChange={(period) =>
+        summary={
+          analyticsSummary
+        }
+        selectedPeriod={
+          analyticsPeriod
+        }
+        onPeriodChange={(
+          period,
+        ) =>
           void handleAnalyticsPeriodChange(
             period,
           )
         }
         onClose={() =>
-          setCurrentView("inventory")
+          setCurrentView(
+            "inventory",
+          )
         }
       />
     );
   }
 
   if (
-    currentView === "export-reports"
+    currentView ===
+    "export-reports"
   ) {
     return (
       <ExportReports
@@ -876,7 +1437,9 @@ export default function App() {
         selectedFormat={
           selectedExportFormat
         }
-        isExporting={isExporting}
+        isExporting={
+          isExporting
+        }
         onReportTypeChange={
           setSelectedExportReportType
         }
@@ -887,7 +1450,58 @@ export default function App() {
           void handleExport()
         }
         onClose={() =>
-          setCurrentView("inventory")
+          setCurrentView(
+            "inventory",
+          )
+        }
+      />
+    );
+  }
+
+  if (
+    currentView ===
+    "archived-products"
+  ) {
+    if (
+      isArchivedProductsLoading
+    ) {
+      return (
+        <SafeAreaView
+          style={styles.screen}
+        >
+          <View
+            style={
+              styles.centeredContainer
+            }
+          >
+            <ActivityIndicator
+              size="large"
+            />
+
+            <Text
+              style={
+                styles.statusText
+              }
+            >
+              Loading archived products…
+            </Text>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    return (
+      <ArchivedProducts
+        products={
+          archivedProducts
+        }
+        onRestore={
+          confirmRestoreProduct
+        }
+        onClose={() =>
+          setCurrentView(
+            "inventory",
+          )
         }
       />
     );
@@ -899,20 +1513,37 @@ export default function App() {
   ) {
     if (!selectedProduct) {
       return (
-        <SafeAreaView style={styles.screen}>
-          <View style={styles.centeredContainer}>
-            <Text style={styles.errorTitle}>
+        <SafeAreaView
+          style={styles.screen}
+        >
+          <View
+            style={
+              styles.centeredContainer
+            }
+          >
+            <Text
+              style={
+                styles.errorTitle
+              }
+            >
               Product not selected
             </Text>
 
             <Pressable
+              accessibilityRole="button"
               onPress={() =>
-                setCurrentView("inventory")
+                setCurrentView(
+                  "inventory",
+                )
               }
-              style={styles.primaryButton}
+              style={
+                styles.primaryButton
+              }
             >
               <Text
-                style={styles.primaryButtonText}
+                style={
+                  styles.primaryButtonText
+                }
               >
                 Return to inventory
               </Text>
@@ -924,11 +1555,15 @@ export default function App() {
 
     return (
       <InventoryTransactionForm
-        product={selectedProduct}
+        product={
+          selectedProduct
+        }
         isSubmitting={
           isTransactionSubmitting
         }
-        onCancel={closeTransactionForm}
+        onCancel={
+          closeTransactionForm
+        }
         onSubmit={
           handleInventoryTransaction
         }
@@ -942,20 +1577,37 @@ export default function App() {
   ) {
     if (!selectedProduct) {
       return (
-        <SafeAreaView style={styles.screen}>
-          <View style={styles.centeredContainer}>
-            <Text style={styles.errorTitle}>
+        <SafeAreaView
+          style={styles.screen}
+        >
+          <View
+            style={
+              styles.centeredContainer
+            }
+          >
+            <Text
+              style={
+                styles.errorTitle
+              }
+            >
               Product not selected
             </Text>
 
             <Pressable
+              accessibilityRole="button"
               onPress={() =>
-                setCurrentView("inventory")
+                setCurrentView(
+                  "inventory",
+                )
               }
-              style={styles.primaryButton}
+              style={
+                styles.primaryButton
+              }
             >
               <Text
-                style={styles.primaryButtonText}
+                style={
+                  styles.primaryButtonText
+                }
               >
                 Return to inventory
               </Text>
@@ -965,13 +1617,27 @@ export default function App() {
       );
     }
 
-    if (isHistoryLoading) {
+    if (
+      isHistoryLoading
+    ) {
       return (
-        <SafeAreaView style={styles.screen}>
-          <View style={styles.centeredContainer}>
-            <ActivityIndicator size="large" />
+        <SafeAreaView
+          style={styles.screen}
+        >
+          <View
+            style={
+              styles.centeredContainer
+            }
+          >
+            <ActivityIndicator
+              size="large"
+            />
 
-            <Text style={styles.statusText}>
+            <Text
+              style={
+                styles.statusText
+              }
+            >
               Loading transaction history…
             </Text>
           </View>
@@ -981,26 +1647,110 @@ export default function App() {
 
     return (
       <ProductTransactionHistory
-        productName={selectedProduct.name}
+        productName={
+          selectedProduct.name
+        }
         currentStock={
           selectedProduct.currentStock
         }
-        transactions={transactionHistory}
-        onClose={closeTransactionHistory}
+        transactions={
+          transactionHistory
+        }
+        onClose={
+          closeTransactionHistory
+        }
       />
     );
   }
 
-  if (currentView === "add-product") {
-    return (
-      <SafeAreaView style={styles.screen}>
-        <View style={styles.topBar}>
-          <Pressable
-            onPress={closeProductForm}
-            style={styles.secondaryButton}
+  if (
+    currentView ===
+    "edit-product"
+  ) {
+    if (!selectedProduct) {
+      return (
+        <SafeAreaView
+          style={styles.screen}
+        >
+          <View
+            style={
+              styles.centeredContainer
+            }
           >
             <Text
-              style={styles.secondaryButtonText}
+              style={
+                styles.errorTitle
+              }
+            >
+              Product not selected
+            </Text>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                setCurrentView(
+                  "inventory",
+                )
+              }
+              style={
+                styles.primaryButton
+              }
+            >
+              <Text
+                style={
+                  styles.primaryButtonText
+                }
+              >
+                Return to inventory
+              </Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    return (
+      <EditProductForm
+        product={
+          selectedProduct
+        }
+        isSubmitting={
+          isProductUpdating
+        }
+        onCancel={
+          closeEditProduct
+        }
+        onSubmit={
+          handleUpdateProduct
+        }
+      />
+    );
+  }
+
+  if (
+    currentView ===
+    "add-product"
+  ) {
+    return (
+      <SafeAreaView
+        style={styles.screen}
+      >
+        <View
+          style={styles.topBar}
+        >
+          <Pressable
+            accessibilityRole="button"
+            onPress={
+              closeProductForm
+            }
+            style={
+              styles.secondaryButton
+            }
+          >
+            <Text
+              style={
+                styles.secondaryButtonText
+              }
             >
               Cancel
             </Text>
@@ -1008,54 +1758,96 @@ export default function App() {
         </View>
 
         <ProductForm
-          initialBarcode={scannedBarcode}
-          isSubmitting={isSubmitting}
-          onSubmit={handleCreateProduct}
+          initialBarcode={
+            scannedBarcode
+          }
+          isSubmitting={
+            isSubmitting
+          }
+          onSubmit={
+            handleCreateProduct
+          }
         />
 
-        <StatusBar style="auto" />
+        <StatusBar
+          style="auto"
+        />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView
+      style={styles.screen}
+    >
       <FlatList
-        data={visibleProducts}
-        keyExtractor={(product) =>
+        data={
+          visibleProducts
+        }
+        keyExtractor={(
+          product,
+        ) =>
           product.id.toString()
         }
         contentContainerStyle={
           styles.listContent
         }
-        renderItem={({ item }) => (
+        renderItem={({
+          item,
+        }) => (
           <ProductCard
             product={item}
             latestDelivery={
-              latestDeliveries.get(item.id)
+              latestDeliveries.get(
+                item.id,
+              )
             }
             onUpdateInventory={
               openTransactionForm
             }
-            onViewHistory={(product) =>
+            onViewHistory={(
+              product,
+            ) =>
               void openTransactionHistory(
                 product,
               )
+            }
+            onEditProduct={
+              openEditProduct
+            }
+            onArchiveProduct={
+              confirmArchiveProduct
             }
           />
         )}
         ListHeaderComponent={
           <View>
-            <View style={styles.header}>
-              <Text style={styles.title}>
+            <View
+              style={
+                styles.header
+              }
+            >
+              <Text
+                style={
+                  styles.title
+                }
+              >
                 SmartStock Inventory
               </Text>
 
-              <Text style={styles.summary}>
+              <Text
+                style={
+                  styles.summary
+                }
+              >
                 {products.length} active products
               </Text>
 
-              <View style={styles.actionMenuWrapper}>
+              <View
+                style={
+                  styles.actionMenuWrapper
+                }
+              >
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={
@@ -1082,7 +1874,9 @@ export default function App() {
                   <ActionMenuItem
                     label="Scan Barcode"
                     onPress={() =>
-                      setCurrentView("scanner")
+                      setCurrentView(
+                        "scanner",
+                      )
                     }
                   />
 
@@ -1090,6 +1884,13 @@ export default function App() {
                     label="Add Product"
                     onPress={
                       openManualProductForm
+                    }
+                  />
+
+                  <ActionMenuItem
+                    label="Archived"
+                    onPress={() =>
+                      void openArchivedProducts()
                     }
                   />
 
@@ -1106,12 +1907,18 @@ export default function App() {
             </View>
 
             <InventoryToolbar
-              filters={filters}
+              filters={
+                filters
+              }
               resultCount={
                 visibleProducts.length
               }
-              totalCount={products.length}
-              onFiltersChange={setFilters}
+              totalCount={
+                products.length
+              }
+              onFiltersChange={
+                setFilters
+              }
               onClearFilters={
                 clearInventoryFilters
               }
@@ -1119,27 +1926,86 @@ export default function App() {
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyTitle}>
-              {products.length === 0
+          <View
+            style={
+              styles.emptyContainer
+            }
+          >
+            <Text
+              style={
+                styles.emptyTitle
+              }
+            >
+              {products.length ===
+              0
                 ? "No products found"
                 : "No matching products"}
             </Text>
 
-            <Text style={styles.statusText}>
-              {products.length === 0
+            <Text
+              style={
+                styles.statusText
+              }
+            >
+              {products.length ===
+              0
                 ? "Add a product to begin tracking inventory."
                 : "Try changing or clearing your inventory filters."}
             </Text>
+
+            {products.length ===
+            0 ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={
+                  openManualProductForm
+                }
+                style={
+                  styles.primaryButton
+                }
+              >
+                <Text
+                  style={
+                    styles.primaryButtonText
+                  }
+                >
+                  Add first product
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                onPress={
+                  clearInventoryFilters
+                }
+                style={
+                  styles.primaryButton
+                }
+              >
+                <Text
+                  style={
+                    styles.primaryButtonText
+                  }
+                >
+                  Clear filters
+                </Text>
+              </Pressable>
+            )}
           </View>
         }
-        refreshing={isRefreshing}
+        refreshing={
+          isRefreshing
+        }
         onRefresh={() =>
-          void loadProducts(true)
+          void loadProducts(
+            true,
+          )
         }
       />
 
-      <StatusBar style="auto" />
+      <StatusBar
+        style="auto"
+      />
     </SafeAreaView>
   );
 }
@@ -1157,158 +2023,183 @@ function ActionMenuItem({
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [
+      style={({
+        pressed,
+      }) => [
         styles.actionMenuItem,
+
         pressed &&
           styles.actionMenuItemPressed,
       ]}
     >
-      <Text style={styles.actionMenuText}>
+      <Text
+        style={
+          styles.actionMenuText
+        }
+      >
         {label}
       </Text>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#F4F6F8",
-  },
+const styles =
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor:
+        "#F4F6F8",
+    },
 
-  listContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
+    listContent: {
+      padding: 16,
+      paddingBottom: 40,
+    },
 
-  header: {
-    marginBottom: 18,
-  },
+    header: {
+      marginBottom: 18,
+    },
 
-  title: {
-    fontSize: 30,
-    fontWeight: "800",
-    color: "#111827",
-  },
+    title: {
+      fontSize: 30,
+      fontWeight: "800",
+      color: "#111827",
+    },
 
-  summary: {
-    marginTop: 4,
-    fontSize: 15,
-    color: "#5D6673",
-  },
+    summary: {
+      marginTop: 4,
+      fontSize: 15,
+      color: "#5D6673",
+    },
 
-  /*
-   * Horizontal menu similar to your reference.
-   */
+    actionMenuWrapper: {
+      marginTop: 18,
+      marginHorizontal:
+        -16,
+      backgroundColor:
+        "#FFFFFF",
+    },
 
-  actionMenuWrapper: {
-    marginTop: 18,
-    marginHorizontal: -16,
-    backgroundColor: "#FFFFFF",
-  },
+    actionMenu: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 8,
+    },
 
-  actionMenu: {
-    flexDirection: "row",
-    alignItems: "center",
+    actionMenuItem: {
+      minHeight: 54,
 
-    /*
-     * Intentionally leaves limited edge padding
-     * so partially-visible items suggest scrolling.
-     */
-    paddingHorizontal: 8,
-  },
+      alignItems: "center",
+      justifyContent:
+        "center",
 
-  actionMenuItem: {
-    minHeight: 54,
-    alignItems: "center",
-    justifyContent: "center",
+      paddingHorizontal: 20,
 
-    paddingHorizontal: 20,
+      backgroundColor:
+        "#FFFFFF",
+    },
 
-    backgroundColor: "#FFFFFF",
-  },
+    actionMenuItemPressed: {
+      backgroundColor:
+        "#EEF1F3",
+    },
 
-  actionMenuItemPressed: {
-    backgroundColor: "#EEF1F3",
-  },
+    actionMenuText: {
+      fontSize: 13,
+      fontWeight: "800",
+      letterSpacing: 0.3,
+      color: "#7A858B",
+    },
 
-  actionMenuText: {
-    fontSize: 13,
-    fontWeight: "800",
-    letterSpacing: 0.3,
-    color: "#7A858B",
-  },
+    topBar: {
+      alignItems: "flex-end",
+      paddingHorizontal: 20,
+      paddingTop: 8,
+    },
 
-  topBar: {
-    alignItems: "flex-end",
-    paddingHorizontal: 20,
-    paddingTop: 8,
-  },
+    centeredContainer: {
+      flex: 1,
 
-  centeredContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
+      alignItems: "center",
+      justifyContent:
+        "center",
 
-  statusText: {
-    marginTop: 10,
-    fontSize: 15,
-    textAlign: "center",
-    color: "#5D6673",
-  },
+      padding: 24,
+    },
 
-  errorTitle: {
-    fontSize: 21,
-    fontWeight: "700",
-    textAlign: "center",
-  },
+    statusText: {
+      marginTop: 10,
 
-  errorMessage: {
-    marginTop: 12,
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: "center",
-    color: "#5D6673",
-  },
+      fontSize: 15,
+      textAlign: "center",
 
-  primaryButton: {
-    marginTop: 18,
-    minHeight: 46,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 10,
-    paddingHorizontal: 18,
-    backgroundColor: "#20252B",
-  },
+      color: "#5D6673",
+    },
 
-  primaryButtonText: {
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
+    errorTitle: {
+      fontSize: 21,
+      fontWeight: "700",
+      textAlign: "center",
+    },
 
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: "#C8CED6",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    backgroundColor: "#FFFFFF",
-  },
+    errorMessage: {
+      marginTop: 12,
 
-  secondaryButtonText: {
-    fontWeight: "700",
-    color: "#20252B",
-  },
+      fontSize: 15,
+      lineHeight: 22,
+      textAlign: "center",
 
-  emptyContainer: {
-    paddingVertical: 60,
-    alignItems: "center",
-  },
+      color: "#5D6673",
+    },
 
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-  },
-});
+    primaryButton: {
+      marginTop: 18,
+
+      minHeight: 46,
+
+      alignItems: "center",
+      justifyContent:
+        "center",
+
+      borderRadius: 10,
+
+      paddingHorizontal: 18,
+
+      backgroundColor:
+        "#20252B",
+    },
+
+    primaryButtonText: {
+      fontWeight: "700",
+      color: "#FFFFFF",
+    },
+
+    secondaryButton: {
+      borderWidth: 1,
+      borderColor:
+        "#C8CED6",
+
+      borderRadius: 10,
+
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+
+      backgroundColor:
+        "#FFFFFF",
+    },
+
+    secondaryButtonText: {
+      fontWeight: "700",
+      color: "#20252B",
+    },
+
+    emptyContainer: {
+      paddingVertical: 60,
+      alignItems: "center",
+    },
+
+    emptyTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+    },
+  });
