@@ -2,8 +2,9 @@ import type {
   CreateProductInput,
   Product,
 } from "../types/product";
-
+import type { UpdateProductInput } from "../types/productUpdate";
 import { getDatabase } from "./database";
+
 
 interface ProductRow {
   id: number;
@@ -195,4 +196,169 @@ export async function getProductByBarcode(
   );
 
   return row ? mapProductRow(row) : null;
+}
+
+export async function updateProduct(
+  input: UpdateProductInput,
+): Promise<void> {
+  const database = await getDatabase();
+
+  const barcode = input.barcode.trim();
+  const name = input.name.trim();
+  const brand = input.brand.trim();
+
+  if (!barcode) {
+    throw new Error(
+      "Barcode is required.",
+    );
+  }
+
+  if (!name) {
+    throw new Error(
+      "Product name is required.",
+    );
+  }
+
+  if (!brand) {
+    throw new Error(
+      "Brand is required.",
+    );
+  }
+
+  if (
+    !Number.isFinite(input.unitCost) ||
+    input.unitCost < 0
+  ) {
+    throw new Error(
+      "Unit cost must be zero or greater.",
+    );
+  }
+
+  if (
+    !Number.isFinite(input.unitPrice) ||
+    input.unitPrice < 0
+  ) {
+    throw new Error(
+      "Selling price must be zero or greater.",
+    );
+  }
+
+  if (
+    !Number.isInteger(input.reorderLevel) ||
+    input.reorderLevel < 0
+  ) {
+    throw new Error(
+      "Reorder level must be a whole number of zero or greater.",
+    );
+  }
+
+  const duplicateBarcode =
+    await database.getFirstAsync<{
+      id: number;
+    }>(
+      `
+        SELECT id
+        FROM products
+        WHERE
+          barcode = ?
+          AND id != ?
+        LIMIT 1;
+      `,
+      barcode,
+      input.productId,
+    );
+
+  if (duplicateBarcode) {
+    throw new Error(
+      "Another product already uses this barcode.",
+    );
+  }
+
+  const result =
+    await database.runAsync(
+      `
+        UPDATE products
+        SET
+          barcode = ?,
+          name = ?,
+          brand = ?,
+          department = ?,
+          category = ?,
+          unit_cost = ?,
+          unit_price = ?,
+          reorder_level = ?,
+          updated_at = ?
+        WHERE id = ?;
+      `,
+      barcode,
+      name,
+      brand,
+      input.department,
+      input.category,
+      input.unitCost,
+      input.unitPrice,
+      input.reorderLevel,
+      new Date().toISOString(),
+      input.productId,
+    );
+
+  if (result.changes === 0) {
+    throw new Error(
+      "Product could not be found.",
+    );
+  }
+}
+
+export async function archiveProduct(
+  productId: number,
+): Promise<void> {
+  const database = await getDatabase();
+
+  const result =
+    await database.runAsync(
+      `
+        UPDATE products
+        SET
+          is_active = 0,
+          updated_at = ?
+        WHERE
+          id = ?
+          AND is_active = 1;
+      `,
+      new Date().toISOString(),
+      productId,
+    );
+
+  if (result.changes === 0) {
+    throw new Error(
+      "The product is already archived or could not be found.",
+    );
+  }
+}
+
+export async function restoreProduct(
+  productId: number,
+): Promise<void> {
+  const database = await getDatabase();
+
+  const result =
+    await database.runAsync(
+      `
+        UPDATE products
+        SET
+          is_active = 1,
+          updated_at = ?
+        WHERE
+          id = ?
+          AND is_active = 0;
+      `,
+      new Date().toISOString(),
+      productId,
+    );
+
+  if (result.changes === 0) {
+    throw new Error(
+      "The product is already active or could not be found.",
+    );
+  }
 }
