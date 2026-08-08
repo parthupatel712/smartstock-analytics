@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useMemo, useState } from "react";
 import {
   Pressable,
   SafeAreaView,
@@ -8,7 +9,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useMemo, useState } from "react";
 
 import type {
   GlobalTransaction,
@@ -24,7 +24,13 @@ type TransactionFilter =
   | "all"
   | GlobalTransactionType;
 
-const FILTERS: {
+type DateFilter =
+  | "today"
+  | "7-days"
+  | "30-days"
+  | "all-time";
+
+const TRANSACTION_FILTERS: {
   label: string;
   value: TransactionFilter;
 }[] = [
@@ -54,6 +60,28 @@ const FILTERS: {
   },
 ];
 
+const DATE_FILTERS: {
+  label: string;
+  value: DateFilter;
+}[] = [
+  {
+    label: "Today",
+    value: "today",
+  },
+  {
+    label: "7 Days",
+    value: "7-days",
+  },
+  {
+    label: "30 Days",
+    value: "30-days",
+  },
+  {
+    label: "All Time",
+    value: "all-time",
+  },
+];
+
 export function GlobalTransactions({
   transactions,
   onClose,
@@ -70,6 +98,13 @@ export function GlobalTransactions({
     "all",
   );
 
+  const [
+    selectedDateFilter,
+    setSelectedDateFilter,
+  ] = useState<DateFilter>(
+    "30-days",
+  );
+
   const filteredTransactions =
     useMemo(() => {
       const normalizedSearch =
@@ -77,11 +112,13 @@ export function GlobalTransactions({
           .trim()
           .toLowerCase();
 
+      const now =
+        new Date();
+
       return transactions.filter(
         (transaction) => {
           const matchesType =
-            selectedFilter ===
-              "all" ||
+            selectedFilter === "all" ||
             transaction.transactionType ===
               selectedFilter;
 
@@ -89,33 +126,31 @@ export function GlobalTransactions({
             normalizedSearch === "" ||
             transaction.productName
               .toLowerCase()
-              .includes(
-                normalizedSearch,
-              ) ||
+              .includes(normalizedSearch) ||
             transaction.productBrand
               .toLowerCase()
-              .includes(
-                normalizedSearch,
-              ) ||
+              .includes(normalizedSearch) ||
             transaction.barcode
               .toLowerCase()
-              .includes(
-                normalizedSearch,
-              ) ||
+              .includes(normalizedSearch) ||
             transaction.department
               .toLowerCase()
-              .includes(
-                normalizedSearch,
-              ) ||
+              .includes(normalizedSearch) ||
             transaction.category
               .toLowerCase()
-              .includes(
-                normalizedSearch,
-              );
+              .includes(normalizedSearch);
+
+          const matchesDate =
+            transactionMatchesDateFilter(
+              transaction.createdAt,
+              selectedDateFilter,
+              now,
+            );
 
           return (
             matchesType &&
-            matchesSearch
+            matchesSearch &&
+            matchesDate
           );
         },
       );
@@ -123,7 +158,22 @@ export function GlobalTransactions({
       transactions,
       searchQuery,
       selectedFilter,
+      selectedDateFilter,
     ]);
+
+  function clearAllFilters(): void {
+    setSearchQuery("");
+    setSelectedFilter("all");
+    setSelectedDateFilter(
+      "30-days",
+    );
+  }
+
+  const hasActiveFilters =
+    searchQuery.trim() !== "" ||
+    selectedFilter !== "all" ||
+    selectedDateFilter !==
+      "30-days";
 
   return (
     <SafeAreaView
@@ -164,6 +214,7 @@ export function GlobalTransactions({
             onPress={onClose}
             style={({ pressed }) => [
               styles.closeButton,
+
               pressed &&
                 styles.buttonPressed,
             ]}
@@ -222,67 +273,226 @@ export function GlobalTransactions({
           ) : null}
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={
-            false
-          }
-          contentContainerStyle={
-            styles.filtersRow
-          }
-        >
-          {FILTERS.map(
-            (filter) => {
-              const isSelected =
-                selectedFilter ===
-                filter.value;
-
-              return (
-                <Pressable
-                  key={filter.value}
-                  accessibilityRole="button"
-                  onPress={() =>
-                    setSelectedFilter(
-                      filter.value,
-                    )
-                  }
-                  style={({ pressed }) => [
-                    styles.filterChip,
-
-                    isSelected &&
-                      styles.filterChipSelected,
-
-                    pressed &&
-                      styles.buttonPressed,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-
-                      isSelected &&
-                        styles.filterChipTextSelected,
-                    ]}
-                  >
-                    {filter.label}
-                  </Text>
-                </Pressable>
-              );
-            },
-          )}
-        </ScrollView>
-
         <View
-          style={styles.resultsHeader}
+          style={
+            styles.filterSection
+          }
         >
           <Text
-            style={styles.resultsTitle}
+            style={
+              styles.filterSectionLabel
+            }
           >
-            Recent Activity
+            Transaction Type
           </Text>
 
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={
+              false
+            }
+            contentContainerStyle={
+              styles.filtersRow
+            }
+          >
+            {TRANSACTION_FILTERS.map(
+              (filter) => {
+                const isSelected =
+                  selectedFilter ===
+                  filter.value;
+
+                return (
+                  <Pressable
+                    key={
+                      filter.value
+                    }
+                    accessibilityRole="button"
+                    onPress={() =>
+                      setSelectedFilter(
+                        filter.value,
+                      )
+                    }
+                    style={({
+                      pressed,
+                    }) => [
+                      styles.filterChip,
+
+                      isSelected &&
+                        styles.filterChipSelected,
+
+                      pressed &&
+                        styles.buttonPressed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+
+                        isSelected &&
+                          styles.filterChipTextSelected,
+                      ]}
+                    >
+                      {
+                        filter.label
+                      }
+                    </Text>
+                  </Pressable>
+                );
+              },
+            )}
+          </ScrollView>
+        </View>
+
+        <View
+          style={
+            styles.filterSection
+          }
+        >
+          <View
+            style={
+              styles.dateFilterHeader
+            }
+          >
+            <Text
+              style={
+                styles.filterSectionLabel
+              }
+            >
+              Date Range
+            </Text>
+
+            {hasActiveFilters ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={
+                  clearAllFilters
+                }
+                style={({
+                  pressed,
+                }) => [
+                  styles.clearFiltersButton,
+
+                  pressed &&
+                    styles.buttonPressed,
+                ]}
+              >
+                <Text
+                  style={
+                    styles.clearFiltersText
+                  }
+                >
+                  Reset
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={
+              false
+            }
+            contentContainerStyle={
+              styles.filtersRow
+            }
+          >
+            {DATE_FILTERS.map(
+              (filter) => {
+                const isSelected =
+                  selectedDateFilter ===
+                  filter.value;
+
+                return (
+                  <Pressable
+                    key={
+                      filter.value
+                    }
+                    accessibilityRole="button"
+                    onPress={() =>
+                      setSelectedDateFilter(
+                        filter.value,
+                      )
+                    }
+                    style={({
+                      pressed,
+                    }) => [
+                      styles.dateChip,
+
+                      isSelected &&
+                        styles.dateChipSelected,
+
+                      pressed &&
+                        styles.buttonPressed,
+                    ]}
+                  >
+                    <Ionicons
+                      name={
+                        filter.value ===
+                        "today"
+                          ? "today-outline"
+                          : filter.value ===
+                              "all-time"
+                            ? "infinite-outline"
+                            : "calendar-outline"
+                      }
+                      size={15}
+                      color={
+                        isSelected
+                          ? "#FFFFFF"
+                          : "#52606D"
+                      }
+                    />
+
+                    <Text
+                      style={[
+                        styles.dateChipText,
+
+                        isSelected &&
+                          styles.dateChipTextSelected,
+                      ]}
+                    >
+                      {
+                        filter.label
+                      }
+                    </Text>
+                  </Pressable>
+                );
+              },
+            )}
+          </ScrollView>
+        </View>
+
+        <View
+          style={
+            styles.resultsHeader
+          }
+        >
+          <View>
+            <Text
+              style={
+                styles.resultsTitle
+              }
+            >
+              Recent Activity
+            </Text>
+
+            <Text
+              style={
+                styles.resultsSubtitle
+              }
+            >
+              {
+                getDateFilterDescription(
+                  selectedDateFilter,
+                )
+              }
+            </Text>
+          </View>
+
           <Text
-            style={styles.resultsCount}
+            style={
+              styles.resultsCount
+            }
           >
             {
               filteredTransactions.length
@@ -324,16 +534,45 @@ export function GlobalTransactions({
             />
 
             <Text
-              style={styles.emptyTitle}
+              style={
+                styles.emptyTitle
+              }
             >
               No transactions found
             </Text>
 
             <Text
-              style={styles.emptyText}
+              style={
+                styles.emptyText
+              }
             >
-              Try changing the transaction filter or search terms.
+              No inventory activity matches the selected search, transaction type, and date range.
             </Text>
+
+            {hasActiveFilters ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={
+                  clearAllFilters
+                }
+                style={({
+                  pressed,
+                }) => [
+                  styles.emptyResetButton,
+
+                  pressed &&
+                    styles.buttonPressed,
+                ]}
+              >
+                <Text
+                  style={
+                    styles.emptyResetButtonText
+                  }
+                >
+                  Reset filters
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         )}
       </ScrollView>
@@ -357,7 +596,9 @@ function TransactionCard({
 
   return (
     <View
-      style={styles.transactionCard}
+      style={
+        styles.transactionCard
+      }
     >
       <View
         style={
@@ -372,6 +613,7 @@ function TransactionCard({
           <View
             style={[
               styles.iconContainer,
+
               {
                 backgroundColor:
                   activityStyle.background,
@@ -422,6 +664,7 @@ function TransactionCard({
         <View
           style={[
             styles.transactionBadge,
+
             {
               backgroundColor:
                 activityStyle.background,
@@ -431,6 +674,7 @@ function TransactionCard({
           <Text
             style={[
               styles.transactionBadgeText,
+
               {
                 color:
                   activityStyle.color,
@@ -445,10 +689,14 @@ function TransactionCard({
       </View>
 
       <View
-        style={styles.metaRow}
+        style={
+          styles.metaRow
+        }
       >
         <Text
-          style={styles.metaText}
+          style={
+            styles.metaText
+          }
         >
           {
             transaction.department
@@ -464,7 +712,9 @@ function TransactionCard({
         </Text>
 
         <Text
-          style={styles.metaText}
+          style={
+            styles.metaText
+          }
           numberOfLines={1}
         >
           {
@@ -474,14 +724,18 @@ function TransactionCard({
       </View>
 
       <Text
-        style={styles.barcode}
+        style={
+          styles.barcode
+        }
       >
         Barcode:{" "}
         {transaction.barcode}
       </Text>
 
       <View
-        style={styles.metricsRow}
+        style={
+          styles.metricsRow
+        }
       >
         <Metric
           label="Change"
@@ -535,10 +789,14 @@ function TransactionCard({
       ) : null}
 
       <View
-        style={styles.footerRow}
+        style={
+          styles.footerRow
+        }
       >
         <Text
-          style={styles.sourceText}
+          style={
+            styles.sourceText
+          }
         >
           {formatSource(
             transaction.source,
@@ -546,7 +804,9 @@ function TransactionCard({
         </Text>
 
         <Text
-          style={styles.dateText}
+          style={
+            styles.dateText
+          }
         >
           {formatDateTime(
             transaction.createdAt,
@@ -563,7 +823,9 @@ function Metric({
   tone = "normal",
 }: {
   label: string;
+
   value: string;
+
   tone?:
     | "normal"
     | "positive"
@@ -574,7 +836,9 @@ function Metric({
       style={styles.metric}
     >
       <Text
-        style={styles.metricLabel}
+        style={
+          styles.metricLabel
+        }
       >
         {label}
       </Text>
@@ -583,10 +847,12 @@ function Metric({
         style={[
           styles.metricValue,
 
-          tone === "positive" &&
+          tone ===
+            "positive" &&
             styles.metricPositive,
 
-          tone === "negative" &&
+          tone ===
+            "negative" &&
             styles.metricNegative,
         ]}
       >
@@ -594,6 +860,85 @@ function Metric({
       </Text>
     </View>
   );
+}
+
+function transactionMatchesDateFilter(
+  createdAt: string,
+  filter: DateFilter,
+  now: Date,
+): boolean {
+  if (
+    filter === "all-time"
+  ) {
+    return true;
+  }
+
+  const transactionDate =
+    new Date(createdAt);
+
+  if (
+    Number.isNaN(
+      transactionDate.getTime(),
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    filter === "today"
+  ) {
+    return (
+      transactionDate.getFullYear() ===
+        now.getFullYear() &&
+      transactionDate.getMonth() ===
+        now.getMonth() &&
+      transactionDate.getDate() ===
+        now.getDate()
+    );
+  }
+
+  const days =
+    filter === "7-days"
+      ? 7
+      : 30;
+
+  const startDate =
+    new Date(now);
+
+  startDate.setHours(
+    0,
+    0,
+    0,
+    0,
+  );
+
+  startDate.setDate(
+    startDate.getDate() -
+      (days - 1),
+  );
+
+  return (
+    transactionDate.getTime() >=
+    startDate.getTime()
+  );
+}
+
+function getDateFilterDescription(
+  filter: DateFilter,
+): string {
+  switch (filter) {
+    case "today":
+      return "Transactions recorded today";
+
+    case "7-days":
+      return "Transactions from the last 7 days";
+
+    case "30-days":
+      return "Transactions from the last 30 days";
+
+    case "all-time":
+      return "Complete transaction history";
+  }
 }
 
 function getActivityStyle(
@@ -737,7 +1082,9 @@ function formatDateTime(
     );
 
   const yesterdayStart =
-    new Date(todayStart);
+    new Date(
+      todayStart,
+    );
 
   yesterdayStart.setDate(
     yesterdayStart.getDate() -
@@ -779,11 +1126,13 @@ function formatDateTime(
     {
       month: "short",
       day: "numeric",
+
       year:
         date.getFullYear() ===
         now.getFullYear()
           ? undefined
           : "numeric",
+
       hour: "numeric",
       minute: "2-digit",
     },
@@ -852,65 +1201,80 @@ const styles =
 
     searchContainer: {
       marginTop: 22,
-
       minHeight: 50,
-
       flexDirection: "row",
       alignItems: "center",
-
       borderWidth: 1,
       borderColor:
         "#D6DCE3",
-
       borderRadius: 14,
-
       paddingHorizontal: 14,
-
       backgroundColor:
         "#FFFFFF",
     },
 
     searchInput: {
       flex: 1,
-
       marginLeft: 9,
-
       paddingVertical: 12,
-
       fontSize: 15,
-
       color: "#111827",
     },
 
     clearSearchButton: {
       marginLeft: 8,
-
       padding: 3,
     },
 
+    filterSection: {
+      marginTop: 18,
+    },
+
+    filterSectionLabel: {
+      marginBottom: 9,
+      fontSize: 12,
+      fontWeight: "800",
+      textTransform:
+        "uppercase",
+      letterSpacing: 0.4,
+      color: "#6B7280",
+    },
+
+    dateFilterHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent:
+        "space-between",
+    },
+
+    clearFiltersButton: {
+      marginBottom: 7,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+    },
+
+    clearFiltersText: {
+      fontSize: 12,
+      fontWeight: "800",
+      color: "#2563EB",
+    },
+
     filtersRow: {
-      marginTop: 14,
-
       paddingRight: 10,
-
       gap: 8,
     },
 
     filterChip: {
       minHeight: 38,
-
       alignItems: "center",
       justifyContent:
         "center",
-
       borderWidth: 1,
       borderColor:
         "#D6DCE3",
-
       borderRadius: 999,
-
       paddingHorizontal: 14,
-
       backgroundColor:
         "#FFFFFF",
     },
@@ -918,16 +1282,13 @@ const styles =
     filterChipSelected: {
       borderColor:
         "#20252B",
-
       backgroundColor:
         "#20252B",
     },
 
     filterChipText: {
       fontSize: 12,
-
       fontWeight: "700",
-
       color: "#52606D",
     },
 
@@ -935,12 +1296,45 @@ const styles =
       color: "#FFFFFF",
     },
 
-    resultsHeader: {
-      marginTop: 24,
-      marginBottom: 12,
-
+    dateChip: {
+      minHeight: 38,
       flexDirection: "row",
       alignItems: "center",
+      justifyContent:
+        "center",
+      gap: 6,
+      borderWidth: 1,
+      borderColor:
+        "#D6DCE3",
+      borderRadius: 999,
+      paddingHorizontal: 13,
+      backgroundColor:
+        "#FFFFFF",
+    },
+
+    dateChipSelected: {
+      borderColor:
+        "#20252B",
+      backgroundColor:
+        "#20252B",
+    },
+
+    dateChipText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: "#52606D",
+    },
+
+    dateChipTextSelected: {
+      color: "#FFFFFF",
+    },
+
+    resultsHeader: {
+      marginTop: 26,
+      marginBottom: 12,
+      flexDirection: "row",
+      alignItems:
+        "flex-end",
       justifyContent:
         "space-between",
     },
@@ -951,7 +1345,14 @@ const styles =
       color: "#111827",
     },
 
+    resultsSubtitle: {
+      marginTop: 3,
+      fontSize: 11,
+      color: "#8B949E",
+    },
+
     resultsCount: {
+      marginLeft: 12,
       fontSize: 12,
       fontWeight: "600",
       color: "#7A838E",
@@ -959,15 +1360,11 @@ const styles =
 
     transactionCard: {
       marginBottom: 14,
-
       borderWidth: 1,
       borderColor:
         "#E0E4E8",
-
       borderRadius: 18,
-
       padding: 16,
-
       backgroundColor:
         "#FFFFFF",
     },
@@ -982,26 +1379,21 @@ const styles =
 
     transactionIdentity: {
       flex: 1,
-
       flexDirection: "row",
-
       marginRight: 10,
     },
 
     iconContainer: {
       width: 43,
       height: 43,
-
       alignItems: "center",
       justifyContent:
         "center",
-
       borderRadius: 22,
     },
 
     productTextContainer: {
       flex: 1,
-
       marginLeft: 11,
     },
 
@@ -1020,9 +1412,7 @@ const styles =
 
     transactionBadge: {
       flexShrink: 0,
-
       borderRadius: 999,
-
       paddingHorizontal: 9,
       paddingVertical: 5,
     },
@@ -1034,7 +1424,6 @@ const styles =
 
     metaRow: {
       marginTop: 13,
-
       flexDirection: "row",
       alignItems: "center",
       flexWrap: "wrap",
@@ -1053,23 +1442,17 @@ const styles =
 
     barcode: {
       marginTop: 5,
-
       fontSize: 11,
-
       color: "#8B949E",
     },
 
     metricsRow: {
       marginTop: 15,
-
       flexDirection: "row",
-
       borderTopWidth: 1,
       borderTopColor:
         "#EEF0F2",
-
       paddingTop: 13,
-
       gap: 8,
     },
 
@@ -1079,22 +1462,16 @@ const styles =
 
     metricLabel: {
       fontSize: 10,
-
       fontWeight: "700",
-
       textTransform:
         "uppercase",
-
       color: "#8B949E",
     },
 
     metricValue: {
       marginTop: 4,
-
       fontSize: 14,
-
       fontWeight: "800",
-
       color: "#20252B",
     },
 
@@ -1108,101 +1485,89 @@ const styles =
 
     noteContainer: {
       marginTop: 13,
-
       flexDirection: "row",
       alignItems:
         "flex-start",
-
       gap: 7,
-
       borderRadius: 10,
-
       padding: 10,
-
       backgroundColor:
         "#F8FAFC",
     },
 
     noteText: {
       flex: 1,
-
       fontSize: 12,
-
       lineHeight: 17,
-
       color: "#52606D",
     },
 
     footerRow: {
       marginTop: 13,
-
       flexDirection: "row",
-
       alignItems: "center",
-
       justifyContent:
         "space-between",
     },
 
     sourceText: {
       fontSize: 11,
-
       fontWeight: "600",
-
       color: "#8B949E",
     },
 
     dateText: {
       marginLeft: 12,
-
       fontSize: 11,
-
       fontWeight: "600",
-
       textAlign: "right",
-
       color: "#8B949E",
     },
 
     emptyContainer: {
       marginTop: 30,
-
       alignItems: "center",
-
       borderWidth: 1,
       borderColor:
         "#E5E7EB",
-
       borderRadius: 18,
-
       paddingHorizontal: 24,
       paddingVertical: 45,
-
       backgroundColor:
         "#FFFFFF",
     },
 
     emptyTitle: {
       marginTop: 12,
-
       fontSize: 18,
-
       fontWeight: "800",
-
       color: "#111827",
     },
 
     emptyText: {
       marginTop: 6,
-
       maxWidth: 280,
-
       fontSize: 13,
-
       lineHeight: 19,
-
       textAlign: "center",
-
       color: "#6B7280",
+    },
+
+    emptyResetButton: {
+      marginTop: 16,
+      minHeight: 40,
+      alignItems: "center",
+      justifyContent:
+        "center",
+      borderRadius: 10,
+      paddingHorizontal: 15,
+      backgroundColor:
+        "#20252B",
+    },
+
+    emptyResetButtonText: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: "#FFFFFF",
     },
   });
