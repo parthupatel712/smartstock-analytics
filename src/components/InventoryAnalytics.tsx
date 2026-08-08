@@ -17,6 +17,7 @@ import type {
   DailyInventoryMetric,
   InventoryAnalyticsSummary,
   ProductSalesMetric,
+  ProductTrend,
 } from "../types/inventoryAnalytics";
 
 interface InventoryAnalyticsProps {
@@ -37,10 +38,11 @@ export function InventoryAnalytics({
   onPeriodChange,
   onClose,
 }: InventoryAnalyticsProps) {
-  const totals =
-    calculateTotals(
-      summary.dailyMetrics,
-    );
+  const current =
+    summary.comparison.current;
+
+  const previous =
+    summary.comparison.previous;
 
   const maxDailySales =
     Math.max(
@@ -49,6 +51,22 @@ export function InventoryAnalytics({
           metric.salesValue,
       ),
       1,
+    );
+
+  const fasterProducts =
+    summary.productTrends.filter(
+      (trend) =>
+        trend.trendType ===
+          "selling_faster" ||
+        trend.trendType ===
+          "new_strong_seller",
+    );
+
+  const droppedProducts =
+    summary.productTrends.filter(
+      (trend) =>
+        trend.trendType ===
+        "sales_dropped",
     );
 
   return (
@@ -80,7 +98,7 @@ export function InventoryAnalytics({
             <Text
               style={styles.subtitle}
             >
-              See what is selling and how your stock is changing over time.
+              See what is changing in your store and which products need attention.
             </Text>
           </View>
 
@@ -161,10 +179,14 @@ export function InventoryAnalytics({
             styles.periodDescription
           }
         >
-          Showing trends from the last{" "}
+          Comparing the last{" "}
           {formatPeriodLabel(
             selectedPeriod,
-          )}
+          )}{" "}
+          with the previous{" "}
+          {formatPeriodLabel(
+            selectedPeriod,
+          )}.
         </Text>
 
         <Text
@@ -172,7 +194,7 @@ export function InventoryAnalytics({
             styles.sectionTitle
           }
         >
-          Period Summary
+          Compared With Before
         </Text>
 
         <Text
@@ -180,7 +202,7 @@ export function InventoryAnalytics({
             styles.sectionDescription
           }
         >
-          A quick look at what happened during this time period.
+          See whether sales and stock activity went up or down.
         </Text>
 
         <View
@@ -188,48 +210,63 @@ export function InventoryAnalytics({
             styles.summaryGrid
           }
         >
-          <SummaryCard
+          <ComparisonCard
             label="Sales"
             value={formatCurrency(
-              totals.salesValue,
+              current.salesValue,
             )}
-            description={`${formatNumber(
-              totals.salesUnits,
-            )} items sold`}
-            tone="positive"
+            previousValue={`Previous: ${formatCurrency(
+              previous.salesValue,
+            )}`}
+            change={
+              summary.comparison
+                .salesValueChangePercent
+            }
+            positiveIsGood
           />
 
-          <SummaryCard
+          <ComparisonCard
             label="Items Sold"
             value={formatNumber(
-              totals.salesUnits,
+              current.salesUnits,
             )}
-            description="Total items sold during this period"
+            previousValue={`Previous: ${formatNumber(
+              previous.salesUnits,
+            )}`}
+            change={
+              summary.comparison
+                .salesUnitsChangePercent
+            }
+            positiveIsGood
           />
 
-          <SummaryCard
+          <ComparisonCard
             label="Stock Added"
             value={formatNumber(
-              totals.stockInUnits,
+              current.stockInUnits,
             )}
-            description={`${formatCurrency(
-              totals.stockInValue,
-            )} worth of stock added`}
+            previousValue={`Previous: ${formatNumber(
+              previous.stockInUnits,
+            )}`}
+            change={
+              summary.comparison
+                .stockInUnitsChangePercent
+            }
           />
 
-          <SummaryCard
+          <ComparisonCard
             label="Damaged Stock"
-            value={formatNumber(
-              totals.damageUnits,
+            value={formatCurrency(
+              current.damageValue,
             )}
-            description={`${formatCurrency(
-              totals.damageValue,
-            )} worth of damaged stock`}
-            tone={
-              totals.damageUnits > 0
-                ? "danger"
-                : "normal"
+            previousValue={`Previous: ${formatCurrency(
+              previous.damageValue,
+            )}`}
+            change={
+              summary.comparison
+                .damageValueChangePercent
             }
+            positiveIsGood={false}
           />
         </View>
 
@@ -238,7 +275,7 @@ export function InventoryAnalytics({
             styles.sectionTitle
           }
         >
-          Sales by Day
+          Sales Trend
         </Text>
 
         <Text
@@ -246,7 +283,170 @@ export function InventoryAnalytics({
             styles.sectionDescription
           }
         >
-          See which days had more or fewer sales.
+          Daily sales during the selected time period.
+        </Text>
+
+        <View
+          style={
+            styles.chartCard
+          }
+        >
+          {summary.dailyMetrics
+            .length === 0 ? (
+            <EmptyMessage
+              text="No sales activity is available for this time period."
+            />
+          ) : (
+            <>
+              <SalesChart
+                metrics={
+                  summary.dailyMetrics
+                }
+                maxSales={
+                  maxDailySales
+                }
+              />
+
+              <View
+                style={
+                  styles.chartFooter
+                }
+              >
+                <Text
+                  style={
+                    styles.chartFooterText
+                  }
+                >
+                  Total sales
+                </Text>
+
+                <Text
+                  style={
+                    styles.chartFooterValue
+                  }
+                >
+                  {formatCurrency(
+                    current.salesValue,
+                  )}
+                </Text>
+              </View>
+            </>
+          )}
+        </View>
+
+        <Text
+          style={
+            styles.sectionTitle
+          }
+        >
+          Products to Notice
+        </Text>
+
+        <Text
+          style={
+            styles.sectionDescription
+          }
+        >
+          Products selling much faster or slower than before.
+        </Text>
+
+        {summary.productTrends.length ===
+        0 ? (
+          <View
+            style={
+              styles.noticeEmptyCard
+            }
+          >
+            <Text
+              style={
+                styles.noticeEmptyTitle
+              }
+            >
+              No major changes found
+            </Text>
+
+            <Text
+              style={
+                styles.noticeEmptyText
+              }
+            >
+              Product sales are fairly steady compared with the previous period.
+            </Text>
+          </View>
+        ) : (
+          <>
+            {fasterProducts.length >
+            0 ? (
+              <View
+                style={
+                  styles.trendGroup
+                }
+              >
+                <Text
+                  style={
+                    styles.trendGroupTitle
+                  }
+                >
+                  Selling Faster
+                </Text>
+
+                {fasterProducts.map(
+                  (trend) => (
+                    <ProductTrendCard
+                      key={`up-${trend.productId}`}
+                      trend={
+                        trend
+                      }
+                    />
+                  ),
+                )}
+              </View>
+            ) : null}
+
+            {droppedProducts.length >
+            0 ? (
+              <View
+                style={
+                  styles.trendGroup
+                }
+              >
+                <Text
+                  style={
+                    styles.trendGroupTitle
+                  }
+                >
+                  Sales Dropped
+                </Text>
+
+                {droppedProducts.map(
+                  (trend) => (
+                    <ProductTrendCard
+                      key={`down-${trend.productId}`}
+                      trend={
+                        trend
+                      }
+                    />
+                  ),
+                )}
+              </View>
+            ) : null}
+          </>
+        )}
+
+        <Text
+          style={
+            styles.sectionTitle
+          }
+        >
+          Daily Details
+        </Text>
+
+        <Text
+          style={
+            styles.sectionDescription
+          }
+        >
+          Sales, stock added, and damaged items for each day.
         </Text>
 
         <View
@@ -255,7 +455,7 @@ export function InventoryAnalytics({
           {summary.dailyMetrics
             .length === 0 ? (
             <EmptyMessage
-              text="No sales or stock activity is available for this time period."
+              text="No store activity is available for this time period."
             />
           ) : (
             summary.dailyMetrics.map(
@@ -289,7 +489,7 @@ export function InventoryAnalytics({
             styles.sectionDescription
           }
         >
-          Products that brought in the most sales during this time period.
+          Products bringing in the most sales during this time period.
         </Text>
 
         <View
@@ -374,34 +574,56 @@ export function InventoryAnalytics({
   );
 }
 
-interface SummaryCardProps {
+interface ComparisonCardProps {
   label: string;
 
   value: string;
 
-  description: string;
+  previousValue: string;
 
-  tone?:
-    | "normal"
-    | "positive"
-    | "danger";
+  change: number | null;
+
+  positiveIsGood?: boolean;
 }
 
-function SummaryCard({
+function ComparisonCard({
   label,
   value,
-  description,
-  tone = "normal",
-}: SummaryCardProps) {
+  previousValue,
+  change,
+  positiveIsGood,
+}: ComparisonCardProps) {
+  const isUp =
+    change !== null &&
+    change > 0;
+
+  const isDown =
+    change !== null &&
+    change < 0;
+
+  const isGood =
+    positiveIsGood === undefined
+      ? null
+      : positiveIsGood
+        ? isUp
+        : isDown;
+
+  const isBad =
+    positiveIsGood === undefined
+      ? null
+      : positiveIsGood
+        ? isDown
+        : isUp;
+
   return (
     <View
       style={[
         styles.summaryCard,
 
-        tone === "positive" &&
+        isGood &&
           styles.summaryCardPositive,
 
-        tone === "danger" &&
+        isBad &&
           styles.summaryCardDanger,
       ]}
     >
@@ -414,25 +636,308 @@ function SummaryCard({
       </Text>
 
       <Text
-        style={[
-          styles.summaryValue,
-
-          tone === "positive" &&
-            styles.summaryValuePositive,
-
-          tone === "danger" &&
-            styles.summaryValueDanger,
-        ]}
+        style={
+          styles.summaryValue
+        }
       >
         {value}
       </Text>
 
       <Text
         style={
-          styles.summaryDescription
+          styles.previousValue
         }
       >
-        {description}
+        {previousValue}
+      </Text>
+
+      <View
+        style={
+          styles.changeRow
+        }
+      >
+        <Text
+          style={[
+            styles.changeText,
+
+            isUp &&
+              styles.changeUp,
+
+            isDown &&
+              styles.changeDown,
+          ]}
+        >
+          {formatChange(
+            change,
+          )}
+        </Text>
+
+        <Text
+          style={
+            styles.changeCaption
+          }
+        >
+          vs previous period
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function SalesChart({
+  metrics,
+  maxSales,
+}: {
+  metrics: DailyInventoryMetric[];
+
+  maxSales: number;
+}) {
+  const visibleMetrics =
+    reduceChartPoints(
+      metrics,
+      14,
+    );
+
+  return (
+    <View>
+      <View
+        style={
+          styles.salesChart
+        }
+      >
+        {visibleMetrics.map(
+          (metric) => {
+            const heightPercent =
+              Math.max(
+                (
+                  metric.salesValue /
+                  maxSales
+                ) * 100,
+                metric.salesValue >
+                  0
+                  ? 5
+                  : 2,
+              );
+
+            return (
+              <View
+                key={
+                  metric.date
+                }
+                style={
+                  styles.chartColumn
+                }
+              >
+                <View
+                  style={
+                    styles.chartBarArea
+                  }
+                >
+                  <View
+                    style={[
+                      styles.chartBar,
+
+                      {
+                        height:
+                          `${heightPercent}%`,
+                      },
+                    ]}
+                  />
+                </View>
+
+                <Text
+                  style={
+                    styles.chartDate
+                  }
+                  numberOfLines={1}
+                >
+                  {formatShortDate(
+                    metric.date,
+                  )}
+                </Text>
+              </View>
+            );
+          },
+        )}
+      </View>
+
+      <View
+        style={
+          styles.chartScaleRow
+        }
+      >
+        <Text
+          style={
+            styles.chartScaleText
+          }
+        >
+          Lower sales
+        </Text>
+
+        <Text
+          style={
+            styles.chartScaleText
+          }
+        >
+          Higher sales
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function ProductTrendCard({
+  trend,
+}: {
+  trend: ProductTrend;
+}) {
+  const isDrop =
+    trend.trendType ===
+    "sales_dropped";
+
+  const isNew =
+    trend.trendType ===
+    "new_strong_seller";
+
+  const productDetails = [
+    trend.brand.trim(),
+    trend.category,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <View
+      style={[
+        styles.trendCard,
+
+        isDrop
+          ? styles.trendCardDanger
+          : styles.trendCardPositive,
+      ]}
+    >
+      <View
+        style={
+          styles.trendCardHeader
+        }
+      >
+        <View
+          style={
+            styles.trendProductText
+          }
+        >
+          <Text
+            style={
+              styles.trendProductName
+            }
+          >
+            {
+              trend.productName
+            }
+          </Text>
+
+          {productDetails ? (
+            <Text
+              style={
+                styles.trendProductDetails
+              }
+            >
+              {productDetails}
+            </Text>
+          ) : null}
+        </View>
+
+        <Text
+          style={[
+            styles.trendPercent,
+
+            isDrop
+              ? styles.trendPercentDown
+              : styles.trendPercentUp,
+          ]}
+        >
+          {formatChange(
+            trend.changePercent,
+          )}
+        </Text>
+      </View>
+
+      <View
+        style={
+          styles.trendNumbersRow
+        }
+      >
+        <View
+          style={
+            styles.trendNumberBlock
+          }
+        >
+          <Text
+            style={
+              styles.trendNumberLabel
+            }
+          >
+            Before
+          </Text>
+
+          <Text
+            style={
+              styles.trendNumberValue
+            }
+          >
+            {formatNumber(
+              trend.previousUnitsSold,
+            )}
+          </Text>
+        </View>
+
+        <Text
+          style={
+            styles.trendArrow
+          }
+        >
+          →
+        </Text>
+
+        <View
+          style={
+            styles.trendNumberBlock
+          }
+        >
+          <Text
+            style={
+              styles.trendNumberLabel
+            }
+          >
+            Now
+          </Text>
+
+          <Text
+            style={
+              styles.trendNumberValue
+            }
+          >
+            {formatNumber(
+              trend.currentUnitsSold,
+            )}
+          </Text>
+        </View>
+      </View>
+
+      <Text
+        style={[
+          styles.trendMessage,
+
+          isDrop
+            ? styles.trendMessageDanger
+            : styles.trendMessagePositive,
+        ]}
+      >
+        {isNew
+          ? "New strong seller"
+          : isDrop
+            ? "Sales dropped sharply"
+            : "Selling much faster than before"}
       </Text>
     </View>
   );
@@ -738,49 +1243,161 @@ function EmptyMessage({
   );
 }
 
-function calculateTotals(
-  dailyMetrics: DailyInventoryMetric[],
-) {
-  return dailyMetrics.reduce(
-    (
-      totals,
-      metric,
-    ) => ({
+function reduceChartPoints(
+  metrics: DailyInventoryMetric[],
+  maxPoints: number,
+): DailyInventoryMetric[] {
+  if (
+    metrics.length <=
+    maxPoints
+  ) {
+    return metrics;
+  }
+
+  const step =
+    Math.ceil(
+      metrics.length /
+        maxPoints,
+    );
+
+  const result:
+    DailyInventoryMetric[] = [];
+
+  for (
+    let index = 0;
+    index < metrics.length;
+    index += step
+  ) {
+    const group =
+      metrics.slice(
+        index,
+        index + step,
+      );
+
+    if (
+      group.length === 0
+    ) {
+      continue;
+    }
+
+    result.push({
+      date:
+        group[
+          group.length - 1
+        ].date,
+
       salesValue:
-        totals.salesValue +
-        metric.salesValue,
+        group.reduce(
+          (
+            total,
+            item,
+          ) =>
+            total +
+            item.salesValue,
+          0,
+        ),
 
       stockInValue:
-        totals.stockInValue +
-        metric.stockInValue,
+        group.reduce(
+          (
+            total,
+            item,
+          ) =>
+            total +
+            item.stockInValue,
+          0,
+        ),
 
       damageValue:
-        totals.damageValue +
-        metric.damageValue,
+        group.reduce(
+          (
+            total,
+            item,
+          ) =>
+            total +
+            item.damageValue,
+          0,
+        ),
 
       salesUnits:
-        totals.salesUnits +
-        metric.salesUnits,
+        group.reduce(
+          (
+            total,
+            item,
+          ) =>
+            total +
+            item.salesUnits,
+          0,
+        ),
 
       stockInUnits:
-        totals.stockInUnits +
-        metric.stockInUnits,
+        group.reduce(
+          (
+            total,
+            item,
+          ) =>
+            total +
+            item.stockInUnits,
+          0,
+        ),
 
       damageUnits:
-        totals.damageUnits +
-        metric.damageUnits,
-    }),
+        group.reduce(
+          (
+            total,
+            item,
+          ) =>
+            total +
+            item.damageUnits,
+          0,
+        ),
 
-    {
-      salesValue: 0,
-      stockInValue: 0,
-      damageValue: 0,
+      transactionCount:
+        group.reduce(
+          (
+            total,
+            item,
+          ) =>
+            total +
+            item.transactionCount,
+          0,
+        ),
+    });
+  }
 
-      salesUnits: 0,
-      stockInUnits: 0,
-      damageUnits: 0,
-    },
-  );
+  return result;
+}
+
+function formatChange(
+  value: number | null,
+): string {
+  if (value === null) {
+    return "New";
+  }
+
+  if (
+    Math.abs(value) <
+    0.05
+  ) {
+    return "No change";
+  }
+
+  const rounded =
+    Math.round(
+      value * 10,
+    ) / 10;
+
+  if (rounded > 0) {
+    return `↑ ${rounded}%`;
+  }
+
+  if (rounded < 0) {
+    return `↓ ${Math.abs(
+      rounded,
+    )}%`;
+  }
+
+  return "No change";
 }
 
 function formatCurrency(
@@ -834,6 +1451,23 @@ function formatDate(
         new Date().getFullYear()
           ? "numeric"
           : undefined,
+    },
+  );
+}
+
+function formatShortDate(
+  date: string,
+): string {
+  const parsedDate =
+    new Date(
+      `${date}T00:00:00`,
+    );
+
+  return parsedDate.toLocaleDateString(
+    "en-CA",
+    {
+      month: "short",
+      day: "numeric",
     },
   );
 }
@@ -946,12 +1580,13 @@ const styles =
     periodDescription: {
       marginTop: 9,
       fontSize: 12,
+      lineHeight: 18,
       color: "#6B7280",
     },
 
     sectionTitle: {
-      marginTop: 26,
-      fontSize: 19,
+      marginTop: 28,
+      fontSize: 20,
       fontWeight: "800",
       color: "#111827",
     },
@@ -973,7 +1608,7 @@ const styles =
 
     summaryCard: {
       width: "48%",
-      minHeight: 126,
+      minHeight: 150,
       borderWidth: 1,
       borderColor:
         "#E0E4E8",
@@ -1005,24 +1640,39 @@ const styles =
 
     summaryValue: {
       marginTop: 9,
-      fontSize: 23,
+      fontSize: 22,
       fontWeight: "800",
       color: "#111827",
     },
 
-    summaryValuePositive: {
+    previousValue: {
+      marginTop: 5,
+      fontSize: 11,
+      color: "#8B949E",
+    },
+
+    changeRow: {
+      marginTop: 10,
+    },
+
+    changeText: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: "#6B7280",
+    },
+
+    changeUp: {
       color: "#15803D",
     },
 
-    summaryValueDanger: {
+    changeDown: {
       color: "#B42318",
     },
 
-    summaryDescription: {
-      marginTop: 7,
-      fontSize: 12,
-      lineHeight: 17,
-      color: "#6B7280",
+    changeCaption: {
+      marginTop: 2,
+      fontSize: 10,
+      color: "#9CA3AF",
     },
 
     chartCard: {
@@ -1033,6 +1683,221 @@ const styles =
       padding: 16,
       backgroundColor:
         "#FFFFFF",
+    },
+
+    salesChart: {
+      height: 190,
+      flexDirection: "row",
+      alignItems:
+        "flex-end",
+      justifyContent:
+        "space-between",
+      gap: 4,
+    },
+
+    chartColumn: {
+      flex: 1,
+      minWidth: 14,
+      alignItems: "center",
+    },
+
+    chartBarArea: {
+      width: "100%",
+      height: 155,
+      justifyContent:
+        "flex-end",
+      alignItems: "center",
+      borderBottomWidth: 1,
+      borderBottomColor:
+        "#E5E7EB",
+    },
+
+    chartBar: {
+      width: "68%",
+      minHeight: 3,
+      borderTopLeftRadius: 5,
+      borderTopRightRadius: 5,
+      backgroundColor:
+        "#2563EB",
+    },
+
+    chartDate: {
+      marginTop: 7,
+      fontSize: 8,
+      color: "#8B949E",
+    },
+
+    chartScaleRow: {
+      marginTop: 12,
+      flexDirection: "row",
+      justifyContent:
+        "space-between",
+    },
+
+    chartScaleText: {
+      fontSize: 10,
+      color: "#9CA3AF",
+    },
+
+    chartFooter: {
+      marginTop: 15,
+      paddingTop: 13,
+      borderTopWidth: 1,
+      borderTopColor:
+        "#EEF0F2",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent:
+        "space-between",
+    },
+
+    chartFooterText: {
+      fontSize: 12,
+      color: "#6B7280",
+    },
+
+    chartFooterValue: {
+      fontSize: 16,
+      fontWeight: "800",
+      color: "#15803D",
+    },
+
+    noticeEmptyCard: {
+      borderWidth: 1,
+      borderColor:
+        "#E0E4E8",
+      borderRadius: 16,
+      padding: 20,
+      backgroundColor:
+        "#FFFFFF",
+    },
+
+    noticeEmptyTitle: {
+      fontSize: 15,
+      fontWeight: "800",
+      color: "#111827",
+    },
+
+    noticeEmptyText: {
+      marginTop: 6,
+      fontSize: 12,
+      lineHeight: 18,
+      color: "#6B7280",
+    },
+
+    trendGroup: {
+      marginBottom: 14,
+    },
+
+    trendGroupTitle: {
+      marginBottom: 9,
+      fontSize: 14,
+      fontWeight: "800",
+      color: "#374151",
+    },
+
+    trendCard: {
+      marginBottom: 10,
+      borderWidth: 1,
+      borderRadius: 15,
+      padding: 14,
+    },
+
+    trendCardPositive: {
+      borderColor:
+        "#D1FAE5",
+      backgroundColor:
+        "#F7FEFA",
+    },
+
+    trendCardDanger: {
+      borderColor:
+        "#FECACA",
+      backgroundColor:
+        "#FFF8F7",
+    },
+
+    trendCardHeader: {
+      flexDirection: "row",
+      alignItems:
+        "flex-start",
+      justifyContent:
+        "space-between",
+    },
+
+    trendProductText: {
+      flex: 1,
+      marginRight: 12,
+    },
+
+    trendProductName: {
+      fontSize: 15,
+      fontWeight: "800",
+      color: "#111827",
+    },
+
+    trendProductDetails: {
+      marginTop: 3,
+      fontSize: 11,
+      color: "#6B7280",
+    },
+
+    trendPercent: {
+      fontSize: 14,
+      fontWeight: "800",
+    },
+
+    trendPercentUp: {
+      color: "#15803D",
+    },
+
+    trendPercentDown: {
+      color: "#B42318",
+    },
+
+    trendNumbersRow: {
+      marginTop: 13,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+
+    trendNumberBlock: {
+      minWidth: 70,
+    },
+
+    trendNumberLabel: {
+      fontSize: 10,
+      fontWeight: "700",
+      textTransform:
+        "uppercase",
+      color: "#8B949E",
+    },
+
+    trendNumberValue: {
+      marginTop: 3,
+      fontSize: 18,
+      fontWeight: "800",
+      color: "#111827",
+    },
+
+    trendArrow: {
+      marginHorizontal: 12,
+      fontSize: 18,
+      color: "#9CA3AF",
+    },
+
+    trendMessage: {
+      marginTop: 11,
+      fontSize: 12,
+      fontWeight: "700",
+    },
+
+    trendMessagePositive: {
+      color: "#15803D",
+    },
+
+    trendMessageDanger: {
+      color: "#B42318",
     },
 
     dailyRow: {
