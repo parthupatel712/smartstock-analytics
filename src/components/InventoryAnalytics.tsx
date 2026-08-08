@@ -7,6 +7,10 @@ import {
   View,
 } from "react-native";
 
+import {
+  ANALYTICS_PERIOD_OPTIONS,
+  type AnalyticsPeriodDays,
+} from "../types/analyticsPeriod";
 import type {
   CategorySalesMetric,
   DailyInventoryMetric,
@@ -16,13 +20,17 @@ import type {
 
 interface InventoryAnalyticsProps {
   summary: InventoryAnalyticsSummary;
-  days?: number;
+  selectedPeriod: AnalyticsPeriodDays;
+  onPeriodChange: (
+    period: AnalyticsPeriodDays,
+  ) => void;
   onClose: () => void;
 }
 
 export function InventoryAnalytics({
   summary,
-  days = 30,
+  selectedPeriod,
+  onPeriodChange,
   onClose,
 }: InventoryAnalyticsProps) {
   const totals = calculateTotals(summary.dailyMetrics);
@@ -47,7 +55,7 @@ export function InventoryAnalytics({
             </Text>
 
             <Text style={styles.subtitle}>
-              Performance insights for the last {days} days
+              Inventory and sales performance
             </Text>
           </View>
 
@@ -65,29 +73,87 @@ export function InventoryAnalytics({
           </Pressable>
         </View>
 
+        <Text style={styles.periodLabel}>
+          Analytics period
+        </Text>
+
+        <View style={styles.periodContainer}>
+          {ANALYTICS_PERIOD_OPTIONS.map(
+            (option) => {
+              const isSelected =
+                option.days === selectedPeriod;
+
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  key={option.days}
+                  onPress={() =>
+                    onPeriodChange(option.days)
+                  }
+                  style={({ pressed }) => [
+                    styles.periodButton,
+                    isSelected &&
+                      styles.periodButtonSelected,
+                    pressed && styles.buttonPressed,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.periodButtonText,
+                      isSelected &&
+                        styles.periodButtonTextSelected,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            },
+          )}
+        </View>
+
+        <Text style={styles.periodDescription}>
+          Showing activity from the last{" "}
+          {formatPeriodLabel(selectedPeriod)}
+        </Text>
+
         <View style={styles.summaryGrid}>
           <SummaryCard
             label="Sales"
             value={formatCurrency(totals.salesValue)}
-            description={`${totals.salesUnits} units sold`}
+            description={`${formatNumber(
+              totals.salesUnits,
+            )} units sold`}
           />
 
           <SummaryCard
             label="Stock received"
-            value={formatCurrency(totals.stockInValue)}
-            description={`${totals.stockInUnits} units received`}
+            value={formatCurrency(
+              totals.stockInValue,
+            )}
+            description={`${formatNumber(
+              totals.stockInUnits,
+            )} units received`}
           />
 
           <SummaryCard
             label="Damage"
-            value={formatCurrency(totals.damageValue)}
-            description={`${totals.damageUnits} units damaged`}
+            value={formatCurrency(
+              totals.damageValue,
+            )}
+            description={`${formatNumber(
+              totals.damageUnits,
+            )} units damaged`}
           />
 
           <SummaryCard
             label="Transactions"
-            value={formatNumber(totals.transactionCount)}
-            description={`Last ${days} days`}
+            value={formatNumber(
+              totals.transactionCount,
+            )}
+            description={`Last ${formatPeriodLabel(
+              selectedPeriod,
+            )}`}
           />
         </View>
 
@@ -118,7 +184,7 @@ export function InventoryAnalytics({
         <View style={styles.rankingCard}>
           {summary.topProducts.length === 0 ? (
             <EmptyMessage
-              text="No product sales have been recorded yet."
+              text="No product sales have been recorded for this period."
             />
           ) : (
             summary.topProducts.map(
@@ -140,7 +206,7 @@ export function InventoryAnalytics({
         <View style={styles.rankingCard}>
           {summary.topCategories.length === 0 ? (
             <EmptyMessage
-              text="No category sales have been recorded yet."
+              text="No category sales have been recorded for this period."
             />
           ) : (
             summary.topCategories.map(
@@ -226,15 +292,17 @@ function DailyMetricRow({
 
       <View style={styles.dailyMetaRow}>
         <Text style={styles.dailyMetaText}>
-          Sold: {metric.salesUnits}
+          Sold: {formatNumber(metric.salesUnits)}
         </Text>
 
         <Text style={styles.dailyMetaText}>
-          Received: {metric.stockInUnits}
+          Received:{" "}
+          {formatNumber(metric.stockInUnits)}
         </Text>
 
         <Text style={styles.dailyMetaText}>
-          Damage: {metric.damageUnits}
+          Damage:{" "}
+          {formatNumber(metric.damageUnits)}
         </Text>
       </View>
     </View>
@@ -268,8 +336,10 @@ function ProductRankingRow({
         </Text>
 
         <Text style={styles.rankingMeta}>
-          {product.unitsSold} units ·{" "}
-          {product.transactionCount} sales
+          {formatNumber(product.unitsSold)} units ·{" "}
+          {formatNumber(
+            product.transactionCount,
+          )} sales
         </Text>
       </View>
 
@@ -307,8 +377,10 @@ function CategoryRankingRow({
         </Text>
 
         <Text style={styles.rankingMeta}>
-          {category.unitsSold} units ·{" "}
-          {category.transactionCount} transactions
+          {formatNumber(category.unitsSold)} units ·{" "}
+          {formatNumber(
+            category.transactionCount,
+          )} transactions
         </Text>
       </View>
 
@@ -340,17 +412,26 @@ function calculateTotals(
     (totals, metric) => ({
       salesValue:
         totals.salesValue + metric.salesValue,
+
       stockInValue:
-        totals.stockInValue + metric.stockInValue,
+        totals.stockInValue +
+        metric.stockInValue,
+
       damageValue:
-        totals.damageValue + metric.damageValue,
+        totals.damageValue +
+        metric.damageValue,
 
       salesUnits:
-        totals.salesUnits + metric.salesUnits,
+        totals.salesUnits +
+        metric.salesUnits,
+
       stockInUnits:
-        totals.stockInUnits + metric.stockInUnits,
+        totals.stockInUnits +
+        metric.stockInUnits,
+
       damageUnits:
-        totals.damageUnits + metric.damageUnits,
+        totals.damageUnits +
+        metric.damageUnits,
 
       transactionCount:
         totals.transactionCount +
@@ -377,7 +458,19 @@ function formatCurrency(value: number): string {
 }
 
 function formatNumber(value: number): string {
-  return new Intl.NumberFormat("en-CA").format(value);
+  return new Intl.NumberFormat("en-CA").format(
+    value,
+  );
+}
+
+function formatPeriodLabel(
+  period: AnalyticsPeriodDays,
+): string {
+  if (period === 365) {
+    return "1 year";
+  }
+
+  return `${period} days`;
 }
 
 function formatDate(date: string): string {
@@ -388,6 +481,11 @@ function formatDate(date: string): string {
   return parsedDate.toLocaleDateString("en-CA", {
     month: "short",
     day: "numeric",
+    year:
+      parsedDate.getFullYear() !==
+      new Date().getFullYear()
+        ? "numeric"
+        : undefined,
   });
 }
 
@@ -436,8 +534,47 @@ const styles = StyleSheet.create({
   buttonPressed: {
     opacity: 0.72,
   },
+  periodLabel: {
+    marginTop: 24,
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#374151",
+  },
+  periodContainer: {
+    marginTop: 10,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 9,
+  },
+  periodButton: {
+    minHeight: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#CBD2DA",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    backgroundColor: "#FFFFFF",
+  },
+  periodButtonSelected: {
+    borderColor: "#0F766E",
+    backgroundColor: "#0F766E",
+  },
+  periodButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#374151",
+  },
+  periodButtonTextSelected: {
+    color: "#FFFFFF",
+  },
+  periodDescription: {
+    marginTop: 9,
+    fontSize: 12,
+    color: "#6B7280",
+  },
   summaryGrid: {
-    marginTop: 22,
+    marginTop: 20,
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 12,
