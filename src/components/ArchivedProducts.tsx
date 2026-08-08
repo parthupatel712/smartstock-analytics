@@ -104,9 +104,11 @@ function ArchivedProductCard({
             {product.name}
           </Text>
 
-          <Text style={styles.productMeta}>
-            {product.brand}
-          </Text>
+         {product.brand.trim() ? (
+  <Text style={styles.productMeta}>
+    {product.brand}
+  </Text>
+) : null}
 
           <Text style={styles.productMeta}>
             {product.department} · {product.category}

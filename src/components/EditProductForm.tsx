@@ -50,7 +50,7 @@ export function EditProductForm({
     useState(product.name);
 
   const [brand, setBrand] =
-    useState(product.brand);
+    useState(product.brand ?? "");
 
   const [
     department,
@@ -66,15 +66,19 @@ export function EditProductForm({
     product.category,
   );
 
-  const [unitCost, setUnitCost] =
-    useState(
-      product.unitCost.toString(),
-    );
+  const [
+    unitCost,
+    setUnitCost,
+  ] = useState(
+    product.unitCost.toString(),
+  );
 
-  const [unitPrice, setUnitPrice] =
-    useState(
-      product.unitPrice.toString(),
-    );
+  const [
+    unitPrice,
+    setUnitPrice,
+  ] = useState(
+    product.unitPrice.toString(),
+  );
 
   const [
     reorderLevel,
@@ -86,7 +90,9 @@ export function EditProductForm({
   const [
     activePicker,
     setActivePicker,
-  ] = useState<PickerType>(null);
+  ] = useState<PickerType>(
+    null,
+  );
 
   const availableCategories =
     useMemo(
@@ -145,6 +151,10 @@ export function EditProductForm({
     const cleanName =
       name.trim();
 
+    /*
+     * Brand is intentionally optional.
+     * Empty brand values are stored as "".
+     */
     const cleanBrand =
       brand.trim();
 
@@ -152,15 +162,6 @@ export function EditProductForm({
       Alert.alert(
         "Product name required",
         "Enter a product name before saving.",
-      );
-
-      return;
-    }
-
-    if (!cleanBrand) {
-      Alert.alert(
-        "Brand required",
-        "Enter a brand before saving.",
       );
 
       return;
@@ -227,13 +228,20 @@ export function EditProductForm({
     }
 
     await onSubmit({
-      productId: product.id,
+      productId:
+        product.id,
 
-      barcode: cleanBarcode,
-      name: cleanName,
-      brand: cleanBrand,
+      barcode:
+        cleanBarcode,
+
+      name:
+        cleanName,
+
+      brand:
+        cleanBrand,
 
       department,
+
       category,
 
       unitCost:
@@ -268,12 +276,16 @@ export function EditProductForm({
               styles.headerTextContainer
             }
           >
-            <Text style={styles.title}>
+            <Text
+              style={styles.title}
+            >
               Edit Product
             </Text>
 
             <Text
-              style={styles.subtitle}
+              style={
+                styles.subtitle
+              }
             >
               Update product details without changing inventory history.
             </Text>
@@ -282,8 +294,11 @@ export function EditProductForm({
           <Pressable
             accessibilityRole="button"
             onPress={onCancel}
-            style={({ pressed }) => [
+            style={({
+              pressed,
+            }) => [
               styles.closeButton,
+
               pressed &&
                 styles.buttonPressed,
             ]}
@@ -338,10 +353,10 @@ export function EditProductForm({
         />
 
         <FormField
-          label="Brand"
+          label="Brand (Optional)"
           value={brand}
           onChangeText={setBrand}
-          placeholder="Brand"
+          placeholder="e.g. Coca-Cola"
           autoCapitalize="words"
         />
 
@@ -351,7 +366,9 @@ export function EditProductForm({
           }
         >
           <Text
-            style={styles.fieldLabel}
+            style={
+              styles.fieldLabel
+            }
           >
             Department
           </Text>
@@ -363,8 +380,11 @@ export function EditProductForm({
                 "department",
               )
             }
-            style={({ pressed }) => [
+            style={({
+              pressed,
+            }) => [
               styles.selector,
+
               pressed &&
                 styles.buttonPressed,
             ]}
@@ -393,7 +413,9 @@ export function EditProductForm({
           }
         >
           <Text
-            style={styles.fieldLabel}
+            style={
+              styles.fieldLabel
+            }
           >
             Category
           </Text>
@@ -405,8 +427,11 @@ export function EditProductForm({
                 "category",
               )
             }
-            style={({ pressed }) => [
+            style={({
+              pressed,
+            }) => [
               styles.selector,
+
               pressed &&
                 styles.buttonPressed,
             ]}
@@ -432,7 +457,9 @@ export function EditProductForm({
         <FormField
           label="Barcode"
           value={barcode}
-          onChangeText={setBarcode}
+          onChangeText={
+            setBarcode
+          }
           placeholder="Barcode"
           keyboardType="number-pad"
           autoCapitalize="none"
@@ -496,11 +523,15 @@ export function EditProductForm({
 
         <Pressable
           accessibilityRole="button"
-          disabled={isSubmitting}
+          disabled={
+            isSubmitting
+          }
           onPress={() =>
             void handleSubmit()
           }
-          style={({ pressed }) => [
+          style={({
+            pressed,
+          }) => [
             styles.saveButton,
 
             pressed &&
@@ -527,7 +558,8 @@ export function EditProductForm({
         animationType="slide"
         transparent
         visible={
-          activePicker !== null
+          activePicker !==
+          null
         }
         onRequestClose={() =>
           setActivePicker(null)
@@ -643,6 +675,7 @@ export function EditProductForm({
 
 interface FormFieldProps {
   label: string;
+
   value: string;
 
   placeholder?: string;
@@ -678,7 +711,9 @@ function FormField({
       }
     >
       <Text
-        style={styles.fieldLabel}
+        style={
+          styles.fieldLabel
+        }
       >
         {label}
       </Text>
@@ -706,7 +741,9 @@ function FormField({
 
 interface PickerOptionProps {
   label: string;
+
   selected: boolean;
+
   onPress: () => void;
 }
 
@@ -719,7 +756,9 @@ function PickerOption({
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [
+      style={({
+        pressed,
+      }) => [
         styles.pickerOption,
 
         selected &&
