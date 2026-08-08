@@ -362,3 +362,29 @@ export async function restoreProduct(
     );
   }
 }
+
+export async function getArchivedProducts(): Promise<Product[]> {
+  const database = await getDatabase();
+
+  return database.getAllAsync<Product>(
+    `
+      SELECT
+        id,
+        barcode,
+        name,
+        department,
+        category,
+        brand,
+        unit_cost AS unitCost,
+        unit_price AS unitPrice,
+        current_stock AS currentStock,
+        reorder_level AS reorderLevel,
+        is_active AS isActive,
+        created_at AS createdAt,
+        updated_at AS updatedAt
+      FROM products
+      WHERE is_active = 0
+      ORDER BY name COLLATE NOCASE ASC;
+    `,
+  );
+}
