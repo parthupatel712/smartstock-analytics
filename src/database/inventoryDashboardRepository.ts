@@ -1,4 +1,5 @@
 import type { InventoryDashboardSummary } from "../types/inventoryDashboard";
+import type { DashboardRecentActivity } from "../types/dashboardRecentActivity";
 
 import { getDatabase } from "./database";
 
@@ -166,4 +167,89 @@ export async function getInventoryDashboardSummary(
     recentTransactionCount:
       transactionSummary?.recent_transaction_count ?? 0,
   };
+}
+
+export async function getDashboardRecentActivity(
+  limit = 8,
+): Promise<DashboardRecentActivity[]> {
+  const database = await getDatabase();
+
+  const safeLimit = Math.max(
+    1,
+    Math.min(
+      Math.floor(limit),
+      50,
+    ),
+  );
+
+  const rows =
+    await database.getAllAsync<{
+      transactionId: number;
+      productId: number;
+
+      productName: string;
+      productBrand: string;
+
+      transactionType:
+        DashboardRecentActivity["transactionType"];
+
+      quantity: number;
+
+      stockBefore: number;
+      stockAfter: number;
+
+      unitCost: number;
+      unitPrice: number;
+      transactionValue: number;
+
+      notes: string | null;
+
+      createdAt: string;
+    }>(
+      `
+        SELECT
+          t.id AS transactionId,
+          t.product_id AS productId,
+
+          p.name AS productName,
+          p.brand AS productBrand,
+
+          t.transaction_type AS transactionType,
+
+          t.quantity AS quantity,
+
+          t.stock_before AS stockBefore,
+          t.stock_after AS stockAfter,
+
+          t.unit_cost AS unitCost,
+          t.unit_price AS unitPrice,
+          t.transaction_value AS transactionValue,
+
+          t.notes AS notes,
+
+          t.created_at AS createdAt
+
+        FROM inventory_transactions AS t
+
+        INNER JOIN products AS p
+          ON p.id = t.product_id
+
+        WHERE t.transaction_type IN (
+          'sale',
+          'stock_in',
+          'damage',
+          'return',
+          'physical_count'
+        )
+
+        ORDER BY
+          datetime(t.created_at) DESC,
+          t.id DESC
+
+        LIMIT ?;
+      `,
+      safeLimit,
+    );
+
+  return rows;
 }

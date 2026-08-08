@@ -30,7 +30,10 @@ import { ProductForm } from "./src/components/ProductForm";
 import { ProductTransactionHistory } from "./src/components/ProductTransactionHistory";
 
 import { getInventoryAnalyticsSummary } from "./src/database/inventoryAnalyticsRepository";
-import { getInventoryDashboardSummary } from "./src/database/inventoryDashboardRepository";
+import {
+  getDashboardRecentActivity,
+  getInventoryDashboardSummary,
+} from "./src/database/inventoryDashboardRepository";
 import {
   createInventoryTransaction,
   getLatestDeliveriesByProduct,
@@ -69,6 +72,7 @@ import {
   DEFAULT_ANALYTICS_PERIOD,
   type AnalyticsPeriodDays,
 } from "./src/types/analyticsPeriod";
+import type { DashboardRecentActivity } from "./src/types/dashboardRecentActivity";
 import type {
   ExportedReport,
   ExportFileFormat,
@@ -169,6 +173,11 @@ export default function App() {
   );
 
   const [
+    dashboardRecentActivity,
+    setDashboardRecentActivity,
+  ] = useState<DashboardRecentActivity[]>([]);
+
+  const [
     analyticsSummary,
     setAnalyticsSummary,
   ] = useState<InventoryAnalyticsSummary>(
@@ -263,19 +272,13 @@ export default function App() {
           normalizedSearch === "" ||
           product.name
             .toLowerCase()
-            .includes(
-              normalizedSearch,
-            ) ||
+            .includes(normalizedSearch) ||
           product.brand
             .toLowerCase()
-            .includes(
-              normalizedSearch,
-            ) ||
+            .includes(normalizedSearch) ||
           product.barcode
             .toLowerCase()
-            .includes(
-              normalizedSearch,
-            );
+            .includes(normalizedSearch);
 
         const matchesDepartment =
           filters.department ===
@@ -347,10 +350,12 @@ export default function App() {
           storedProducts,
           deliveryMap,
           dashboard,
+          recentActivity,
         ] = await Promise.all([
           getAllProducts(),
           getLatestDeliveriesByProduct(),
           getInventoryDashboardSummary(),
+          getDashboardRecentActivity(8),
         ]);
 
         setProducts(
@@ -363,6 +368,10 @@ export default function App() {
 
         setDashboardSummary(
           dashboard,
+        );
+
+        setDashboardRecentActivity(
+          recentActivity,
         );
       },
       [],
@@ -939,11 +948,20 @@ export default function App() {
         "dashboard",
       );
 
-      const summary =
-        await getInventoryDashboardSummary();
+      const [
+        summary,
+        recentActivity,
+      ] = await Promise.all([
+        getInventoryDashboardSummary(),
+        getDashboardRecentActivity(8),
+      ]);
 
       setDashboardSummary(
         summary,
+      );
+
+      setDashboardRecentActivity(
+        recentActivity,
       );
     } catch (error) {
       console.error(
@@ -960,7 +978,7 @@ export default function App() {
 
         error instanceof Error
           ? error.message
-          : "The dashboard summary could not be loaded.",
+          : "The dashboard could not be loaded.",
       );
     } finally {
       setIsDashboardLoading(
@@ -1360,6 +1378,9 @@ export default function App() {
           dashboardSummary
         }
         recentDays={30}
+        recentActivity={
+          dashboardRecentActivity
+        }
         onClose={() =>
           setCurrentView(
             "inventory",
