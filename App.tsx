@@ -29,6 +29,7 @@ import { InventoryTransactionForm } from "./src/components/InventoryTransactionF
 import { ProductCard } from "./src/components/ProductCard";
 import { ProductForm } from "./src/components/ProductForm";
 import { ProductTransactionHistory } from "./src/components/ProductTransactionHistory";
+import { ProductDetails } from "./src/components/ProductDetails";
 
 import { getInventoryAnalyticsSummary } from "./src/database/inventoryAnalyticsRepository";
 import {
@@ -110,7 +111,8 @@ type AppView =
   | "dashboard"
   | "analytics"
   | "export-reports"
-  | "archived-products";
+  | "archived-products"
+  | "product-details";
 
 const INITIAL_DASHBOARD_SUMMARY: InventoryDashboardSummary = {
   totalProducts: 0,
@@ -306,6 +308,8 @@ export default function App() {
     setScannedBarcode,
   ] = useState("");
 
+  
+
   const visibleProducts = useMemo(() => {
     const normalizedSearch =
       filters.searchQuery
@@ -471,12 +475,18 @@ export default function App() {
     void loadProducts();
   }, [loadProducts]);
 
-  async function handleCreateProduct(
-    values: ProductFormValues,
-  ): Promise<void> {
-    try {
-      setIsSubmitting(true);
+async function handleCreateProduct(
+  values: ProductFormValues,
+): Promise<void> {
+  try {
+    setIsSubmitting(true);
 
+    const openingStock =
+      Number(
+        values.currentStock,
+      );
+
+    const productId =
       await createProduct({
         barcode:
           values.barcode,
@@ -503,10 +513,17 @@ export default function App() {
             values.unitPrice,
           ),
 
-        currentStock:
-          Number(
-            values.currentStock,
-          ),
+        /*
+         * Important:
+         *
+         * New products always start
+         * at zero here.
+         *
+         * Opening stock is recorded
+         * below as a real stock
+         * transaction.
+         */
+        currentStock: 0,
 
         reorderLevel:
           Number(
@@ -514,108 +531,129 @@ export default function App() {
           ),
       });
 
-      await loadInventoryData();
+    /*
+     * Record opening stock as an
+     * actual Stock Added transaction.
+     *
+     * This makes it appear in:
+     *
+     * - Stock History
+     * - Dashboard Recent Activity
+     * - Latest Delivery
+     */
+    if (
+      openingStock > 0
+    ) {
+      await createInventoryTransaction({
+        productId,
 
-      setScannedBarcode("");
+        transactionType:
+          "stock_in",
 
-      setCurrentView(
-        "inventory",
-      );
+        quantity:
+          openingStock,
 
-      Alert.alert(
-        "Product saved",
-        `${values.name.trim()} was added successfully.`,
-      );
-    } catch (error) {
-      console.error(
-        "Could not create product:",
-        error,
-      );
+        source:
+          scannedBarcode
+            ? "camera"
+            : "manual",
 
-      const message =
-        error instanceof Error
-          ? error.message
-          : "The product could not be saved.";
-
-      const isDuplicateBarcode =
-        message
-          .toLowerCase()
-          .includes("unique") ||
-        message
-          .toLowerCase()
-          .includes("constraint") ||
-        message
-          .toLowerCase()
-          .includes(
-            "already uses this barcode",
-          );
-
-      Alert.alert(
-        isDuplicateBarcode
-          ? "Barcode already exists"
-          : "Could not save product",
-
-        isDuplicateBarcode
-          ? "Another product already uses this barcode."
-          : message,
-      );
-    } finally {
-      setIsSubmitting(false);
+        notes:
+          "Opening stock",
+      });
     }
+
+    await loadInventoryData();
+
+    setScannedBarcode("");
+
+    setCurrentView(
+      "inventory",
+    );
+
+    Alert.alert(
+      "Product saved",
+      `${values.name.trim()} was added successfully.`,
+    );
+  } catch (error) {
+    console.error(
+      "Could not create product:",
+      error,
+    );
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : "The product could not be saved.";
+
+    const isDuplicateBarcode =
+      message
+        .toLowerCase()
+        .includes("unique") ||
+      message
+        .toLowerCase()
+        .includes("constraint") ||
+      message
+        .toLowerCase()
+        .includes(
+          "already uses this barcode",
+        );
+
+    Alert.alert(
+      isDuplicateBarcode
+        ? "Barcode already exists"
+        : "Could not save product",
+
+      isDuplicateBarcode
+        ? "Another product already uses this barcode."
+        : message,
+    );
+  } finally {
+    setIsSubmitting(false);
   }
-
-  async function handleBarcodeDetected(
-    barcode: string,
-  ): Promise<void> {
-    try {
-      const existingProduct =
-        await getProductByBarcode(
-          barcode,
-        );
-
-      if (existingProduct) {
-        setCurrentView(
-          "inventory",
-        );
-
-        Alert.alert(
-          "Product found",
-          `${existingProduct.name}\n\n` +
-            `${
-              existingProduct.brand.trim()
-                ? `Brand: ${existingProduct.brand}\n`
-                : ""
-            }` +
-            `Stock: ${existingProduct.currentStock} units\n` +
-            `Barcode: ${existingProduct.barcode}`,
-        );
-
-        return;
-      }
-
-      setScannedBarcode(
+}
+ async function handleBarcodeDetected(
+  barcode: string,
+): Promise<void> {
+  try {
+    const existingProduct =
+      await getProductByBarcode(
         barcode,
       );
 
+    if (existingProduct) {
+      setSelectedProduct(
+        existingProduct,
+      );
+
       setCurrentView(
-        "add-product",
-      );
-    } catch (error) {
-      console.error(
-        "Could not look up barcode:",
-        error,
+        "product-details",
       );
 
-      Alert.alert(
-        "Barcode lookup failed",
-
-        error instanceof Error
-          ? error.message
-          : "The barcode could not be processed.",
-      );
+      return;
     }
-  }
 
+    setScannedBarcode(
+      barcode,
+    );
+
+    setCurrentView(
+      "add-product",
+    );
+  } catch (error) {
+    console.error(
+      "Could not look up barcode:",
+      error,
+    );
+
+    Alert.alert(
+      "Barcode lookup failed",
+      error instanceof Error
+        ? error.message
+        : "The barcode could not be processed.",
+    );
+  }
+}
   function openEditProduct(
     product: Product,
   ): void {
@@ -1397,6 +1435,174 @@ export default function App() {
       />
     );
   }
+
+  if (
+
+  currentView ===
+
+  "product-details"
+
+) {
+
+  if (!selectedProduct) {
+
+    return (
+
+      <SafeAreaView
+
+        style={styles.screen}
+
+      >
+
+        <View
+
+          style={
+
+            styles.centeredContainer
+
+          }
+
+        >
+
+          <Text
+
+            style={
+
+              styles.errorTitle
+
+            }
+
+          >
+
+            Product not selected
+
+          </Text>
+
+          <Pressable
+
+            accessibilityRole="button"
+
+            onPress={() => {
+
+              setSelectedProduct(
+
+                null,
+
+              );
+
+              setCurrentView(
+
+                "inventory",
+
+              );
+
+            }}
+
+            style={
+
+              styles.primaryButton
+
+            }
+
+          >
+
+            <Text
+
+              style={
+
+                styles.primaryButtonText
+
+              }
+
+            >
+
+              Return to inventory
+
+            </Text>
+
+          </Pressable>
+
+        </View>
+
+      </SafeAreaView>
+
+    );
+
+  }
+
+  return (
+
+    <ProductDetails
+
+      product={
+
+        selectedProduct
+
+      }
+
+      latestDelivery={
+
+        latestDeliveries.get(
+
+          selectedProduct.id,
+
+        )
+
+      }
+
+      onUpdateStock={
+
+        openTransactionForm
+
+      }
+
+      onViewHistory={(
+
+        product,
+
+      ) =>
+
+        void openTransactionHistory(
+
+          product,
+
+        )
+
+      }
+
+      onEdit={
+
+        openEditProduct
+
+      }
+
+      onArchive={
+
+        confirmArchiveProduct
+
+      }
+
+      onClose={() => {
+
+        setSelectedProduct(
+
+          null,
+
+        );
+
+        setCurrentView(
+
+          "inventory",
+
+        );
+
+      }}
+
+    />
+
+  );
+
+}
 
   if (
     currentView ===
