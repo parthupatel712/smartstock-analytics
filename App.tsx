@@ -52,7 +52,7 @@ import {
   updateProduct,
 } from "./src/database/productRepository";
 import { initializeDatabase } from "./src/database/schema";
-import { seedDatabase } from "./src/database/seed";
+//import { seedDatabase } from "./src/database/seed";
 
 import {
   exportAnalyticsCsv,
@@ -445,7 +445,7 @@ export default function App() {
           setErrorMessage("");
 
           await initializeDatabase();
-          await seedDatabase();
+          //await seedDatabase();
           await loadInventoryData();
 
           setStatus("ready");
