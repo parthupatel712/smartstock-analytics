@@ -1297,6 +1297,17 @@ function reduceChartPoints(
           0,
         ),
 
+      estimatedProfit:
+        group.reduce(
+          (
+            total,
+            item,
+          ) =>
+            total +
+            item.estimatedProfit,
+          0,
+        ),
+
       stockInValue:
         group.reduce(
           (

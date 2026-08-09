@@ -14,15 +14,13 @@ interface DailyMetricRow {
   date: string;
 
   sales_value: number | null;
+  estimated_profit: number | null;
 
   stock_in_value: number | null;
-
   damage_value: number | null;
 
   sales_units: number | null;
-
   stock_in_units: number | null;
-
   damage_units: number | null;
 
   transaction_count: number | null;
@@ -43,6 +41,8 @@ interface ProductSalesRow {
 
   sales_value: number | null;
 
+  estimated_profit: number | null;
+
   transaction_count: number | null;
 }
 
@@ -55,11 +55,15 @@ interface CategorySalesRow {
 
   sales_value: number | null;
 
+  estimated_profit: number | null;
+
   transaction_count: number | null;
 }
 
 interface PeriodTotalsRow {
   sales_value: number | null;
+
+  estimated_profit: number | null;
 
   sales_units: number | null;
 
@@ -89,20 +93,26 @@ interface ProductComparisonRow {
 
   current_sales_value: number | null;
 
+  current_estimated_profit: number | null;
+
   previous_units_sold: number | null;
 
   previous_sales_value: number | null;
+
+  previous_estimated_profit: number | null;
 }
 
 function mapDailyMetricRow(
   row: DailyMetricRow,
 ): DailyInventoryMetric {
   return {
-    date:
-      row.date,
+    date: row.date,
 
     salesValue:
       row.sales_value ?? 0,
+
+    estimatedProfit:
+      row.estimated_profit ?? 0,
 
     stockInValue:
       row.stock_in_value ?? 0,
@@ -149,6 +159,9 @@ function mapProductSalesRow(
     salesValue:
       row.sales_value ?? 0,
 
+    estimatedProfit:
+      row.estimated_profit ?? 0,
+
     transactionCount:
       row.transaction_count ?? 0,
   };
@@ -170,6 +183,9 @@ function mapCategorySalesRow(
     salesValue:
       row.sales_value ?? 0,
 
+    estimatedProfit:
+      row.estimated_profit ?? 0,
+
     transactionCount:
       row.transaction_count ?? 0,
   };
@@ -181,6 +197,9 @@ function mapPeriodTotalsRow(
   return {
     salesValue:
       row?.sales_value ?? 0,
+
+    estimatedProfit:
+      row?.estimated_profit ?? 0,
 
     salesUnits:
       row?.sales_units ?? 0,
@@ -240,6 +259,12 @@ function buildComparison(
         previous.salesUnits,
       ),
 
+    estimatedProfitChangePercent:
+      calculatePercentChange(
+        current.estimatedProfit,
+        previous.estimatedProfit,
+      ),
+
     stockInUnitsChangePercent:
       calculatePercentChange(
         current.stockInUnits,
@@ -272,6 +297,12 @@ function buildProductTrends(
     const previousSalesValue =
       row.previous_sales_value ?? 0;
 
+    const currentEstimatedProfit =
+      row.current_estimated_profit ?? 0;
+
+    const previousEstimatedProfit =
+      row.previous_estimated_profit ?? 0;
+
     const changePercent =
       calculatePercentChange(
         currentUnits,
@@ -279,10 +310,9 @@ function buildProductTrends(
       );
 
     /*
-     * New strong seller
-     *
-     * Previously almost no sales,
-     * but now enough volume to matter.
+     * New strong seller:
+     * almost no sales before,
+     * meaningful sales now.
      */
     if (
       previousUnits <= 2 &&
@@ -314,6 +344,10 @@ function buildProductTrends(
 
         previousSalesValue,
 
+        currentEstimatedProfit,
+
+        previousEstimatedProfit,
+
         changePercent,
 
         trendType:
@@ -324,9 +358,11 @@ function buildProductTrends(
     }
 
     /*
-     * Selling much faster
+     * Selling much faster.
      *
-     * Avoid noisy alerts from tiny volumes.
+     * We require enough volume
+     * so small changes do not
+     * create misleading alerts.
      */
     if (
       previousUnits >= 5 &&
@@ -360,6 +396,10 @@ function buildProductTrends(
 
         previousSalesValue,
 
+        currentEstimatedProfit,
+
+        previousEstimatedProfit,
+
         changePercent,
 
         trendType:
@@ -370,10 +410,7 @@ function buildProductTrends(
     }
 
     /*
-     * Sales dropped sharply
-     *
-     * Only show if the product had
-     * enough previous sales to matter.
+     * Sales dropped sharply.
      */
     if (
       previousUnits >= 10 &&
@@ -405,6 +442,10 @@ function buildProductTrends(
         currentSalesValue,
 
         previousSalesValue,
+
+        currentEstimatedProfit,
+
+        previousEstimatedProfit,
 
         changePercent,
 
@@ -503,6 +544,21 @@ export async function getInventoryAnalyticsSummary(
             ),
             0
           ) AS sales_value,
+
+          COALESCE(
+            SUM(
+              CASE
+                WHEN transaction_type = 'sale'
+                THEN
+                  (
+                    unit_price -
+                    unit_cost
+                  ) * quantity
+                ELSE 0
+              END
+            ),
+            0
+          ) AS estimated_profit,
 
           COALESCE(
             SUM(
@@ -609,6 +665,17 @@ export async function getInventoryAnalyticsSummary(
             0
           ) AS sales_value,
 
+          COALESCE(
+            SUM(
+              (
+                transactions.unit_price -
+                transactions.unit_cost
+              ) *
+              transactions.quantity
+            ),
+            0
+          ) AS estimated_profit,
+
           COUNT(
             transactions.id
           ) AS transaction_count
@@ -670,6 +737,17 @@ export async function getInventoryAnalyticsSummary(
             0
           ) AS sales_value,
 
+          COALESCE(
+            SUM(
+              (
+                transactions.unit_price -
+                transactions.unit_cost
+              ) *
+              transactions.quantity
+            ),
+            0
+          ) AS estimated_profit,
+
           COUNT(
             transactions.id
           ) AS transaction_count
@@ -721,6 +799,21 @@ export async function getInventoryAnalyticsSummary(
             ),
             0
           ) AS sales_value,
+
+          COALESCE(
+            SUM(
+              CASE
+                WHEN transaction_type = 'sale'
+                THEN
+                  (
+                    unit_price -
+                    unit_cost
+                  ) * quantity
+                ELSE 0
+              END
+            ),
+            0
+          ) AS estimated_profit,
 
           COALESCE(
             SUM(
@@ -804,6 +897,21 @@ export async function getInventoryAnalyticsSummary(
             ),
             0
           ) AS sales_value,
+
+          COALESCE(
+            SUM(
+              CASE
+                WHEN transaction_type = 'sale'
+                THEN
+                  (
+                    unit_price -
+                    unit_cost
+                  ) * quantity
+                ELSE 0
+              END
+            ),
+            0
+          ) AS estimated_profit,
 
           COALESCE(
             SUM(
@@ -902,13 +1010,17 @@ export async function getInventoryAnalyticsSummary(
                 WHEN
                   transactions.transaction_type =
                     'sale'
+
                   AND datetime(
                     transactions.created_at
                   ) >= datetime(
                     'now',
                     ?
                   )
-                THEN transactions.quantity
+
+                THEN
+                  transactions.quantity
+
                 ELSE 0
               END
             ),
@@ -921,14 +1033,17 @@ export async function getInventoryAnalyticsSummary(
                 WHEN
                   transactions.transaction_type =
                     'sale'
+
                   AND datetime(
                     transactions.created_at
                   ) >= datetime(
                     'now',
                     ?
                   )
+
                 THEN
                   transactions.transaction_value
+
                 ELSE 0
               END
             ),
@@ -941,19 +1056,51 @@ export async function getInventoryAnalyticsSummary(
                 WHEN
                   transactions.transaction_type =
                     'sale'
+
                   AND datetime(
                     transactions.created_at
                   ) >= datetime(
                     'now',
                     ?
                   )
+
+                THEN
+                  (
+                    transactions.unit_price -
+                    transactions.unit_cost
+                  ) *
+                  transactions.quantity
+
+                ELSE 0
+              END
+            ),
+            0
+          ) AS current_estimated_profit,
+
+          COALESCE(
+            SUM(
+              CASE
+                WHEN
+                  transactions.transaction_type =
+                    'sale'
+
+                  AND datetime(
+                    transactions.created_at
+                  ) >= datetime(
+                    'now',
+                    ?
+                  )
+
                   AND datetime(
                     transactions.created_at
                   ) < datetime(
                     'now',
                     ?
                   )
-                THEN transactions.quantity
+
+                THEN
+                  transactions.quantity
+
                 ELSE 0
               END
             ),
@@ -966,25 +1113,63 @@ export async function getInventoryAnalyticsSummary(
                 WHEN
                   transactions.transaction_type =
                     'sale'
+
                   AND datetime(
                     transactions.created_at
                   ) >= datetime(
                     'now',
                     ?
                   )
+
                   AND datetime(
                     transactions.created_at
                   ) < datetime(
                     'now',
                     ?
                   )
+
                 THEN
                   transactions.transaction_value
+
                 ELSE 0
               END
             ),
             0
-          ) AS previous_sales_value
+          ) AS previous_sales_value,
+
+          COALESCE(
+            SUM(
+              CASE
+                WHEN
+                  transactions.transaction_type =
+                    'sale'
+
+                  AND datetime(
+                    transactions.created_at
+                  ) >= datetime(
+                    'now',
+                    ?
+                  )
+
+                  AND datetime(
+                    transactions.created_at
+                  ) < datetime(
+                    'now',
+                    ?
+                  )
+
+                THEN
+                  (
+                    transactions.unit_price -
+                    transactions.unit_cost
+                  ) *
+                  transactions.quantity
+
+                ELSE 0
+              END
+            ),
+            0
+          ) AS previous_estimated_profit
 
         FROM products
 
@@ -1010,10 +1195,17 @@ export async function getInventoryAnalyticsSummary(
       `,
       currentStart,
       currentStart,
+      currentStart,
+
       previousStart,
       previousEnd,
+
       previousStart,
       previousEnd,
+
+      previousStart,
+      previousEnd,
+
       previousStart,
     ),
   ]);

@@ -130,6 +130,38 @@ const INITIAL_ANALYTICS_SUMMARY: InventoryAnalyticsSummary = {
   dailyMetrics: [],
   topProducts: [],
   topCategories: [],
+
+  comparison: {
+    current: {
+      salesValue: 0,
+      estimatedProfit: 0,
+      salesUnits: 0,
+      stockInValue: 0,
+      stockInUnits: 0,
+      damageValue: 0,
+      damageUnits: 0,
+      transactionCount: 0,
+    },
+
+    previous: {
+      salesValue: 0,
+      estimatedProfit: 0,
+      salesUnits: 0,
+      stockInValue: 0,
+      stockInUnits: 0,
+      damageValue: 0,
+      damageUnits: 0,
+      transactionCount: 0,
+    },
+
+    salesValueChangePercent: 0,
+    salesUnitsChangePercent: 0,
+    estimatedProfitChangePercent: 0,
+    stockInUnitsChangePercent: 0,
+    damageValueChangePercent: 0,
+  },
+
+  productTrends: [],
 };
 
 export default function App() {

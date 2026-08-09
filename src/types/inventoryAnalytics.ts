@@ -2,6 +2,8 @@ export interface DailyInventoryMetric {
   date: string;
 
   salesValue: number;
+  estimatedProfit: number;
+
   stockInValue: number;
   damageValue: number;
 
@@ -27,6 +29,8 @@ export interface ProductSalesMetric {
 
   salesValue: number;
 
+  estimatedProfit: number;
+
   transactionCount: number;
 }
 
@@ -39,11 +43,15 @@ export interface CategorySalesMetric {
 
   salesValue: number;
 
+  estimatedProfit: number;
+
   transactionCount: number;
 }
 
 export interface AnalyticsPeriodTotals {
   salesValue: number;
+
+  estimatedProfit: number;
 
   salesUnits: number;
 
@@ -66,6 +74,8 @@ export interface AnalyticsPeriodComparison {
   salesValueChangePercent: number | null;
 
   salesUnitsChangePercent: number | null;
+
+  estimatedProfitChangePercent: number | null;
 
   stockInUnitsChangePercent: number | null;
 
@@ -95,6 +105,10 @@ export interface ProductTrend {
   currentSalesValue: number;
 
   previousSalesValue: number;
+
+  currentEstimatedProfit: number;
+
+  previousEstimatedProfit: number;
 
   changePercent: number | null;
 
