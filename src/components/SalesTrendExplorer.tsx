@@ -7,8 +7,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
+
+import { LineChart } from "react-native-gifted-charts";
 
 import {
   getCategorySalesTrend,
@@ -36,6 +39,13 @@ type PickerType =
   | "category"
   | "product"
   | null;
+
+interface ChartPoint {
+  value: number;
+  label: string;
+  date: string;
+  rawPoint: SalesTrendPoint;
+}
 
 const METRIC_OPTIONS: {
   label: string;
@@ -76,6 +86,9 @@ const VIEW_OPTIONS: {
 export function SalesTrendExplorer({
   selectedPeriod,
 }: SalesTrendExplorerProps) {
+  const { width } =
+    useWindowDimensions();
+
   const [
     selectedMetric,
     setSelectedMetric,
@@ -238,7 +251,9 @@ export function SalesTrendExplorer({
           );
       }
 
-      setTrendPoints(points);
+      setTrendPoints(
+        points,
+      );
     } catch (error) {
       console.error(
         "Could not load sales trend:",
@@ -331,6 +346,41 @@ export function SalesTrendExplorer({
       selectedMetric,
     ]);
 
+  const chartData =
+    useMemo(
+      () =>
+        buildChartData(
+          trendPoints,
+          selectedMetric,
+        ),
+      [
+        trendPoints,
+        selectedMetric,
+      ],
+    );
+
+  const chartWidth =
+    Math.max(
+      width - 92,
+      250,
+    );
+
+  const maximumValue =
+    useMemo(() => {
+      const highest =
+        Math.max(
+          ...chartData.map(
+            (point) =>
+              point.value,
+          ),
+          1,
+        );
+
+      return Math.ceil(
+        highest * 1.15,
+      );
+    }, [chartData]);
+
   return (
     <View>
       <View
@@ -389,7 +439,9 @@ export function SalesTrendExplorer({
                     option.value,
                   )
                 }
-                style={({ pressed }) => [
+                style={({
+                  pressed,
+                }) => [
                   styles.optionButton,
 
                   isSelected &&
@@ -407,7 +459,9 @@ export function SalesTrendExplorer({
                       styles.optionButtonTextSelected,
                   ]}
                 >
-                  {option.label}
+                  {
+                    option.label
+                  }
                 </Text>
               </Pressable>
             );
@@ -449,7 +503,9 @@ export function SalesTrendExplorer({
                     option.value,
                   )
                 }
-                style={({ pressed }) => [
+                style={({
+                  pressed,
+                }) => [
                   styles.optionButton,
 
                   isSelected &&
@@ -467,7 +523,9 @@ export function SalesTrendExplorer({
                       styles.optionButtonTextSelected,
                   ]}
                 >
-                  {option.label}
+                  {
+                    option.label
+                  }
                 </Text>
               </Pressable>
             );
@@ -531,7 +589,7 @@ export function SalesTrendExplorer({
 
       <View
         style={
-          styles.chartPlaceholder
+          styles.chartCard
         }
       >
         {isLoading ? (
@@ -585,13 +643,17 @@ export function SalesTrendExplorer({
           <>
             <View
               style={
-                styles.previewHeader
+                styles.chartHeader
               }
             >
-              <View>
+              <View
+                style={
+                  styles.chartHeaderValue
+                }
+              >
                 <Text
                   style={
-                    styles.previewLabel
+                    styles.chartMetricLabel
                   }
                 >
                   {
@@ -603,7 +665,7 @@ export function SalesTrendExplorer({
 
                 <Text
                   style={
-                    styles.previewValue
+                    styles.chartMetricValue
                   }
                 >
                   {
@@ -617,8 +679,9 @@ export function SalesTrendExplorer({
 
               <Text
                 style={
-                  styles.previewContext
+                  styles.chartContext
                 }
+                numberOfLines={2}
               >
                 {
                   selectedViewLabel
@@ -626,87 +689,179 @@ export function SalesTrendExplorer({
               </Text>
             </View>
 
-            <View
-              style={
-                styles.previewBars
-              }
-            >
-              {buildPreviewPoints(
-                trendPoints,
-              ).map(
-                (point) => {
-                  const value =
-                    getMetricValue(
-                      point,
-                      selectedMetric,
-                    );
-
-                  const max =
-                    getMaximumMetricValue(
-                      trendPoints,
-                      selectedMetric,
-                    );
-
-                  const height =
-                    max > 0
-                      ? Math.max(
-                          (
-                            value /
-                            max
-                          ) *
-                            100,
-                          4,
-                        )
-                      : 4;
-
-                  return (
-                    <View
-                      key={
-                        point.date
-                      }
-                      style={
-                        styles.previewColumn
-                      }
-                    >
-                      <View
-                        style={
-                          styles.previewBarArea
-                        }
-                      >
-                        <View
-                          style={[
-                            styles.previewBar,
-
-                            {
-                              height:
-                                `${height}%`,
-                            },
-                          ]}
-                        />
-                      </View>
-
-                      <Text
-                        style={
-                          styles.previewDate
-                        }
-                      >
-                        {formatShortDate(
-                          point.date,
-                        )}
-                      </Text>
-                    </View>
-                  );
-                },
-              )}
-            </View>
-
             <Text
               style={
-                styles.chartComingText
+                styles.chartHelpText
               }
             >
-              Interactive line chart will replace this preview in the next step.
+              Touch and drag across the line to see daily values.
             </Text>
+
+            <View
+              style={
+                styles.lineChartContainer
+              }
+            >
+              <LineChart
+                key={`${selectedMetric}-${selectedView}-${selectedPeriod}-${selectedCategory?.category ?? "all"}-${selectedProduct?.productId ?? "all"}`}
+                data={
+                  chartData
+                }
+                width={
+                  chartWidth
+                }
+                height={220}
+                maxValue={
+                  maximumValue
+                }
+                initialSpacing={
+                  12
+                }
+                endSpacing={
+                  16
+                }
+                spacing={
+                  calculateChartSpacing(
+                    chartWidth,
+                    chartData.length,
+                  )
+                }
+                thickness={3}
+                curved
+                hideDataPoints={
+                  chartData.length >
+                  20
+                }
+                dataPointsHeight={
+                  7
+                }
+                dataPointsWidth={
+                  7
+                }
+                yAxisLabelWidth={
+                  52
+                }
+                noOfSections={
+                  4
+                }
+                yAxisTextStyle={
+                  styles.axisText
+                }
+                xAxisLabelTextStyle={
+                  styles.xAxisText
+                }
+                xAxisColor="#D7DCE2"
+                yAxisColor="#D7DCE2"
+                rulesColor="#EEF0F2"
+                showVerticalLines={
+                  false
+                }
+                isAnimated
+                animationDuration={
+                  450
+                }
+                formatYLabel={(
+                  value,
+                ) =>
+                  formatAxisValue(
+                    Number(
+                      value,
+                    ),
+                    selectedMetric,
+                  )
+                }
+                pointerConfig={{
+                  pointerStripHeight:
+                    220,
+
+                  pointerStripWidth:
+                    1,
+
+                  pointerColor:
+                    "#8B949E",
+
+                  radius:
+                    5,
+
+                  activatePointersOnLongPress:
+                    true,
+
+                  autoAdjustPointerLabelPosition:
+                    true,
+
+                  pointerLabelWidth:
+                    150,
+
+                  pointerLabelHeight:
+                    112,
+
+                  pointerLabelComponent:
+                    (
+                      items: ChartPoint[],
+                    ) => {
+                      const point =
+                        items[0];
+
+                      if (!point) {
+                        return null;
+                      }
+
+                      return (
+                        <View
+                          style={
+                            styles.tooltip
+                          }
+                        >
+                          <Text
+                            style={
+                              styles.tooltipDate
+                            }
+                          >
+                            {formatFullDate(
+                              point.date,
+                            )}
+                          </Text>
+
+                          <Text
+                            style={
+                              styles.tooltipLabel
+                            }
+                          >
+                            {
+                              getMetricLabel(
+                                selectedMetric,
+                              )
+                            }
+                          </Text>
+
+                          <Text
+                            style={
+                              styles.tooltipValue
+                            }
+                          >
+                            {formatMetricValue(
+                              point.value,
+                              selectedMetric,
+                            )}
+                          </Text>
+
+                          <Text
+                            style={
+                              styles.tooltipExtra
+                            }
+                          >
+                            {formatNumber(
+                              point.rawPoint
+                                .itemsSold,
+                            )}{" "}
+                            items sold
+                          </Text>
+                        </View>
+                      );
+                    },
+                }}
+              />
+            </View>
           </>
         )}
       </View>
@@ -719,7 +874,9 @@ export function SalesTrendExplorer({
           null
         }
         onRequestClose={() =>
-          setActivePicker(null)
+          setActivePicker(
+            null,
+          )
         }
       >
         <View
@@ -928,6 +1085,105 @@ function PickerOption({
   );
 }
 
+function buildChartData(
+  points: SalesTrendPoint[],
+  metric: SalesTrendMetric,
+): ChartPoint[] {
+  if (
+    points.length === 0
+  ) {
+    return [];
+  }
+
+  const labelInterval =
+    getLabelInterval(
+      points.length,
+    );
+
+  return points.map(
+    (
+      point,
+      index,
+    ) => ({
+      value:
+        getMetricValue(
+          point,
+          metric,
+        ),
+
+      label:
+        index %
+          labelInterval ===
+          0 ||
+        index ===
+          points.length - 1
+          ? formatShortDate(
+              point.date,
+            )
+          : "",
+
+      date:
+        point.date,
+
+      rawPoint:
+        point,
+    }),
+  );
+}
+
+function getLabelInterval(
+  pointCount: number,
+): number {
+  if (
+    pointCount <= 7
+  ) {
+    return 1;
+  }
+
+  if (
+    pointCount <= 14
+  ) {
+    return 2;
+  }
+
+  if (
+    pointCount <= 31
+  ) {
+    return 5;
+  }
+
+  if (
+    pointCount <= 100
+  ) {
+    return 14;
+  }
+
+  return 30;
+}
+
+function calculateChartSpacing(
+  chartWidth: number,
+  pointCount: number,
+): number {
+  if (
+    pointCount <= 1
+  ) {
+    return chartWidth;
+  }
+
+  const naturalSpacing =
+    chartWidth /
+    Math.max(
+      pointCount - 1,
+      1,
+    );
+
+  return Math.max(
+    naturalSpacing,
+    18,
+  );
+}
+
 function getMetricValue(
   point: SalesTrendPoint,
   metric: SalesTrendMetric,
@@ -978,49 +1234,30 @@ function formatMetricValue(
   );
 }
 
-function getMaximumMetricValue(
-  points: SalesTrendPoint[],
+function formatAxisValue(
+  value: number,
   metric: SalesTrendMetric,
-): number {
-  return Math.max(
-    ...points.map(
-      (point) =>
-        getMetricValue(
-          point,
-          metric,
-        ),
-    ),
-    1,
-  );
-}
-
-function buildPreviewPoints(
-  points: SalesTrendPoint[],
-): SalesTrendPoint[] {
-  const maximumPoints = 10;
-
+): string {
   if (
-    points.length <=
-    maximumPoints
+    metric === "items"
   ) {
-    return points;
+    return formatCompactNumber(
+      value,
+    );
   }
 
-  const step =
-    Math.ceil(
-      points.length /
-        maximumPoints,
-    );
+  if (
+    Math.abs(value) >=
+    1000
+  ) {
+    return `$${formatCompactNumber(
+      value,
+    )}`;
+  }
 
-  return points.filter(
-    (
-      _,
-      index,
-    ) =>
-      index % step === 0 ||
-      index ===
-        points.length - 1,
-  );
+  return `$${Math.round(
+    value,
+  )}`;
 }
 
 function formatCurrency(
@@ -1047,6 +1284,18 @@ function formatNumber(
   ).format(value);
 }
 
+function formatCompactNumber(
+  value: number,
+): string {
+  return new Intl.NumberFormat(
+    "en-CA",
+    {
+      notation: "compact",
+      maximumFractionDigits: 1,
+    },
+  ).format(value);
+}
+
 function formatShortDate(
   date: string,
 ): string {
@@ -1058,6 +1307,24 @@ function formatShortDate(
   return parsedDate.toLocaleDateString(
     "en-CA",
     {
+      month: "short",
+      day: "numeric",
+    },
+  );
+}
+
+function formatFullDate(
+  date: string,
+): string {
+  const parsedDate =
+    new Date(
+      `${date}T00:00:00`,
+    );
+
+  return parsedDate.toLocaleDateString(
+    "en-CA",
+    {
+      weekday: "short",
       month: "short",
       day: "numeric",
     },
@@ -1175,20 +1442,116 @@ const styles =
       color: "#6B7280",
     },
 
-    chartPlaceholder: {
+    chartCard: {
       marginTop: 16,
-      minHeight: 245,
+      minHeight: 300,
+      overflow: "hidden",
       borderWidth: 1,
       borderColor:
         "#E0E4E8",
       borderRadius: 16,
-      padding: 16,
+      paddingTop: 16,
+      paddingBottom: 14,
       backgroundColor:
         "#FFFFFF",
     },
 
+    chartHeader: {
+      flexDirection: "row",
+      alignItems:
+        "flex-start",
+      justifyContent:
+        "space-between",
+      paddingHorizontal: 16,
+    },
+
+    chartHeaderValue: {
+      flex: 1,
+      marginRight: 12,
+    },
+
+    chartMetricLabel: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: "#6B7280",
+    },
+
+    chartMetricValue: {
+      marginTop: 4,
+      fontSize: 24,
+      fontWeight: "800",
+      color: "#111827",
+    },
+
+    chartContext: {
+      maxWidth: "48%",
+      fontSize: 11,
+      lineHeight: 16,
+      textAlign: "right",
+      color: "#6B7280",
+    },
+
+    chartHelpText: {
+      marginTop: 8,
+      paddingHorizontal: 16,
+      fontSize: 10,
+      color: "#8B949E",
+    },
+
+    lineChartContainer: {
+      marginTop: 18,
+      paddingRight: 8,
+    },
+
+    axisText: {
+      fontSize: 9,
+      color: "#8B949E",
+    },
+
+    xAxisText: {
+      fontSize: 8,
+      color: "#8B949E",
+    },
+
+    tooltip: {
+      width: 145,
+      minHeight: 100,
+      borderWidth: 1,
+      borderColor:
+        "#D6DCE3",
+      borderRadius: 12,
+      padding: 10,
+      backgroundColor:
+        "#FFFFFF",
+    },
+
+    tooltipDate: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: "#6B7280",
+    },
+
+    tooltipLabel: {
+      marginTop: 7,
+      fontSize: 10,
+      color: "#8B949E",
+    },
+
+    tooltipValue: {
+      marginTop: 2,
+      fontSize: 16,
+      fontWeight: "800",
+      color: "#111827",
+    },
+
+    tooltipExtra: {
+      marginTop: 5,
+      fontSize: 10,
+      color: "#6B7280",
+    },
+
     loadingContainer: {
-      minHeight: 210,
+      minHeight: 260,
       alignItems: "center",
       justifyContent:
         "center",
@@ -1201,16 +1564,18 @@ const styles =
     },
 
     errorText: {
-      paddingVertical: 40,
+      paddingVertical: 60,
+      paddingHorizontal: 20,
       textAlign: "center",
       color: "#B42318",
     },
 
     emptyContainer: {
-      minHeight: 210,
+      minHeight: 260,
       alignItems: "center",
       justifyContent:
         "center",
+      paddingHorizontal: 20,
     },
 
     emptyTitle: {
@@ -1226,83 +1591,6 @@ const styles =
       lineHeight: 18,
       textAlign: "center",
       color: "#6B7280",
-    },
-
-    previewHeader: {
-      flexDirection: "row",
-      alignItems:
-        "flex-start",
-      justifyContent:
-        "space-between",
-    },
-
-    previewLabel: {
-      fontSize: 11,
-      fontWeight: "700",
-      color: "#6B7280",
-    },
-
-    previewValue: {
-      marginTop: 4,
-      fontSize: 23,
-      fontWeight: "800",
-      color: "#111827",
-    },
-
-    previewContext: {
-      maxWidth: "50%",
-      marginLeft: 12,
-      fontSize: 11,
-      lineHeight: 16,
-      textAlign: "right",
-      color: "#6B7280",
-    },
-
-    previewBars: {
-      marginTop: 18,
-      height: 125,
-      flexDirection: "row",
-      alignItems:
-        "flex-end",
-      gap: 5,
-    },
-
-    previewColumn: {
-      flex: 1,
-      alignItems: "center",
-    },
-
-    previewBarArea: {
-      width: "100%",
-      height: 100,
-      justifyContent:
-        "flex-end",
-      alignItems: "center",
-      borderBottomWidth: 1,
-      borderBottomColor:
-        "#E5E7EB",
-    },
-
-    previewBar: {
-      width: "65%",
-      minHeight: 3,
-      borderTopLeftRadius: 4,
-      borderTopRightRadius: 4,
-      backgroundColor:
-        "#2563EB",
-    },
-
-    previewDate: {
-      marginTop: 6,
-      fontSize: 8,
-      color: "#8B949E",
-    },
-
-    chartComingText: {
-      marginTop: 12,
-      fontSize: 10,
-      textAlign: "center",
-      color: "#9CA3AF",
     },
 
     modalBackdrop: {
