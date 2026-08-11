@@ -599,7 +599,7 @@ export async function getGlobalTransactions(
           'stock_in',
           'damage',
           'return',
-          'physical_count'
+          'adjustment'
         )
 
         ORDER BY

@@ -3,7 +3,7 @@ export type GlobalTransactionType =
   | "stock_in"
   | "damage"
   | "return"
-  | "physical_count";
+  | "adjustment";
 
 export interface GlobalTransaction {
   transactionId: number;

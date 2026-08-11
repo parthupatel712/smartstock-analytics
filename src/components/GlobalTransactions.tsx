@@ -56,7 +56,7 @@ const TRANSACTION_FILTERS: {
   },
   {
     label: "Stock Count",
-    value: "physical_count",
+    value: "adjustment",
   },
 ];
 
@@ -1185,7 +1185,7 @@ function getActivityStyle(
           "#F5F3FF",
       };
 
-    case "physical_count":
+    case "adjustment":
       return {
         label:
           "Stock Count",
