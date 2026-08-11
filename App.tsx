@@ -32,6 +32,7 @@ import { ProductTransactionHistory } from "./src/components/ProductTransactionHi
 import { ProductDetails } from "./src/components/ProductDetails";
 
 import { getInventoryAnalyticsSummary } from "./src/database/inventoryAnalyticsRepository";
+import { getCloudProducts } from "./src/database/cloudProductRepository";
 import {
   getDashboardRecentActivity,
   getInventoryDashboardSummary,
@@ -94,6 +95,9 @@ import type { ProductDeliverySummary } from "./src/types/productDelivery";
 import type { ProductFormValues } from "./src/types/productForm";
 import type { UpdateProductInput } from "./src/types/productUpdate";
 import type { TransactionHistoryItem } from "./src/types/transactionHistory";
+import { syncLocalProductsToCloud } from "./src/services/productSyncService";
+import { downloadCloudProductsToLocal } from "./src/services/cloudProductDownloadService";
+
 
 type AppStatus =
   | "loading"
@@ -445,8 +449,18 @@ export default function App() {
           setErrorMessage("");
 
           await initializeDatabase();
+
+          const downloadResult =
+
+            await downloadCloudProductsToLocal();
+
+            console.log("CLOUD DOWNLOAD RESULT:",downloadResult);
           //await seedDatabase();
           await loadInventoryData();
+
+          
+
+         
 
           setStatus("ready");
         } catch (error) {
