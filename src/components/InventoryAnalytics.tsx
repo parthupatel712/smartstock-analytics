@@ -8,7 +8,7 @@ import {
 } from "react-native";
 
 import { SalesLineChart } from "./SalesLineChart";
-
+import { StoreInsightCards } from "./StoreInsightCards";
 import {
   ANALYTICS_PERIOD_OPTIONS,
   type AnalyticsPeriodDays,
@@ -332,7 +332,27 @@ export function InventoryAnalytics({
             positiveIsGood
           />
         </View>
+        <Text
+  style={
+    styles.sectionTitle
+  }
+>
+  Business Insights
+</Text>
 
+<Text
+  style={
+    styles.sectionDescription
+  }
+>
+  Important changes and opportunities detected from your store activity.
+</Text>
+
+<StoreInsightCards
+  summary={
+    summary
+  }
+/>
         <Text
           style={
             styles.sectionTitle
