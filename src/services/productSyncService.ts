@@ -19,12 +19,15 @@ export async function syncLocalProductsToCloud(): Promise<ProductSyncResult> {
   const localProducts =
     await getAllProducts();
 
+   
+
   let uploaded = 0;
   let updated = 0;
   let failed = 0;
 
   for (const product of localProducts) {
     try {
+         
       const existingCloudProduct =
         await findCloudProductByBarcode(
           product.barcode,
