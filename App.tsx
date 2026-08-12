@@ -32,6 +32,7 @@ import { ProductCard } from "./src/components/ProductCard";
 import { ProductDetails } from "./src/components/ProductDetails";
 import { ProductForm } from "./src/components/ProductForm";
 import { ProductTransactionHistory } from "./src/components/ProductTransactionHistory";
+import { ReorderManagement } from "./src/components/ReorderManagement";
 
 import { getInventoryAnalyticsSummary } from "./src/database/inventoryAnalyticsRepository";
 
@@ -56,6 +57,10 @@ import {
   restoreProduct,
   updateProduct,
 } from "./src/database/productRepository";
+
+import {
+  getReorderItems,
+} from "./src/database/reorderRepository";
 
 import { initializeDatabase } from "./src/database/schema";
 
@@ -116,6 +121,8 @@ import type { ProductDeliverySummary } from "./src/types/productDelivery";
 
 import type { ProductFormValues } from "./src/types/productForm";
 
+import type { ReorderItem } from "./src/types/reorderItem";
+
 import type { UpdateProductInput } from "./src/types/productUpdate";
 
 import type { TransactionHistoryItem } from "./src/types/transactionHistory";
@@ -137,7 +144,12 @@ type AppView =
   | "analytics"
   | "export-reports"
   | "archived-products"
-  | "product-details";
+  | "product-details"
+  | "reorder-management";
+
+type TransactionReturnView =
+  | "inventory"
+  | "reorder-management";
 
 const INITIAL_DASHBOARD_SUMMARY: InventoryDashboardSummary = {
   totalProducts: 0,
@@ -158,6 +170,7 @@ const INITIAL_ANALYTICS_SUMMARY: InventoryAnalyticsSummary = {
   topProducts: [],
   topCategories: [],
   categoryShareMetrics: [],
+
   comparison: {
     current: {
       salesValue: 0,
@@ -194,26 +207,58 @@ const INITIAL_ANALYTICS_SUMMARY: InventoryAnalyticsSummary = {
 };
 
 export default function App() {
-  const [status, setStatus] =
-    useState<AppStatus>("loading");
+  const [
+    status,
+    setStatus,
+  ] =
+    useState<AppStatus>(
+      "loading",
+    );
 
-  const [currentView, setCurrentView] =
-    useState<AppView>("inventory");
+  const [
+    currentView,
+    setCurrentView,
+  ] =
+    useState<AppView>(
+      "inventory",
+    );
 
-  const [products, setProducts] =
-    useState<Product[]>([]);
+  const [
+    products,
+    setProducts,
+  ] =
+    useState<Product[]>(
+      [],
+    );
 
   const [
     archivedProducts,
     setArchivedProducts,
-  ] = useState<Product[]>([]);
+  ] =
+    useState<Product[]>(
+      [],
+    );
 
   const [
     globalTransactions,
     setGlobalTransactions,
-  ] = useState<GlobalTransaction[]>([]);
+  ] =
+    useState<GlobalTransaction[]>(
+      [],
+    );
 
-  const [filters, setFilters] =
+  const [
+    reorderItems,
+    setReorderItems,
+  ] =
+    useState<ReorderItem[]>(
+      [],
+    );
+
+  const [
+    filters,
+    setFilters,
+  ] =
     useState<InventoryFilterState>(
       DEFAULT_INVENTORY_FILTERS,
     );
@@ -221,26 +266,41 @@ export default function App() {
   const [
     selectedProduct,
     setSelectedProduct,
-  ] = useState<Product | null>(
-    null,
-  );
+  ] =
+    useState<Product | null>(
+      null,
+    );
+
+  const [
+    transactionReturnView,
+    setTransactionReturnView,
+  ] =
+    useState<TransactionReturnView>(
+      "inventory",
+    );
 
   const [
     transactionHistory,
     setTransactionHistory,
-  ] = useState<
-    TransactionHistoryItem[]
-  >([]);
+  ] =
+    useState<
+      TransactionHistoryItem[]
+    >(
+      [],
+    );
 
   const [
     latestDeliveries,
     setLatestDeliveries,
-  ] = useState<
-    Map<
-      number,
-      ProductDeliverySummary
-    >
-  >(new Map());
+  ] =
+    useState<
+      Map<
+        number,
+        ProductDeliverySummary
+      >
+    >(
+      new Map(),
+    );
 
   const [
     dashboardSummary,
@@ -253,9 +313,12 @@ export default function App() {
   const [
     dashboardRecentActivity,
     setDashboardRecentActivity,
-  ] = useState<
-    DashboardRecentActivity[]
-  >([]);
+  ] =
+    useState<
+      DashboardRecentActivity[]
+    >(
+      [],
+    );
 
   const [
     analyticsSummary,
@@ -276,9 +339,10 @@ export default function App() {
   const [
     selectedExportReportType,
     setSelectedExportReportType,
-  ] = useState<ExportReportType>(
-    "inventory",
-  );
+  ] =
+    useState<ExportReportType>(
+      "inventory",
+    );
 
   const [
     selectedExportFormat,
@@ -291,162 +355,207 @@ export default function App() {
   const [
     errorMessage,
     setErrorMessage,
-  ] = useState("");
+  ] =
+    useState("");
 
   const [
     isRefreshing,
     setIsRefreshing,
-  ] = useState(false);
+  ] =
+    useState(
+      false,
+    );
 
   const [
     isSubmitting,
     setIsSubmitting,
-  ] = useState(false);
+  ] =
+    useState(
+      false,
+    );
 
   const [
     isProductUpdating,
     setIsProductUpdating,
-  ] = useState(false);
+  ] =
+    useState(
+      false,
+    );
 
   const [
     isTransactionSubmitting,
     setIsTransactionSubmitting,
-  ] = useState(false);
+  ] =
+    useState(
+      false,
+    );
 
   const [
     isHistoryLoading,
     setIsHistoryLoading,
-  ] = useState(false);
+  ] =
+    useState(
+      false,
+    );
 
   const [
     isDashboardLoading,
     setIsDashboardLoading,
-  ] = useState(false);
+  ] =
+    useState(
+      false,
+    );
 
   const [
     isAnalyticsLoading,
     setIsAnalyticsLoading,
-  ] = useState(false);
+  ] =
+    useState(
+      false,
+    );
 
   const [
     isArchivedProductsLoading,
     setIsArchivedProductsLoading,
-  ] = useState(false);
+  ] =
+    useState(
+      false,
+    );
 
   const [
     isGlobalTransactionsLoading,
     setIsGlobalTransactionsLoading,
-  ] = useState(false);
+  ] =
+    useState(
+      false,
+    );
+
+  const [
+    isReorderLoading,
+    setIsReorderLoading,
+  ] =
+    useState(
+      false,
+    );
 
   const [
     isExporting,
     setIsExporting,
-  ] = useState(false);
+  ] =
+    useState(
+      false,
+    );
 
   const [
     scannedBarcode,
     setScannedBarcode,
-  ] = useState("");
+  ] =
+    useState("");
 
   const visibleProducts =
-    useMemo(() => {
-      const normalizedSearch =
-        filters.searchQuery
-          .trim()
-          .toLowerCase();
+    useMemo(
+      () => {
+        const normalizedSearch =
+          filters.searchQuery
+            .trim()
+            .toLowerCase();
 
-      const filteredProducts =
-        products.filter(
-          (product) => {
-            const matchesSearch =
-              normalizedSearch ===
-                "" ||
-              product.name
-                .toLowerCase()
-                .includes(
-                  normalizedSearch,
-                ) ||
-              product.brand
-                .toLowerCase()
-                .includes(
-                  normalizedSearch,
-                ) ||
-              product.barcode
-                .toLowerCase()
-                .includes(
-                  normalizedSearch,
+        const filteredProducts =
+          products.filter(
+            (
+              product,
+            ) => {
+              const matchesSearch =
+                normalizedSearch ===
+                  "" ||
+                product.name
+                  .toLowerCase()
+                  .includes(
+                    normalizedSearch,
+                  ) ||
+                product.brand
+                  .toLowerCase()
+                  .includes(
+                    normalizedSearch,
+                  ) ||
+                product.barcode
+                  .toLowerCase()
+                  .includes(
+                    normalizedSearch,
+                  );
+
+              const matchesDepartment =
+                filters.department ===
+                  "all" ||
+                product.department ===
+                  filters.department;
+
+              const matchesLowStock =
+                !filters.lowStockOnly ||
+                product.currentStock <=
+                  product.reorderLevel;
+
+              return (
+                matchesSearch &&
+                matchesDepartment &&
+                matchesLowStock
+              );
+            },
+          );
+
+        return [
+          ...filteredProducts,
+        ].sort(
+          (
+            firstProduct,
+            secondProduct,
+          ) => {
+            switch (
+              filters.sortBy
+            ) {
+              case "name-desc":
+                return secondProduct.name.localeCompare(
+                  firstProduct.name,
                 );
 
-            const matchesDepartment =
-              filters.department ===
-                "all" ||
-              product.department ===
-                filters.department;
+              case "stock-asc":
+                return (
+                  firstProduct.currentStock -
+                  secondProduct.currentStock
+                );
 
-            const matchesLowStock =
-              !filters.lowStockOnly ||
-              product.currentStock <=
-                product.reorderLevel;
+              case "stock-desc":
+                return (
+                  secondProduct.currentStock -
+                  firstProduct.currentStock
+                );
 
-            return (
-              matchesSearch &&
-              matchesDepartment &&
-              matchesLowStock
-            );
+              case "price-asc":
+                return (
+                  firstProduct.unitPrice -
+                  secondProduct.unitPrice
+                );
+
+              case "price-desc":
+                return (
+                  secondProduct.unitPrice -
+                  firstProduct.unitPrice
+                );
+
+              case "name-asc":
+              default:
+                return firstProduct.name.localeCompare(
+                  secondProduct.name,
+                );
+            }
           },
         );
-
-      return [
-        ...filteredProducts,
-      ].sort(
-        (
-          firstProduct,
-          secondProduct,
-        ) => {
-          switch (
-            filters.sortBy
-          ) {
-            case "name-desc":
-              return secondProduct.name.localeCompare(
-                firstProduct.name,
-              );
-
-            case "stock-asc":
-              return (
-                firstProduct.currentStock -
-                secondProduct.currentStock
-              );
-
-            case "stock-desc":
-              return (
-                secondProduct.currentStock -
-                firstProduct.currentStock
-              );
-
-            case "price-asc":
-              return (
-                firstProduct.unitPrice -
-                secondProduct.unitPrice
-              );
-
-            case "price-desc":
-              return (
-                secondProduct.unitPrice -
-                firstProduct.unitPrice
-              );
-
-            case "name-asc":
-            default:
-              return firstProduct.name.localeCompare(
-                secondProduct.name,
-              );
-          }
-        },
-      );
-    }, [
-      filters,
-      products,
-    ]);
+      },
+      [
+        filters,
+        products,
+      ],
+    );
 
   const loadInventoryData =
     useCallback(
@@ -456,17 +565,21 @@ export default function App() {
           deliveryMap,
           dashboard,
           recentActivity,
-        ] = await Promise.all([
-          getAllProducts(),
+          currentReorderItems,
+        ] =
+          await Promise.all([
+            getAllProducts(),
 
-          getLatestDeliveriesByProduct(),
+            getLatestDeliveriesByProduct(),
 
-          getInventoryDashboardSummary(),
+            getInventoryDashboardSummary(),
 
-          getDashboardRecentActivity(
-            8,
-          ),
-        ]);
+            getDashboardRecentActivity(
+              8,
+            ),
+
+            getReorderItems(),
+          ]);
 
         setProducts(
           storedProducts,
@@ -482,6 +595,10 @@ export default function App() {
 
         setDashboardRecentActivity(
           recentActivity,
+        );
+
+        setReorderItems(
+          currentReorderItems,
         );
       },
       [],
@@ -510,8 +627,6 @@ export default function App() {
           await initializeDatabase();
 
           /*
-           * IMPORTANT:
-           *
            * Startup and pull-to-refresh
            * only pull FROM Supabase.
            *
@@ -521,7 +636,9 @@ export default function App() {
            */
           try {
             await pullInventoryFromCloud();
-          } catch (syncError) {
+          } catch (
+            syncError
+          ) {
             console.error(
               "Cloud download failed:",
               syncError,
@@ -530,24 +647,24 @@ export default function App() {
 
           /*
            * After cloud data has been saved
-           * into SQLite, reload the UI.
-           *
-           * ProductCard now receives the
-           * latest current_stock value.
+           * into SQLite, reload all UI data.
            */
           await loadInventoryData();
 
           setStatus(
             "ready",
           );
-        } catch (error) {
+        } catch (
+          error
+        ) {
           console.error(
             "Could not load inventory:",
             error,
           );
 
           setErrorMessage(
-            error instanceof Error
+            error instanceof
+              Error
               ? error.message
               : "An unexpected inventory error occurred.",
           );
@@ -566,12 +683,18 @@ export default function App() {
       ],
     );
 
-  useEffect(() => {
-    void loadProducts();
-  }, [loadProducts]);
+  useEffect(
+    () => {
+      void loadProducts();
+    },
+    [
+      loadProducts,
+    ],
+  );
 
   async function handleCreateProduct(
-    values: ProductFormValues,
+    values:
+      ProductFormValues,
   ): Promise<void> {
     try {
       setIsSubmitting(
@@ -617,7 +740,8 @@ export default function App() {
            * as a real Stock Added
            * transaction below.
            */
-          currentStock: 0,
+          currentStock:
+            0,
 
           reorderLevel:
             Number(
@@ -626,7 +750,8 @@ export default function App() {
         });
 
       if (
-        openingStock > 0
+        openingStock >
+        0
       ) {
         await createInventoryTransaction(
           {
@@ -649,19 +774,17 @@ export default function App() {
         );
       }
 
-      /*
-       * Refresh Device A immediately.
-       */
       await loadInventoryData();
 
       /*
        * Local change occurred.
-       *
        * PUSH only.
        */
       try {
         await pushInventoryToCloud();
-      } catch (syncError) {
+      } catch (
+        syncError
+      ) {
         console.error(
           "Product saved locally but cloud sync failed:",
           syncError,
@@ -681,14 +804,17 @@ export default function App() {
 
         `${values.name.trim()} was added successfully.`,
       );
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "Could not create product:",
         error,
       );
 
       const message =
-        error instanceof Error
+        error instanceof
+        Error
           ? error.message
           : "The product could not be saved.";
 
@@ -726,7 +852,8 @@ export default function App() {
   }
 
   async function handleBarcodeDetected(
-    barcode: string,
+    barcode:
+      string,
   ): Promise<void> {
     try {
       const existingProduct =
@@ -755,7 +882,9 @@ export default function App() {
       setCurrentView(
         "add-product",
       );
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "Could not look up barcode:",
         error,
@@ -764,7 +893,8 @@ export default function App() {
       Alert.alert(
         "Barcode lookup failed",
 
-        error instanceof Error
+        error instanceof
+          Error
           ? error.message
           : "The barcode could not be processed.",
       );
@@ -772,7 +902,8 @@ export default function App() {
   }
 
   function openEditProduct(
-    product: Product,
+    product:
+      Product,
   ): void {
     setSelectedProduct(
       product,
@@ -794,7 +925,8 @@ export default function App() {
   }
 
   async function handleUpdateProduct(
-    input: UpdateProductInput,
+    input:
+      UpdateProductInput,
   ): Promise<void> {
     try {
       setIsProductUpdating(
@@ -807,14 +939,11 @@ export default function App() {
 
       await loadInventoryData();
 
-      /*
-       * Local product edit.
-       *
-       * PUSH only.
-       */
       try {
         await pushInventoryToCloud();
-      } catch (syncError) {
+      } catch (
+        syncError
+      ) {
         console.error(
           "Product updated locally but cloud sync failed:",
           syncError,
@@ -834,7 +963,9 @@ export default function App() {
 
         "The product details were updated successfully.",
       );
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "Could not update product:",
         error,
@@ -843,7 +974,8 @@ export default function App() {
       Alert.alert(
         "Could not update product",
 
-        error instanceof Error
+        error instanceof
+          Error
           ? error.message
           : "The product could not be updated.",
       );
@@ -855,7 +987,8 @@ export default function App() {
   }
 
   function confirmArchiveProduct(
-    product: Product,
+    product:
+      Product,
   ): void {
     Alert.alert(
       "Archive product?",
@@ -878,17 +1011,19 @@ export default function App() {
           style:
             "destructive",
 
-          onPress: () =>
-            void handleArchiveProduct(
-              product,
-            ),
+          onPress:
+            () =>
+              void handleArchiveProduct(
+                product,
+              ),
         },
       ],
     );
   }
 
   async function handleArchiveProduct(
-    product: Product,
+    product:
+      Product,
   ): Promise<void> {
     try {
       await archiveProduct(
@@ -897,14 +1032,11 @@ export default function App() {
 
       await loadInventoryData();
 
-      /*
-       * Local archive.
-       *
-       * PUSH only.
-       */
       try {
         await pushInventoryToCloud();
-      } catch (syncError) {
+      } catch (
+        syncError
+      ) {
         console.error(
           "Product archived locally but cloud sync failed:",
           syncError,
@@ -925,7 +1057,9 @@ export default function App() {
 
         `${product.name} was removed from active inventory.`,
       );
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "Could not archive product:",
         error,
@@ -934,7 +1068,8 @@ export default function App() {
       Alert.alert(
         "Could not archive product",
 
-        error instanceof Error
+        error instanceof
+          Error
           ? error.message
           : "The product could not be archived.",
       );
@@ -957,7 +1092,9 @@ export default function App() {
       setArchivedProducts(
         archived,
       );
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "Could not load archived products:",
         error,
@@ -970,7 +1107,8 @@ export default function App() {
       Alert.alert(
         "Could not load archived products",
 
-        error instanceof Error
+        error instanceof
+          Error
           ? error.message
           : "Archived products could not be loaded.",
       );
@@ -982,7 +1120,8 @@ export default function App() {
   }
 
   function confirmRestoreProduct(
-    product: Product,
+    product:
+      Product,
   ): void {
     Alert.alert(
       "Restore product?",
@@ -1002,17 +1141,19 @@ export default function App() {
           text:
             "Restore",
 
-          onPress: () =>
-            void handleRestoreProduct(
-              product,
-            ),
+          onPress:
+            () =>
+              void handleRestoreProduct(
+                product,
+              ),
         },
       ],
     );
   }
 
   async function handleRestoreProduct(
-    product: Product,
+    product:
+      Product,
   ): Promise<void> {
     try {
       await restoreProduct(
@@ -1021,14 +1162,11 @@ export default function App() {
 
       await loadInventoryData();
 
-      /*
-       * Local restore.
-       *
-       * PUSH only.
-       */
       try {
         await pushInventoryToCloud();
-      } catch (syncError) {
+      } catch (
+        syncError
+      ) {
         console.error(
           "Product restored locally but cloud sync failed:",
           syncError,
@@ -1047,7 +1185,9 @@ export default function App() {
 
         `${product.name} is active again.`,
       );
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "Could not restore product:",
         error,
@@ -1056,7 +1196,8 @@ export default function App() {
       Alert.alert(
         "Could not restore product",
 
-        error instanceof Error
+        error instanceof
+          Error
           ? error.message
           : "The product could not be restored.",
       );
@@ -1081,7 +1222,9 @@ export default function App() {
       setGlobalTransactions(
         transactions,
       );
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "Could not load global transactions:",
         error,
@@ -1094,7 +1237,8 @@ export default function App() {
       Alert.alert(
         "Could not load transactions",
 
-        error instanceof Error
+        error instanceof
+          Error
           ? error.message
           : "Global transaction history could not be loaded.",
       );
@@ -1105,9 +1249,74 @@ export default function App() {
     }
   }
 
+  async function openReorderManagement(): Promise<void> {
+    try {
+      setIsReorderLoading(
+        true,
+      );
+
+      setCurrentView(
+        "reorder-management",
+      );
+
+      const items =
+        await getReorderItems();
+
+      setReorderItems(
+        items,
+      );
+    } catch (
+      error
+    ) {
+      console.error(
+        "Could not load reorder management:",
+        error,
+      );
+
+      setCurrentView(
+        "inventory",
+      );
+
+      Alert.alert(
+        "Could not load reorder list",
+
+        error instanceof
+          Error
+          ? error.message
+          : "The reorder list could not be loaded.",
+      );
+    } finally {
+      setIsReorderLoading(
+        false,
+      );
+    }
+  }
+
   function openTransactionForm(
-    product: Product,
+    product:
+      Product,
   ): void {
+    setTransactionReturnView(
+      "inventory",
+    );
+
+    setSelectedProduct(
+      product,
+    );
+
+    setCurrentView(
+      "inventory-transaction",
+    );
+  }
+
+  function openReorderStockForm(
+    product:
+      Product,
+  ): void {
+    setTransactionReturnView(
+      "reorder-management",
+    );
+
     setSelectedProduct(
       product,
     );
@@ -1118,22 +1327,33 @@ export default function App() {
   }
 
   function closeTransactionForm(): void {
+    const returnView =
+      transactionReturnView;
+
     setSelectedProduct(
       null,
     );
 
-    setCurrentView(
+    setTransactionReturnView(
       "inventory",
+    );
+
+    setCurrentView(
+      returnView,
     );
   }
 
   async function handleInventoryTransaction(
-    input: CreateInventoryTransactionInput,
+    input:
+      CreateInventoryTransactionInput,
   ): Promise<void> {
     try {
       setIsTransactionSubmitting(
         true,
       );
+
+      const returnView =
+        transactionReturnView;
 
       const transaction =
         await createInventoryTransaction(
@@ -1141,24 +1361,43 @@ export default function App() {
         );
 
       /*
-       * Reload local data first so
-       * Device A's ProductCard changes
-       * immediately.
+       * Reload local products,
+       * Dashboard, deliveries and
+       * reorder queue immediately.
        */
       await loadInventoryData();
 
       /*
        * Stock changed locally.
-       *
        * PUSH products + transactions
        * to Supabase.
        */
       try {
         await pushInventoryToCloud();
-      } catch (syncError) {
+      } catch (
+        syncError
+      ) {
         console.error(
           "Inventory updated locally but cloud sync failed:",
           syncError,
+        );
+      }
+
+      /*
+       * If this transaction was opened
+       * from Reorder Management,
+       * reload the queue again before
+       * returning there.
+       */
+      if (
+        returnView ===
+        "reorder-management"
+      ) {
+        const updatedReorderItems =
+          await getReorderItems();
+
+        setReorderItems(
+          updatedReorderItems,
         );
       }
 
@@ -1166,8 +1405,12 @@ export default function App() {
         null,
       );
 
-      setCurrentView(
+      setTransactionReturnView(
         "inventory",
+      );
+
+      setCurrentView(
+        returnView,
       );
 
       Alert.alert(
@@ -1175,7 +1418,9 @@ export default function App() {
 
         `Stock changed from ${transaction.stockBefore} to ${transaction.stockAfter} units.`,
       );
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "Could not save inventory transaction:",
         error,
@@ -1184,7 +1429,8 @@ export default function App() {
       Alert.alert(
         "Could not update inventory",
 
-        error instanceof Error
+        error instanceof
+          Error
           ? error.message
           : "The inventory transaction could not be saved.",
       );
@@ -1196,7 +1442,8 @@ export default function App() {
   }
 
   async function openTransactionHistory(
-    product: Product,
+    product:
+      Product,
   ): Promise<void> {
     try {
       setSelectedProduct(
@@ -1223,7 +1470,9 @@ export default function App() {
       setTransactionHistory(
         history,
       );
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "Could not load transaction history:",
         error,
@@ -1240,7 +1489,8 @@ export default function App() {
       Alert.alert(
         "Could not load history",
 
-        error instanceof Error
+        error instanceof
+          Error
           ? error.message
           : "Transaction history could not be loaded.",
       );
@@ -1278,13 +1528,14 @@ export default function App() {
       const [
         summary,
         recentActivity,
-      ] = await Promise.all([
-        getInventoryDashboardSummary(),
+      ] =
+        await Promise.all([
+          getInventoryDashboardSummary(),
 
-        getDashboardRecentActivity(
-          8,
-        ),
-      ]);
+          getDashboardRecentActivity(
+            8,
+          ),
+        ]);
 
       setDashboardSummary(
         summary,
@@ -1293,7 +1544,9 @@ export default function App() {
       setDashboardRecentActivity(
         recentActivity,
       );
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "Could not load inventory dashboard:",
         error,
@@ -1306,7 +1559,8 @@ export default function App() {
       Alert.alert(
         "Could not load dashboard",
 
-        error instanceof Error
+        error instanceof
+          Error
           ? error.message
           : "The dashboard could not be loaded.",
       );
@@ -1318,7 +1572,8 @@ export default function App() {
   }
 
   async function loadAnalytics(
-    period: AnalyticsPeriodDays,
+    period:
+      AnalyticsPeriodDays,
   ): Promise<void> {
     const summary =
       await getInventoryAnalyticsSummary(
@@ -1344,7 +1599,9 @@ export default function App() {
       await loadAnalytics(
         analyticsPeriod,
       );
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "Could not load analytics:",
         error,
@@ -1357,7 +1614,8 @@ export default function App() {
       Alert.alert(
         "Could not load analytics",
 
-        error instanceof Error
+        error instanceof
+          Error
           ? error.message
           : "Inventory analytics could not be loaded.",
       );
@@ -1369,7 +1627,8 @@ export default function App() {
   }
 
   async function handleAnalyticsPeriodChange(
-    period: AnalyticsPeriodDays,
+    period:
+      AnalyticsPeriodDays,
   ): Promise<void> {
     if (
       period ===
@@ -1390,7 +1649,9 @@ export default function App() {
       await loadAnalytics(
         period,
       );
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "Could not change analytics period:",
         error,
@@ -1399,7 +1660,8 @@ export default function App() {
       Alert.alert(
         "Could not update analytics",
 
-        error instanceof Error
+        error instanceof
+          Error
           ? error.message
           : "Analytics could not be loaded for the selected period.",
       );
@@ -1416,7 +1678,9 @@ export default function App() {
     const histories =
       await Promise.all(
         products.map(
-          (product) =>
+          (
+            product,
+          ) =>
             getTransactionHistoryForProduct(
               product.id,
             ),
@@ -1529,7 +1793,9 @@ export default function App() {
       await shareExportedReport(
         report,
       );
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "Could not export report:",
         error,
@@ -1538,7 +1804,8 @@ export default function App() {
       Alert.alert(
         "Export failed",
 
-        error instanceof Error
+        error instanceof
+          Error
           ? error.message
           : "The report could not be generated.",
       );
@@ -1576,7 +1843,8 @@ export default function App() {
   }
 
   if (
-    status === "loading"
+    status ===
+    "loading"
   ) {
     return (
       <SafeAreaView
@@ -1610,7 +1878,8 @@ export default function App() {
   }
 
   if (
-    status === "error"
+    status ===
+    "error"
   ) {
     return (
       <SafeAreaView
@@ -1885,6 +2154,57 @@ export default function App() {
 
   if (
     currentView ===
+    "reorder-management"
+  ) {
+    if (
+      isReorderLoading
+    ) {
+      return (
+        <SafeAreaView
+          style={
+            styles.screen
+          }
+        >
+          <View
+            style={
+              styles.centeredContainer
+            }
+          >
+            <ActivityIndicator
+              size="large"
+            />
+
+            <Text
+              style={
+                styles.statusText
+              }
+            >
+              Loading reorder list…
+            </Text>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
+    return (
+      <ReorderManagement
+        items={
+          reorderItems
+        }
+        onStockIn={
+          openReorderStockForm
+        }
+        onClose={() =>
+          setCurrentView(
+            "inventory",
+          )
+        }
+      />
+    );
+  }
+
+  if (
+    currentView ===
     "analytics"
   ) {
     if (
@@ -2053,11 +2373,15 @@ export default function App() {
 
             <Pressable
               accessibilityRole="button"
-              onPress={() =>
+              onPress={() => {
+                setTransactionReturnView(
+                  "inventory",
+                );
+
                 setCurrentView(
                   "inventory",
-                )
-              }
+                );
+              }}
               style={
                 styles.primaryButton
               }
@@ -2077,19 +2401,36 @@ export default function App() {
 
     return (
       <InventoryTransactionForm
-        product={
-          selectedProduct
-        }
-        isSubmitting={
-          isTransactionSubmitting
-        }
-        onCancel={
-          closeTransactionForm
-        }
-        onSubmit={
-          handleInventoryTransaction
-        }
-      />
+  product={
+    selectedProduct
+  }
+  isSubmitting={
+    isTransactionSubmitting
+  }
+  initialTransactionType={
+    transactionReturnView ===
+    "reorder-management"
+      ? "stock_in"
+      : undefined
+  }
+  initialQuantity={
+    transactionReturnView ===
+    "reorder-management"
+      ? Math.max(
+          selectedProduct.reorderLevel *
+            2 -
+            selectedProduct.currentStock,
+          0,
+        )
+      : undefined
+  }
+  onCancel={
+    closeTransactionForm
+  }
+  onSubmit={
+    handleInventoryTransaction
+  }
+/>
     );
   }
 
@@ -2408,6 +2749,13 @@ export default function App() {
                   />
 
                   <ActionMenuItem
+                    label="Reorder"
+                    onPress={() =>
+                      void openReorderManagement()
+                    }
+                  />
+
+                  <ActionMenuItem
                     label="Stock History"
                     onPress={() =>
                       void openGlobalTransactions()
@@ -2561,8 +2909,11 @@ export default function App() {
 }
 
 interface ActionMenuItemProps {
-  label: string;
-  onPress: () => void;
+  label:
+    string;
+
+  onPress:
+    () => void;
 }
 
 function ActionMenuItem({
@@ -2598,54 +2949,82 @@ function ActionMenuItem({
 const styles =
   StyleSheet.create({
     screen: {
-      flex: 1,
+      flex:
+        1,
+
       backgroundColor:
         "#F4F6F8",
     },
 
     listContent: {
-      padding: 16,
-      paddingBottom: 40,
+      padding:
+        16,
+
+      paddingBottom:
+        40,
     },
 
     header: {
-      marginBottom: 18,
+      marginBottom:
+        18,
     },
 
     title: {
-      fontSize: 30,
-      fontWeight: "800",
-      color: "#111827",
+      fontSize:
+        30,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     summary: {
-      marginTop: 4,
-      fontSize: 15,
-      color: "#5D6673",
+      marginTop:
+        4,
+
+      fontSize:
+        15,
+
+      color:
+        "#5D6673",
     },
 
     actionMenuWrapper: {
-      marginTop: 18,
+      marginTop:
+        18,
+
       marginHorizontal:
         -16,
+
       backgroundColor:
         "#FFFFFF",
     },
 
     actionMenu: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingHorizontal: 8,
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
+      paddingHorizontal:
+        8,
     },
 
     actionMenuItem: {
-      minHeight: 54,
+      minHeight:
+        54,
 
-      alignItems: "center",
+      alignItems:
+        "center",
+
       justifyContent:
         "center",
 
-      paddingHorizontal: 20,
+      paddingHorizontal:
+        20,
 
       backgroundColor:
         "#FFFFFF",
@@ -2657,101 +3036,158 @@ const styles =
     },
 
     actionMenuText: {
-      fontSize: 13,
-      fontWeight: "800",
-      letterSpacing: 0.3,
-      color: "#7A858B",
+      fontSize:
+        13,
+
+      fontWeight:
+        "800",
+
+      letterSpacing:
+        0.3,
+
+      color:
+        "#7A858B",
     },
 
     topBar: {
-      alignItems: "flex-end",
-      paddingHorizontal: 20,
-      paddingTop: 8,
+      alignItems:
+        "flex-end",
+
+      paddingHorizontal:
+        20,
+
+      paddingTop:
+        8,
     },
 
     centeredContainer: {
-      flex: 1,
+      flex:
+        1,
 
-      alignItems: "center",
+      alignItems:
+        "center",
+
       justifyContent:
         "center",
 
-      padding: 24,
+      padding:
+        24,
     },
 
     statusText: {
-      marginTop: 10,
+      marginTop:
+        10,
 
-      fontSize: 15,
-      textAlign: "center",
+      fontSize:
+        15,
 
-      color: "#5D6673",
+      textAlign:
+        "center",
+
+      color:
+        "#5D6673",
     },
 
     errorTitle: {
-      fontSize: 21,
-      fontWeight: "700",
-      textAlign: "center",
+      fontSize:
+        21,
+
+      fontWeight:
+        "700",
+
+      textAlign:
+        "center",
     },
 
     errorMessage: {
-      marginTop: 12,
+      marginTop:
+        12,
 
-      fontSize: 15,
-      lineHeight: 22,
-      textAlign: "center",
+      fontSize:
+        15,
 
-      color: "#5D6673",
+      lineHeight:
+        22,
+
+      textAlign:
+        "center",
+
+      color:
+        "#5D6673",
     },
 
     primaryButton: {
-      marginTop: 18,
+      marginTop:
+        18,
 
-      minHeight: 46,
+      minHeight:
+        46,
 
-      alignItems: "center",
+      alignItems:
+        "center",
+
       justifyContent:
         "center",
 
-      borderRadius: 10,
+      borderRadius:
+        10,
 
-      paddingHorizontal: 18,
+      paddingHorizontal:
+        18,
 
       backgroundColor:
         "#20252B",
     },
 
     primaryButtonText: {
-      fontWeight: "700",
-      color: "#FFFFFF",
+      fontWeight:
+        "700",
+
+      color:
+        "#FFFFFF",
     },
 
     secondaryButton: {
-      borderWidth: 1,
+      borderWidth:
+        1,
+
       borderColor:
         "#C8CED6",
 
-      borderRadius: 10,
+      borderRadius:
+        10,
 
-      paddingHorizontal: 14,
-      paddingVertical: 9,
+      paddingHorizontal:
+        14,
+
+      paddingVertical:
+        9,
 
       backgroundColor:
         "#FFFFFF",
     },
 
     secondaryButtonText: {
-      fontWeight: "700",
-      color: "#20252B",
+      fontWeight:
+        "700",
+
+      color:
+        "#20252B",
     },
 
     emptyContainer: {
-      paddingVertical: 60,
-      alignItems: "center",
+      paddingVertical:
+        60,
+
+      alignItems:
+        "center",
     },
 
     emptyTitle: {
-      fontSize: 20,
-      fontWeight: "700",
+      fontSize:
+        20,
+
+      fontWeight:
+        "700",
     },
   });
