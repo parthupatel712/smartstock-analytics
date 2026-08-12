@@ -13,17 +13,29 @@ import { getDatabase } from "./database";
 interface DailyMetricRow {
   date: string;
 
-  sales_value: number | null;
-  estimated_profit: number | null;
+  sales_value:
+    number | null;
 
-  stock_in_value: number | null;
-  damage_value: number | null;
+  estimated_profit:
+    number | null;
 
-  sales_units: number | null;
-  stock_in_units: number | null;
-  damage_units: number | null;
+  stock_in_value:
+    number | null;
 
-  transaction_count: number | null;
+  damage_value:
+    number | null;
+
+  sales_units:
+    number | null;
+
+  stock_in_units:
+    number | null;
+
+  damage_units:
+    number | null;
+
+  transaction_count:
+    number | null;
 }
 
 interface ProductSalesRow {
@@ -37,13 +49,17 @@ interface ProductSalesRow {
 
   category: string;
 
-  units_sold: number | null;
+  units_sold:
+    number | null;
 
-  sales_value: number | null;
+  sales_value:
+    number | null;
 
-  estimated_profit: number | null;
+  estimated_profit:
+    number | null;
 
-  transaction_count: number | null;
+  transaction_count:
+    number | null;
 }
 
 interface CategorySalesRow {
@@ -51,31 +67,43 @@ interface CategorySalesRow {
 
   category: string;
 
-  units_sold: number | null;
+  units_sold:
+    number | null;
 
-  sales_value: number | null;
+  sales_value:
+    number | null;
 
-  estimated_profit: number | null;
+  estimated_profit:
+    number | null;
 
-  transaction_count: number | null;
+  transaction_count:
+    number | null;
 }
 
 interface PeriodTotalsRow {
-  sales_value: number | null;
+  sales_value:
+    number | null;
 
-  estimated_profit: number | null;
+  estimated_profit:
+    number | null;
 
-  sales_units: number | null;
+  sales_units:
+    number | null;
 
-  stock_in_value: number | null;
+  stock_in_value:
+    number | null;
 
-  stock_in_units: number | null;
+  stock_in_units:
+    number | null;
 
-  damage_value: number | null;
+  damage_value:
+    number | null;
 
-  damage_units: number | null;
+  damage_units:
+    number | null;
 
-  transaction_count: number | null;
+  transaction_count:
+    number | null;
 }
 
 interface ProductComparisonRow {
@@ -89,24 +117,35 @@ interface ProductComparisonRow {
 
   category: string;
 
-  current_units_sold: number | null;
+  current_stock: number;
 
-  current_sales_value: number | null;
+  reorder_level: number;
 
-  current_estimated_profit: number | null;
+  current_units_sold:
+    number | null;
 
-  previous_units_sold: number | null;
+  current_sales_value:
+    number | null;
 
-  previous_sales_value: number | null;
+  current_estimated_profit:
+    number | null;
 
-  previous_estimated_profit: number | null;
+  previous_units_sold:
+    number | null;
+
+  previous_sales_value:
+    number | null;
+
+  previous_estimated_profit:
+    number | null;
 }
 
 function mapDailyMetricRow(
   row: DailyMetricRow,
 ): DailyInventoryMetric {
   return {
-    date: row.date,
+    date:
+      row.date,
 
     salesValue:
       row.sales_value ?? 0,
@@ -192,7 +231,9 @@ function mapCategorySalesRow(
 }
 
 function mapPeriodTotalsRow(
-  row: PeriodTotalsRow | null,
+  row:
+    | PeriodTotalsRow
+    | null,
 ): AnalyticsPeriodTotals {
   return {
     salesValue:
@@ -225,22 +266,29 @@ function calculatePercentChange(
   current: number,
   previous: number,
 ): number | null {
-  if (previous === 0) {
+  if (
+    previous === 0
+  ) {
     return current === 0
       ? 0
       : null;
   }
 
   return (
-    ((current - previous) /
-      previous) *
-    100
-  );
+    (
+      current -
+      previous
+    ) /
+    previous
+  ) * 100;
 }
 
 function buildComparison(
-  current: AnalyticsPeriodTotals,
-  previous: AnalyticsPeriodTotals,
+  current:
+    AnalyticsPeriodTotals,
+
+  previous:
+    AnalyticsPeriodTotals,
 ): AnalyticsPeriodComparison {
   return {
     current,
@@ -280,28 +328,38 @@ function buildComparison(
 }
 
 function buildProductTrends(
-  rows: ProductComparisonRow[],
+  rows:
+    ProductComparisonRow[],
 ): ProductTrend[] {
-  const trends: ProductTrend[] = [];
+  const trends:
+    ProductTrend[] = [];
 
-  for (const row of rows) {
+  for (
+    const row of rows
+  ) {
     const currentUnits =
-      row.current_units_sold ?? 0;
+      row.current_units_sold ??
+      0;
 
     const previousUnits =
-      row.previous_units_sold ?? 0;
+      row.previous_units_sold ??
+      0;
 
     const currentSalesValue =
-      row.current_sales_value ?? 0;
+      row.current_sales_value ??
+      0;
 
     const previousSalesValue =
-      row.previous_sales_value ?? 0;
+      row.previous_sales_value ??
+      0;
 
     const currentEstimatedProfit =
-      row.current_estimated_profit ?? 0;
+      row.current_estimated_profit ??
+      0;
 
     const previousEstimatedProfit =
-      row.previous_estimated_profit ?? 0;
+      row.previous_estimated_profit ??
+      0;
 
     const changePercent =
       calculatePercentChange(
@@ -310,45 +368,67 @@ function buildProductTrends(
       );
 
     /*
-     * New strong seller:
-     * almost no sales before,
-     * meaningful sales now.
+     * A product needs restocking
+     * when it is at or below its
+     * reorder level.
+     */
+    const needsRestock =
+      row.current_stock <=
+      row.reorder_level;
+
+    const baseTrend = {
+      productId:
+        row.product_id,
+
+      productName:
+        row.product_name,
+
+      brand:
+        row.brand,
+
+      department:
+        row.department,
+
+      category:
+        row.category,
+
+      currentUnitsSold:
+        currentUnits,
+
+      previousUnitsSold:
+        previousUnits,
+
+      currentSalesValue,
+
+      previousSalesValue,
+
+      currentEstimatedProfit,
+
+      previousEstimatedProfit,
+
+      currentStock:
+        row.current_stock,
+
+      reorderLevel:
+        row.reorder_level,
+
+      needsRestock,
+
+      changePercent,
+    };
+
+    /*
+     * New strong seller.
+     *
+     * Very little activity before,
+     * but meaningful activity now.
      */
     if (
       previousUnits <= 2 &&
       currentUnits >= 8
     ) {
       trends.push({
-        productId:
-          row.product_id,
-
-        productName:
-          row.product_name,
-
-        brand:
-          row.brand,
-
-        department:
-          row.department,
-
-        category:
-          row.category,
-
-        currentUnitsSold:
-          currentUnits,
-
-        previousUnitsSold:
-          previousUnits,
-
-        currentSalesValue,
-
-        previousSalesValue,
-
-        currentEstimatedProfit,
-
-        previousEstimatedProfit,
-
-        changePercent,
+        ...baseTrend,
 
         trendType:
           "new_strong_seller",
@@ -358,11 +438,10 @@ function buildProductTrends(
     }
 
     /*
-     * Selling much faster.
+     * Selling significantly faster.
      *
-     * We require enough volume
-     * so small changes do not
-     * create misleading alerts.
+     * Minimum sales are required
+     * to avoid noisy alerts.
      */
     if (
       previousUnits >= 5 &&
@@ -371,36 +450,7 @@ function buildProductTrends(
       changePercent >= 40
     ) {
       trends.push({
-        productId:
-          row.product_id,
-
-        productName:
-          row.product_name,
-
-        brand:
-          row.brand,
-
-        department:
-          row.department,
-
-        category:
-          row.category,
-
-        currentUnitsSold:
-          currentUnits,
-
-        previousUnitsSold:
-          previousUnits,
-
-        currentSalesValue,
-
-        previousSalesValue,
-
-        currentEstimatedProfit,
-
-        previousEstimatedProfit,
-
-        changePercent,
+        ...baseTrend,
 
         trendType:
           "selling_faster",
@@ -418,36 +468,7 @@ function buildProductTrends(
       changePercent <= -35
     ) {
       trends.push({
-        productId:
-          row.product_id,
-
-        productName:
-          row.product_name,
-
-        brand:
-          row.brand,
-
-        department:
-          row.department,
-
-        category:
-          row.category,
-
-        currentUnitsSold:
-          currentUnits,
-
-        previousUnitsSold:
-          previousUnits,
-
-        currentSalesValue,
-
-        previousSalesValue,
-
-        currentEstimatedProfit,
-
-        previousEstimatedProfit,
-
-        changePercent,
+        ...baseTrend,
 
         trendType:
           "sales_dropped",
@@ -460,14 +481,29 @@ function buildProductTrends(
       first,
       second,
     ) => {
+      /*
+       * Products that need stock
+       * attention appear first.
+       */
+      if (
+        first.needsRestock !==
+        second.needsRestock
+      ) {
+        return first.needsRestock
+          ? -1
+          : 1;
+      }
+
       const firstChange =
         Math.abs(
-          first.changePercent ?? 0,
+          first.changePercent ??
+            0,
         );
 
       const secondChange =
         Math.abs(
-          second.changePercent ?? 0,
+          second.changePercent ??
+            0,
         );
 
       return (
@@ -483,7 +519,9 @@ export async function getInventoryAnalyticsSummary(
   topLimit = 5,
 ): Promise<InventoryAnalyticsSummary> {
   if (
-    !Number.isInteger(days) ||
+    !Number.isInteger(
+      days,
+    ) ||
     days <= 0
   ) {
     throw new Error(
@@ -492,7 +530,9 @@ export async function getInventoryAnalyticsSummary(
   }
 
   if (
-    !Number.isInteger(topLimit) ||
+    !Number.isInteger(
+      topLimit,
+    ) ||
     topLimit <= 0
   ) {
     throw new Error(
@@ -641,9 +681,11 @@ export async function getInventoryAnalyticsSummary(
     database.getAllAsync<ProductSalesRow>(
       `
         SELECT
-          products.id AS product_id,
+          products.id
+            AS product_id,
 
-          products.name AS product_name,
+          products.name
+            AS product_name,
 
           products.brand,
 
@@ -994,15 +1036,21 @@ export async function getInventoryAnalyticsSummary(
     database.getAllAsync<ProductComparisonRow>(
       `
         SELECT
-          products.id AS product_id,
+          products.id
+            AS product_id,
 
-          products.name AS product_name,
+          products.name
+            AS product_name,
 
           products.brand,
 
           products.department,
 
           products.category,
+
+          products.current_stock,
+
+          products.reorder_level,
 
           COALESCE(
             SUM(
@@ -1186,12 +1234,17 @@ export async function getInventoryAnalyticsSummary(
             ?
           )
 
+        WHERE
+          products.is_active = 1
+
         GROUP BY
           products.id,
           products.name,
           products.brand,
           products.department,
-          products.category;
+          products.category,
+          products.current_stock,
+          products.reorder_level;
       `,
       currentStart,
       currentStart,
