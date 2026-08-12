@@ -71,15 +71,20 @@ export interface AnalyticsPeriodComparison {
 
   previous: AnalyticsPeriodTotals;
 
-  salesValueChangePercent: number | null;
+  salesValueChangePercent:
+    number | null;
 
-  salesUnitsChangePercent: number | null;
+  salesUnitsChangePercent:
+    number | null;
 
-  estimatedProfitChangePercent: number | null;
+  estimatedProfitChangePercent:
+    number | null;
 
-  stockInUnitsChangePercent: number | null;
+  stockInUnitsChangePercent:
+    number | null;
 
-  damageValueChangePercent: number | null;
+  damageValueChangePercent:
+    number | null;
 }
 
 export type ProductTrendType =
@@ -110,19 +115,66 @@ export interface ProductTrend {
 
   previousEstimatedProfit: number;
 
-  changePercent: number | null;
+  currentStock: number;
 
-  trendType: ProductTrendType;
+  reorderLevel: number;
+
+  needsRestock: boolean;
+
+  changePercent:
+    number | null;
+
+  trendType:
+    ProductTrendType;
+}
+
+export interface SalesTrendMetric {
+  date: string;
+
+  productId: number;
+
+  productName: string;
+
+  brand: string;
+
+  department: string;
+
+  category: string;
+
+  salesValue: number;
+
+  salesUnits: number;
+
+  estimatedProfit: number;
 }
 
 export interface InventoryAnalyticsSummary {
-  dailyMetrics: DailyInventoryMetric[];
+  dailyMetrics:
+    DailyInventoryMetric[];
 
-  topProducts: ProductSalesMetric[];
+  topProducts:
+    ProductSalesMetric[];
 
-  topCategories: CategorySalesMetric[];
+  topCategories:
+    CategorySalesMetric[];
 
-  comparison: AnalyticsPeriodComparison;
+  /*
+   * Unlike topCategories,
+   * this contains every category
+   * with sales in the selected period.
+   *
+   * It is used for the category-share
+   * donut chart.
+   */
+  categoryShareMetrics:
+    CategorySalesMetric[];
 
-  productTrends: ProductTrend[];
+  comparison:
+    AnalyticsPeriodComparison;
+
+  productTrends:
+    ProductTrend[];
+
+  salesTrendMetrics:
+    SalesTrendMetric[];
 }

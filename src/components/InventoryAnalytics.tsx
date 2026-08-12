@@ -7,6 +7,8 @@ import {
   View,
 } from "react-native";
 
+import { SalesLineChart } from "./SalesLineChart";
+import { StoreInsightCards } from "./StoreInsightCards";
 import {
   ANALYTICS_PERIOD_OPTIONS,
   type AnalyticsPeriodDays,
@@ -14,22 +16,25 @@ import {
 
 import type {
   CategorySalesMetric,
-  DailyInventoryMetric,
   InventoryAnalyticsSummary,
   ProductSalesMetric,
   ProductTrend,
 } from "../types/inventoryAnalytics";
 
 interface InventoryAnalyticsProps {
-  summary: InventoryAnalyticsSummary;
+  summary:
+    InventoryAnalyticsSummary;
 
-  selectedPeriod: AnalyticsPeriodDays;
+  selectedPeriod:
+    AnalyticsPeriodDays;
 
   onPeriodChange: (
-    period: AnalyticsPeriodDays,
+    period:
+      AnalyticsPeriodDays,
   ) => void;
 
-  onClose: () => void;
+  onClose:
+    () => void;
 }
 
 export function InventoryAnalytics({
@@ -44,22 +49,46 @@ export function InventoryAnalytics({
   const previous =
     summary.comparison.previous;
 
-  const maxDailySales =
-    Math.max(
-      ...summary.dailyMetrics.map(
-        (metric) =>
-          metric.salesValue,
-      ),
-      1,
+  const currentAverageSale =
+    calculateAverageSale(
+      current.salesValue,
+      current.salesUnits,
+    );
+
+  const previousAverageSale =
+    calculateAverageSale(
+      previous.salesValue,
+      previous.salesUnits,
+    );
+
+  const averageSaleChange =
+    calculatePercentChange(
+      currentAverageSale,
+      previousAverageSale,
     );
 
   const fasterProducts =
     summary.productTrends.filter(
       (trend) =>
-        trend.trendType ===
-          "selling_faster" ||
-        trend.trendType ===
-          "new_strong_seller",
+        (
+          trend.trendType ===
+            "selling_faster" ||
+          trend.trendType ===
+            "new_strong_seller"
+        ) &&
+        !trend.needsRestock,
+    );
+
+  const lowStockFastProducts =
+    summary.productTrends.filter(
+      (trend) =>
+        (
+          trend.trendType ===
+            "selling_faster" ||
+          trend.trendType ===
+            "new_strong_seller"
+        ) &&
+        trend.needsRestock,
     );
 
   const droppedProducts =
@@ -68,6 +97,14 @@ export function InventoryAnalytics({
         trend.trendType ===
         "sales_dropped",
     );
+
+  const hasProductNotices =
+    fasterProducts.length >
+      0 ||
+    lowStockFastProducts.length >
+      0 ||
+    droppedProducts.length >
+      0;
 
   return (
     <SafeAreaView
@@ -82,7 +119,9 @@ export function InventoryAnalytics({
         }
       >
         <View
-          style={styles.headerRow}
+          style={
+            styles.headerRow
+          }
         >
           <View
             style={
@@ -90,22 +129,30 @@ export function InventoryAnalytics({
             }
           >
             <Text
-              style={styles.title}
+              style={
+                styles.title
+              }
             >
               Store Trends
             </Text>
 
             <Text
-              style={styles.subtitle}
+              style={
+                styles.subtitle
+              }
             >
-              See what is changing in your store and which products need attention.
+              See what is selling, what is making money, and which products need attention.
             </Text>
           </View>
 
           <Pressable
             accessibilityRole="button"
-            onPress={onClose}
-            style={({ pressed }) => [
+            onPress={
+              onClose
+            }
+            style={({
+              pressed,
+            }) => [
               styles.closeButton,
 
               pressed &&
@@ -123,7 +170,9 @@ export function InventoryAnalytics({
         </View>
 
         <Text
-          style={styles.periodLabel}
+          style={
+            styles.periodLabel
+          }
         >
           Time Period
         </Text>
@@ -142,13 +191,17 @@ export function InventoryAnalytics({
               return (
                 <Pressable
                   accessibilityRole="button"
-                  key={option.days}
+                  key={
+                    option.days
+                  }
                   onPress={() =>
                     onPeriodChange(
                       option.days,
                     )
                   }
-                  style={({ pressed }) => [
+                  style={({
+                    pressed,
+                  }) => [
                     styles.periodButton,
 
                     isSelected &&
@@ -166,7 +219,9 @@ export function InventoryAnalytics({
                         styles.periodButtonTextSelected,
                     ]}
                   >
-                    {option.label}
+                    {
+                      option.label
+                    }
                   </Text>
                 </Pressable>
               );
@@ -202,7 +257,7 @@ export function InventoryAnalytics({
             styles.sectionDescription
           }
         >
-          See whether sales and stock activity went up or down.
+          See whether sales, items sold, and estimated profit improved or dropped.
         </Text>
 
         <View
@@ -212,9 +267,11 @@ export function InventoryAnalytics({
         >
           <ComparisonCard
             label="Sales"
-            value={formatCurrency(
-              current.salesValue,
-            )}
+            value={
+              formatCurrency(
+                current.salesValue,
+              )
+            }
             previousValue={`Previous: ${formatCurrency(
               previous.salesValue,
             )}`}
@@ -227,9 +284,11 @@ export function InventoryAnalytics({
 
           <ComparisonCard
             label="Items Sold"
-            value={formatNumber(
-              current.salesUnits,
-            )}
+            value={
+              formatNumber(
+                current.salesUnits,
+              )
+            }
             previousValue={`Previous: ${formatNumber(
               previous.salesUnits,
             )}`}
@@ -241,35 +300,59 @@ export function InventoryAnalytics({
           />
 
           <ComparisonCard
-            label="Stock Added"
-            value={formatNumber(
-              current.stockInUnits,
-            )}
-            previousValue={`Previous: ${formatNumber(
-              previous.stockInUnits,
+            label="Estimated Profit"
+            value={
+              formatCurrency(
+                current.estimatedProfit,
+              )
+            }
+            previousValue={`Previous: ${formatCurrency(
+              previous.estimatedProfit,
             )}`}
             change={
               summary.comparison
-                .stockInUnitsChangePercent
+                .estimatedProfitChangePercent
             }
+            positiveIsGood
           />
 
           <ComparisonCard
-            label="Damaged Stock"
-            value={formatCurrency(
-              current.damageValue,
-            )}
+            label="Average Sale per Item"
+            value={
+              formatCurrency(
+                currentAverageSale,
+              )
+            }
             previousValue={`Previous: ${formatCurrency(
-              previous.damageValue,
+              previousAverageSale,
             )}`}
             change={
-              summary.comparison
-                .damageValueChangePercent
+              averageSaleChange
             }
-            positiveIsGood={false}
+            positiveIsGood
           />
         </View>
+        <Text
+  style={
+    styles.sectionTitle
+  }
+>
+  Business Insights
+</Text>
 
+<Text
+  style={
+    styles.sectionDescription
+  }
+>
+  Important changes and opportunities detected from your store activity.
+</Text>
+
+<StoreInsightCards
+  summary={
+    summary
+  }
+/>
         <Text
           style={
             styles.sectionTitle
@@ -283,7 +366,7 @@ export function InventoryAnalytics({
             styles.sectionDescription
           }
         >
-          Daily sales during the selected time period.
+          Explore store, category, or individual product performance over time.
         </Text>
 
         <View
@@ -298,12 +381,12 @@ export function InventoryAnalytics({
             />
           ) : (
             <>
-              <SalesChart
+              <SalesLineChart
                 metrics={
                   summary.dailyMetrics
                 }
-                maxSales={
-                  maxDailySales
+                salesTrendMetrics={
+                  summary.salesTrendMetrics
                 }
               />
 
@@ -312,23 +395,49 @@ export function InventoryAnalytics({
                   styles.chartFooter
                 }
               >
-                <Text
-                  style={
-                    styles.chartFooterText
-                  }
-                >
-                  Total sales
-                </Text>
+                <View>
+                  <Text
+                    style={
+                      styles.chartFooterText
+                    }
+                  >
+                    Total store sales
+                  </Text>
 
-                <Text
+                  <Text
+                    style={
+                      styles.chartFooterValue
+                    }
+                  >
+                    {formatCurrency(
+                      current.salesValue,
+                    )}
+                  </Text>
+                </View>
+
+                <View
                   style={
-                    styles.chartFooterValue
+                    styles.chartFooterRight
                   }
                 >
-                  {formatCurrency(
-                    current.salesValue,
-                  )}
-                </Text>
+                  <Text
+                    style={
+                      styles.chartFooterText
+                    }
+                  >
+                    Estimated profit
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.chartProfitValue
+                    }
+                  >
+                    {formatCurrency(
+                      current.estimatedProfit,
+                    )}
+                  </Text>
+                </View>
               </View>
             </>
           )}
@@ -347,11 +456,10 @@ export function InventoryAnalytics({
             styles.sectionDescription
           }
         >
-          Products selling much faster or slower than before.
+          See products growing quickly, running low, or selling much slower than before.
         </Text>
 
-        {summary.productTrends.length ===
-        0 ? (
+        {!hasProductNotices ? (
           <View
             style={
               styles.noticeEmptyCard
@@ -375,6 +483,43 @@ export function InventoryAnalytics({
           </View>
         ) : (
           <>
+            {lowStockFastProducts.length >
+            0 ? (
+              <View
+                style={
+                  styles.trendGroup
+                }
+              >
+                <Text
+                  style={
+                    styles.trendGroupTitle
+                  }
+                >
+                  Low Stock — Selling Fast
+                </Text>
+
+                <Text
+                  style={
+                    styles.trendGroupDescription
+                  }
+                >
+                  These products are selling well but may need restocking soon.
+                </Text>
+
+                {lowStockFastProducts.map(
+                  (trend) => (
+                    <ProductTrendCard
+                      key={`restock-${trend.productId}`}
+                      trend={
+                        trend
+                      }
+                      showStockWarning
+                    />
+                  ),
+                )}
+              </View>
+            ) : null}
+
             {fasterProducts.length >
             0 ? (
               <View
@@ -415,7 +560,15 @@ export function InventoryAnalytics({
                     styles.trendGroupTitle
                   }
                 >
-                  Sales Dropped
+                  Needs Attention
+                </Text>
+
+                <Text
+                  style={
+                    styles.trendGroupDescription
+                  }
+                >
+                  These products are selling much slower than before.
                 </Text>
 
                 {droppedProducts.map(
@@ -432,49 +585,6 @@ export function InventoryAnalytics({
             ) : null}
           </>
         )}
-
-        <Text
-          style={
-            styles.sectionTitle
-          }
-        >
-          Daily Details
-        </Text>
-
-        <Text
-          style={
-            styles.sectionDescription
-          }
-        >
-          Sales, stock added, and damaged items for each day.
-        </Text>
-
-        <View
-          style={styles.chartCard}
-        >
-          {summary.dailyMetrics
-            .length === 0 ? (
-            <EmptyMessage
-              text="No store activity is available for this time period."
-            />
-          ) : (
-            summary.dailyMetrics.map(
-              (metric) => (
-                <DailyMetricRow
-                  key={
-                    metric.date
-                  }
-                  metric={
-                    metric
-                  }
-                  maxSales={
-                    maxDailySales
-                  }
-                />
-              ),
-            )
-          )}
-        </View>
 
         <Text
           style={
@@ -581,7 +691,8 @@ interface ComparisonCardProps {
 
   previousValue: string;
 
-  change: number | null;
+  change:
+    number | null;
 
   positiveIsGood?: boolean;
 }
@@ -684,112 +795,14 @@ function ComparisonCard({
   );
 }
 
-function SalesChart({
-  metrics,
-  maxSales,
-}: {
-  metrics: DailyInventoryMetric[];
-
-  maxSales: number;
-}) {
-  const visibleMetrics =
-    reduceChartPoints(
-      metrics,
-      14,
-    );
-
-  return (
-    <View>
-      <View
-        style={
-          styles.salesChart
-        }
-      >
-        {visibleMetrics.map(
-          (metric) => {
-            const heightPercent =
-              Math.max(
-                (
-                  metric.salesValue /
-                  maxSales
-                ) * 100,
-                metric.salesValue >
-                  0
-                  ? 5
-                  : 2,
-              );
-
-            return (
-              <View
-                key={
-                  metric.date
-                }
-                style={
-                  styles.chartColumn
-                }
-              >
-                <View
-                  style={
-                    styles.chartBarArea
-                  }
-                >
-                  <View
-                    style={[
-                      styles.chartBar,
-
-                      {
-                        height:
-                          `${heightPercent}%`,
-                      },
-                    ]}
-                  />
-                </View>
-
-                <Text
-                  style={
-                    styles.chartDate
-                  }
-                  numberOfLines={1}
-                >
-                  {formatShortDate(
-                    metric.date,
-                  )}
-                </Text>
-              </View>
-            );
-          },
-        )}
-      </View>
-
-      <View
-        style={
-          styles.chartScaleRow
-        }
-      >
-        <Text
-          style={
-            styles.chartScaleText
-          }
-        >
-          Lower sales
-        </Text>
-
-        <Text
-          style={
-            styles.chartScaleText
-          }
-        >
-          Higher sales
-        </Text>
-      </View>
-    </View>
-  );
-}
-
 function ProductTrendCard({
   trend,
+  showStockWarning = false,
 }: {
-  trend: ProductTrend;
+  trend:
+    ProductTrend;
+
+  showStockWarning?: boolean;
 }) {
   const isDrop =
     trend.trendType ===
@@ -811,9 +824,11 @@ function ProductTrendCard({
       style={[
         styles.trendCard,
 
-        isDrop
-          ? styles.trendCardDanger
-          : styles.trendCardPositive,
+        showStockWarning
+          ? styles.trendCardWarning
+          : isDrop
+            ? styles.trendCardDanger
+            : styles.trendCardPositive,
       ]}
     >
       <View
@@ -924,138 +939,63 @@ function ProductTrendCard({
         </View>
       </View>
 
+      {showStockWarning ? (
+        <View
+          style={
+            styles.stockWarningBox
+          }
+        >
+          <Text
+            style={
+              styles.stockWarningTitle
+            }
+          >
+            Consider restocking soon
+          </Text>
+
+          <Text
+            style={
+              styles.stockWarningText
+            }
+          >
+            Current stock:{" "}
+            {formatNumber(
+              trend.currentStock,
+            )}{" "}
+            · Reorder level:{" "}
+            {formatNumber(
+              trend.reorderLevel,
+            )}
+          </Text>
+        </View>
+      ) : null}
+
       <Text
         style={[
           styles.trendMessage,
 
-          isDrop
-            ? styles.trendMessageDanger
-            : styles.trendMessagePositive,
+          showStockWarning
+            ? styles.trendMessageWarning
+            : isDrop
+              ? styles.trendMessageDanger
+              : styles.trendMessagePositive,
         ]}
       >
-        {isNew
-          ? "New strong seller"
-          : isDrop
-            ? "Sales dropped sharply"
-            : "Selling much faster than before"}
+        {showStockWarning
+          ? "Selling fast and stock is running low"
+          : isNew
+            ? "New strong seller"
+            : isDrop
+              ? "Sales dropped sharply"
+              : "Selling much faster than before"}
       </Text>
     </View>
   );
 }
 
-interface DailyMetricRowProps {
-  metric: DailyInventoryMetric;
-
-  maxSales: number;
-}
-
-function DailyMetricRow({
-  metric,
-  maxSales,
-}: DailyMetricRowProps) {
-  const salesWidth =
-    Math.max(
-      (
-        metric.salesValue /
-        maxSales
-      ) * 100,
-
-      metric.salesValue > 0
-        ? 4
-        : 0,
-    );
-
-  return (
-    <View
-      style={styles.dailyRow}
-    >
-      <View
-        style={
-          styles.dailyHeader
-        }
-      >
-        <Text
-          style={
-            styles.dailyDate
-          }
-        >
-          {formatDate(
-            metric.date,
-          )}
-        </Text>
-
-        <Text
-          style={
-            styles.dailySalesValue
-          }
-        >
-          {formatCurrency(
-            metric.salesValue,
-          )}
-        </Text>
-      </View>
-
-      <View
-        style={
-          styles.barTrack
-        }
-      >
-        <View
-          style={[
-            styles.barFill,
-
-            {
-              width:
-                `${salesWidth}%`,
-            },
-          ]}
-        />
-      </View>
-
-      <View
-        style={
-          styles.dailyMetaRow
-        }
-      >
-        <Text
-          style={
-            styles.dailyMetaText
-          }
-        >
-          Sold:{" "}
-          {formatNumber(
-            metric.salesUnits,
-          )}
-        </Text>
-
-        <Text
-          style={
-            styles.dailyMetaText
-          }
-        >
-          Added:{" "}
-          {formatNumber(
-            metric.stockInUnits,
-          )}
-        </Text>
-
-        <Text
-          style={
-            styles.dailyMetaText
-          }
-        >
-          Damaged:{" "}
-          {formatNumber(
-            metric.damageUnits,
-          )}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
 interface ProductRankingRowProps {
-  product: ProductSalesMetric;
+  product:
+    ProductSalesMetric;
 
   rank: number;
 }
@@ -1124,7 +1064,11 @@ function ProductRankingRow({
           {formatNumber(
             product.unitsSold,
           )}{" "}
-          items sold
+          items sold ·{" "}
+          {formatCurrency(
+            product.estimatedProfit,
+          )}{" "}
+          est. profit
         </Text>
       </View>
 
@@ -1142,7 +1086,8 @@ function ProductRankingRow({
 }
 
 interface CategoryRankingRowProps {
-  category: CategorySalesMetric;
+  category:
+    CategorySalesMetric;
 
   rank: number;
 }
@@ -1204,7 +1149,11 @@ function CategoryRankingRow({
           {formatNumber(
             category.unitsSold,
           )}{" "}
-          items sold
+          items sold ·{" "}
+          {formatCurrency(
+            category.estimatedProfit,
+          )}{" "}
+          est. profit
         </Text>
       </View>
 
@@ -1243,152 +1192,57 @@ function EmptyMessage({
   );
 }
 
-function reduceChartPoints(
-  metrics: DailyInventoryMetric[],
-  maxPoints: number,
-): DailyInventoryMetric[] {
+function calculateAverageSale(
+  salesValue: number,
+  salesUnits: number,
+): number {
   if (
-    metrics.length <=
-    maxPoints
+    salesUnits <= 0
   ) {
-    return metrics;
+    return 0;
   }
 
-  const step =
-    Math.ceil(
-      metrics.length /
-        maxPoints,
-    );
+  return (
+    salesValue /
+    salesUnits
+  );
+}
 
-  const result:
-    DailyInventoryMetric[] = [];
-
-  for (
-    let index = 0;
-    index < metrics.length;
-    index += step
+function calculatePercentChange(
+  current: number,
+  previous: number,
+): number | null {
+  if (
+    previous === 0
   ) {
-    const group =
-      metrics.slice(
-        index,
-        index + step,
-      );
-
-    if (
-      group.length === 0
-    ) {
-      continue;
-    }
-
-    result.push({
-      date:
-        group[
-          group.length - 1
-        ].date,
-
-      salesValue:
-        group.reduce(
-          (
-            total,
-            item,
-          ) =>
-            total +
-            item.salesValue,
-          0,
-        ),
-
-      estimatedProfit:
-        group.reduce(
-          (
-            total,
-            item,
-          ) =>
-            total +
-            item.estimatedProfit,
-          0,
-        ),
-
-      stockInValue:
-        group.reduce(
-          (
-            total,
-            item,
-          ) =>
-            total +
-            item.stockInValue,
-          0,
-        ),
-
-      damageValue:
-        group.reduce(
-          (
-            total,
-            item,
-          ) =>
-            total +
-            item.damageValue,
-          0,
-        ),
-
-      salesUnits:
-        group.reduce(
-          (
-            total,
-            item,
-          ) =>
-            total +
-            item.salesUnits,
-          0,
-        ),
-
-      stockInUnits:
-        group.reduce(
-          (
-            total,
-            item,
-          ) =>
-            total +
-            item.stockInUnits,
-          0,
-        ),
-
-      damageUnits:
-        group.reduce(
-          (
-            total,
-            item,
-          ) =>
-            total +
-            item.damageUnits,
-          0,
-        ),
-
-      transactionCount:
-        group.reduce(
-          (
-            total,
-            item,
-          ) =>
-            total +
-            item.transactionCount,
-          0,
-        ),
-    });
+    return current === 0
+      ? 0
+      : null;
   }
 
-  return result;
+  return (
+    (
+      current -
+      previous
+    ) /
+    previous
+  ) * 100;
 }
 
 function formatChange(
-  value: number | null,
+  value:
+    number | null,
 ): string {
-  if (value === null) {
+  if (
+    value === null
+  ) {
     return "New";
   }
 
   if (
-    Math.abs(value) <
-    0.05
+    Math.abs(
+      value,
+    ) < 0.05
   ) {
     return "No change";
   }
@@ -1398,11 +1252,15 @@ function formatChange(
       value * 10,
     ) / 10;
 
-  if (rounded > 0) {
+  if (
+    rounded > 0
+  ) {
     return `↑ ${rounded}%`;
   }
 
-  if (rounded < 0) {
+  if (
+    rounded < 0
+  ) {
     return `↓ ${Math.abs(
       rounded,
     )}%`;
@@ -1417,11 +1275,18 @@ function formatCurrency(
   return new Intl.NumberFormat(
     "en-CA",
     {
-      style: "currency",
-      currency: "CAD",
-      maximumFractionDigits: 2,
+      style:
+        "currency",
+
+      currency:
+        "CAD",
+
+      maximumFractionDigits:
+        2,
     },
-  ).format(value);
+  ).format(
+    value,
+  );
 }
 
 function formatNumber(
@@ -1429,144 +1294,169 @@ function formatNumber(
 ): string {
   return new Intl.NumberFormat(
     "en-CA",
-  ).format(value);
+  ).format(
+    value,
+  );
 }
 
 function formatPeriodLabel(
-  period: AnalyticsPeriodDays,
+  period:
+    AnalyticsPeriodDays,
 ): string {
-  if (period === 365) {
+  if (
+    period === 365
+  ) {
     return "1 year";
   }
 
   return `${period} days`;
 }
 
-function formatDate(
-  date: string,
-): string {
-  const parsedDate =
-    new Date(
-      `${date}T00:00:00`,
-    );
-
-  return parsedDate.toLocaleDateString(
-    "en-CA",
-    {
-      month: "short",
-
-      day: "numeric",
-
-      year:
-        parsedDate.getFullYear() !==
-        new Date().getFullYear()
-          ? "numeric"
-          : undefined,
-    },
-  );
-}
-
-function formatShortDate(
-  date: string,
-): string {
-  const parsedDate =
-    new Date(
-      `${date}T00:00:00`,
-    );
-
-  return parsedDate.toLocaleDateString(
-    "en-CA",
-    {
-      month: "short",
-      day: "numeric",
-    },
-  );
-}
-
 const styles =
   StyleSheet.create({
     screen: {
       flex: 1,
+
       backgroundColor:
         "#F4F6F8",
     },
 
     content: {
       padding: 18,
-      paddingBottom: 48,
+
+      paddingBottom:
+        48,
     },
 
     headerRow: {
-      flexDirection: "row",
+      flexDirection:
+        "row",
+
       alignItems:
         "flex-start",
+
       justifyContent:
         "space-between",
     },
 
     headerTextContainer: {
       flex: 1,
-      marginRight: 16,
+
+      marginRight:
+        16,
     },
 
     title: {
-      fontSize: 30,
-      fontWeight: "800",
-      color: "#111827",
+      fontSize:
+        30,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     subtitle: {
-      marginTop: 6,
-      fontSize: 15,
-      lineHeight: 21,
-      color: "#6B7280",
+      marginTop:
+        6,
+
+      fontSize:
+        15,
+
+      lineHeight:
+        21,
+
+      color:
+        "#6B7280",
     },
 
     closeButton: {
-      borderWidth: 1,
+      borderWidth:
+        1,
+
       borderColor:
         "#CBD2DA",
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 9,
+
+      borderRadius:
+        10,
+
+      paddingHorizontal:
+        14,
+
+      paddingVertical:
+        9,
+
       backgroundColor:
         "#FFFFFF",
     },
 
     closeButtonText: {
-      fontSize: 14,
-      fontWeight: "700",
-      color: "#20252B",
+      fontSize:
+        14,
+
+      fontWeight:
+        "700",
+
+      color:
+        "#20252B",
     },
 
     buttonPressed: {
-      opacity: 0.72,
+      opacity:
+        0.72,
     },
 
     periodLabel: {
-      marginTop: 24,
-      fontSize: 14,
-      fontWeight: "800",
-      color: "#374151",
+      marginTop:
+        24,
+
+      fontSize:
+        14,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#374151",
     },
 
     periodContainer: {
-      marginTop: 10,
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 9,
+      marginTop:
+        10,
+
+      flexDirection:
+        "row",
+
+      flexWrap:
+        "wrap",
+
+      gap:
+        9,
     },
 
     periodButton: {
-      minHeight: 42,
-      alignItems: "center",
+      minHeight:
+        42,
+
+      alignItems:
+        "center",
+
       justifyContent:
         "center",
-      borderWidth: 1,
+
+      borderWidth:
+        1,
+
       borderColor:
         "#CBD2DA",
-      borderRadius: 12,
-      paddingHorizontal: 14,
+
+      borderRadius:
+        12,
+
+      paddingHorizontal:
+        14,
+
       backgroundColor:
         "#FFFFFF",
     },
@@ -1574,57 +1464,105 @@ const styles =
     periodButtonSelected: {
       borderColor:
         "#0F766E",
+
       backgroundColor:
         "#0F766E",
     },
 
     periodButtonText: {
-      fontSize: 13,
-      fontWeight: "700",
-      color: "#374151",
+      fontSize:
+        13,
+
+      fontWeight:
+        "700",
+
+      color:
+        "#374151",
     },
 
     periodButtonTextSelected: {
-      color: "#FFFFFF",
+      color:
+        "#FFFFFF",
     },
 
     periodDescription: {
-      marginTop: 9,
-      fontSize: 12,
-      lineHeight: 18,
-      color: "#6B7280",
+      marginTop:
+        9,
+
+      fontSize:
+        12,
+
+      lineHeight:
+        18,
+
+      color:
+        "#6B7280",
     },
 
     sectionTitle: {
-      marginTop: 28,
-      fontSize: 20,
-      fontWeight: "800",
-      color: "#111827",
+      marginTop:
+        28,
+
+      fontSize:
+        20,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     sectionDescription: {
-      marginTop: 4,
-      marginBottom: 12,
-      fontSize: 12,
-      lineHeight: 18,
-      color: "#6B7280",
+      marginTop:
+        4,
+
+      marginBottom:
+        12,
+
+      fontSize:
+        12,
+
+      lineHeight:
+        18,
+
+      color:
+        "#6B7280",
     },
 
     summaryGrid: {
-      marginTop: 2,
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 12,
+      marginTop:
+        2,
+
+      flexDirection:
+        "row",
+
+      flexWrap:
+        "wrap",
+
+      gap:
+        12,
     },
 
     summaryCard: {
-      width: "48%",
-      minHeight: 150,
-      borderWidth: 1,
+      width:
+        "48%",
+
+      minHeight:
+        150,
+
+      borderWidth:
+        1,
+
       borderColor:
         "#E0E4E8",
-      borderRadius: 16,
-      padding: 15,
+
+      borderRadius:
+        16,
+
+      padding:
+        15,
+
       backgroundColor:
         "#FFFFFF",
     },
@@ -1632,6 +1570,7 @@ const styles =
     summaryCardPositive: {
       borderColor:
         "#D1FAE5",
+
       backgroundColor:
         "#F7FEFA",
     },
@@ -1639,184 +1578,258 @@ const styles =
     summaryCardDanger: {
       borderColor:
         "#FECACA",
+
       backgroundColor:
         "#FFF8F7",
     },
 
     summaryLabel: {
-      fontSize: 13,
-      fontWeight: "700",
-      color: "#6B7280",
+      fontSize:
+        13,
+
+      fontWeight:
+        "700",
+
+      color:
+        "#6B7280",
     },
 
     summaryValue: {
-      marginTop: 9,
-      fontSize: 22,
-      fontWeight: "800",
-      color: "#111827",
+      marginTop:
+        9,
+
+      fontSize:
+        22,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     previousValue: {
-      marginTop: 5,
-      fontSize: 11,
-      color: "#8B949E",
+      marginTop:
+        5,
+
+      fontSize:
+        11,
+
+      color:
+        "#8B949E",
     },
 
     changeRow: {
-      marginTop: 10,
+      marginTop:
+        10,
     },
 
     changeText: {
-      fontSize: 13,
-      fontWeight: "800",
-      color: "#6B7280",
+      fontSize:
+        13,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#6B7280",
     },
 
     changeUp: {
-      color: "#15803D",
+      color:
+        "#15803D",
     },
 
     changeDown: {
-      color: "#B42318",
+      color:
+        "#B42318",
     },
 
     changeCaption: {
-      marginTop: 2,
-      fontSize: 10,
-      color: "#9CA3AF",
+      marginTop:
+        2,
+
+      fontSize:
+        10,
+
+      color:
+        "#9CA3AF",
     },
 
     chartCard: {
-      borderWidth: 1,
+      borderWidth:
+        1,
+
       borderColor:
         "#E0E4E8",
-      borderRadius: 16,
-      padding: 16,
+
+      borderRadius:
+        16,
+
+      padding:
+        16,
+
       backgroundColor:
         "#FFFFFF",
     },
 
-    salesChart: {
-      height: 190,
-      flexDirection: "row",
-      alignItems:
-        "flex-end",
-      justifyContent:
-        "space-between",
-      gap: 4,
-    },
-
-    chartColumn: {
-      flex: 1,
-      minWidth: 14,
-      alignItems: "center",
-    },
-
-    chartBarArea: {
-      width: "100%",
-      height: 155,
-      justifyContent:
-        "flex-end",
-      alignItems: "center",
-      borderBottomWidth: 1,
-      borderBottomColor:
-        "#E5E7EB",
-    },
-
-    chartBar: {
-      width: "68%",
-      minHeight: 3,
-      borderTopLeftRadius: 5,
-      borderTopRightRadius: 5,
-      backgroundColor:
-        "#2563EB",
-    },
-
-    chartDate: {
-      marginTop: 7,
-      fontSize: 8,
-      color: "#8B949E",
-    },
-
-    chartScaleRow: {
-      marginTop: 12,
-      flexDirection: "row",
-      justifyContent:
-        "space-between",
-    },
-
-    chartScaleText: {
-      fontSize: 10,
-      color: "#9CA3AF",
-    },
-
     chartFooter: {
-      marginTop: 15,
-      paddingTop: 13,
-      borderTopWidth: 1,
+      marginTop:
+        15,
+
+      paddingTop:
+        13,
+
+      borderTopWidth:
+        1,
+
       borderTopColor:
         "#EEF0F2",
-      flexDirection: "row",
-      alignItems: "center",
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "flex-start",
+
       justifyContent:
         "space-between",
+    },
+
+    chartFooterRight: {
+      alignItems:
+        "flex-end",
     },
 
     chartFooterText: {
-      fontSize: 12,
-      color: "#6B7280",
+      fontSize:
+        12,
+
+      color:
+        "#6B7280",
     },
 
     chartFooterValue: {
-      fontSize: 16,
-      fontWeight: "800",
-      color: "#15803D",
+      marginTop:
+        3,
+
+      fontSize:
+        16,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#15803D",
+    },
+
+    chartProfitValue: {
+      marginTop:
+        3,
+
+      fontSize:
+        16,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     noticeEmptyCard: {
-      borderWidth: 1,
+      borderWidth:
+        1,
+
       borderColor:
         "#E0E4E8",
-      borderRadius: 16,
-      padding: 20,
+
+      borderRadius:
+        16,
+
+      padding:
+        20,
+
       backgroundColor:
         "#FFFFFF",
     },
 
     noticeEmptyTitle: {
-      fontSize: 15,
-      fontWeight: "800",
-      color: "#111827",
+      fontSize:
+        15,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     noticeEmptyText: {
-      marginTop: 6,
-      fontSize: 12,
-      lineHeight: 18,
-      color: "#6B7280",
+      marginTop:
+        6,
+
+      fontSize:
+        12,
+
+      lineHeight:
+        18,
+
+      color:
+        "#6B7280",
     },
 
     trendGroup: {
-      marginBottom: 14,
+      marginBottom:
+        18,
     },
 
     trendGroupTitle: {
-      marginBottom: 9,
-      fontSize: 14,
-      fontWeight: "800",
-      color: "#374151",
+      marginBottom:
+        4,
+
+      fontSize:
+        14,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#374151",
+    },
+
+    trendGroupDescription: {
+      marginBottom:
+        9,
+
+      fontSize:
+        11,
+
+      lineHeight:
+        16,
+
+      color:
+        "#6B7280",
     },
 
     trendCard: {
-      marginBottom: 10,
-      borderWidth: 1,
-      borderRadius: 15,
-      padding: 14,
+      marginBottom:
+        10,
+
+      borderWidth:
+        1,
+
+      borderRadius:
+        15,
+
+      padding:
+        14,
     },
 
     trendCardPositive: {
       borderColor:
         "#D1FAE5",
+
       backgroundColor:
         "#F7FEFA",
     },
@@ -1824,219 +1837,337 @@ const styles =
     trendCardDanger: {
       borderColor:
         "#FECACA",
+
       backgroundColor:
         "#FFF8F7",
     },
 
+    trendCardWarning: {
+      borderColor:
+        "#FDE68A",
+
+      backgroundColor:
+        "#FFFBEB",
+    },
+
     trendCardHeader: {
-      flexDirection: "row",
+      flexDirection:
+        "row",
+
       alignItems:
         "flex-start",
+
       justifyContent:
         "space-between",
     },
 
     trendProductText: {
-      flex: 1,
-      marginRight: 12,
+      flex:
+        1,
+
+      marginRight:
+        12,
     },
 
     trendProductName: {
-      fontSize: 15,
-      fontWeight: "800",
-      color: "#111827",
+      fontSize:
+        15,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     trendProductDetails: {
-      marginTop: 3,
-      fontSize: 11,
-      color: "#6B7280",
+      marginTop:
+        3,
+
+      fontSize:
+        11,
+
+      color:
+        "#6B7280",
     },
 
     trendPercent: {
-      fontSize: 14,
-      fontWeight: "800",
+      fontSize:
+        14,
+
+      fontWeight:
+        "800",
     },
 
     trendPercentUp: {
-      color: "#15803D",
+      color:
+        "#15803D",
     },
 
     trendPercentDown: {
-      color: "#B42318",
+      color:
+        "#B42318",
     },
 
     trendNumbersRow: {
-      marginTop: 13,
-      flexDirection: "row",
-      alignItems: "center",
+      marginTop:
+        13,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
     },
 
     trendNumberBlock: {
-      minWidth: 70,
+      minWidth:
+        70,
     },
 
     trendNumberLabel: {
-      fontSize: 10,
-      fontWeight: "700",
+      fontSize:
+        10,
+
+      fontWeight:
+        "700",
+
       textTransform:
         "uppercase",
-      color: "#8B949E",
+
+      color:
+        "#8B949E",
     },
 
     trendNumberValue: {
-      marginTop: 3,
-      fontSize: 18,
-      fontWeight: "800",
-      color: "#111827",
+      marginTop:
+        3,
+
+      fontSize:
+        18,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     trendArrow: {
-      marginHorizontal: 12,
-      fontSize: 18,
-      color: "#9CA3AF",
+      marginHorizontal:
+        12,
+
+      fontSize:
+        18,
+
+      color:
+        "#9CA3AF",
+    },
+
+    stockWarningBox: {
+      marginTop:
+        13,
+
+      borderRadius:
+        10,
+
+      padding:
+        10,
+
+      backgroundColor:
+        "#FEF3C7",
+    },
+
+    stockWarningTitle: {
+      fontSize:
+        12,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#92400E",
+    },
+
+    stockWarningText: {
+      marginTop:
+        3,
+
+      fontSize:
+        11,
+
+      color:
+        "#92400E",
     },
 
     trendMessage: {
-      marginTop: 11,
-      fontSize: 12,
-      fontWeight: "700",
+      marginTop:
+        11,
+
+      fontSize:
+        12,
+
+      fontWeight:
+        "700",
     },
 
     trendMessagePositive: {
-      color: "#15803D",
+      color:
+        "#15803D",
     },
 
     trendMessageDanger: {
-      color: "#B42318",
+      color:
+        "#B42318",
     },
 
-    dailyRow: {
-      marginBottom: 18,
-    },
-
-    dailyHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent:
-        "space-between",
-    },
-
-    dailyDate: {
-      fontSize: 14,
-      fontWeight: "700",
-      color: "#374151",
-    },
-
-    dailySalesValue: {
-      fontSize: 14,
-      fontWeight: "800",
-      color: "#15803D",
-    },
-
-    barTrack: {
-      marginTop: 8,
-      height: 9,
-      overflow: "hidden",
-      borderRadius: 5,
-      backgroundColor:
-        "#E5E7EB",
-    },
-
-    barFill: {
-      height: "100%",
-      borderRadius: 5,
-      backgroundColor:
-        "#1D4ED8",
-    },
-
-    dailyMetaRow: {
-      marginTop: 7,
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 12,
-    },
-
-    dailyMetaText: {
-      fontSize: 12,
-      color: "#6B7280",
+    trendMessageWarning: {
+      color:
+        "#B45309",
     },
 
     rankingCard: {
-      borderWidth: 1,
+      borderWidth:
+        1,
+
       borderColor:
         "#E0E4E8",
-      borderRadius: 16,
-      paddingHorizontal: 16,
+
+      borderRadius:
+        16,
+
+      paddingHorizontal:
+        16,
+
       backgroundColor:
         "#FFFFFF",
     },
 
     rankingRow: {
-      minHeight: 88,
-      flexDirection: "row",
-      alignItems: "center",
-      borderBottomWidth: 1,
+      minHeight:
+        88,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
+      borderBottomWidth:
+        1,
+
       borderBottomColor:
         "#E5E7EB",
-      paddingVertical: 14,
+
+      paddingVertical:
+        14,
     },
 
     rankBadge: {
-      width: 34,
-      height: 34,
-      alignItems: "center",
+      width:
+        34,
+
+      height:
+        34,
+
+      alignItems:
+        "center",
+
       justifyContent:
         "center",
-      borderRadius: 17,
+
+      borderRadius:
+        17,
+
       backgroundColor:
         "#EAF2FF",
     },
 
     rankText: {
-      fontSize: 14,
-      fontWeight: "800",
-      color: "#1D4ED8",
+      fontSize:
+        14,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#1D4ED8",
     },
 
     rankingTextContainer: {
-      flex: 1,
-      marginHorizontal: 12,
+      flex:
+        1,
+
+      marginHorizontal:
+        12,
     },
 
     rankingTitle: {
-      fontSize: 15,
-      fontWeight: "800",
-      color: "#111827",
+      fontSize:
+        15,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     rankingSubtitle: {
-      marginTop: 3,
-      fontSize: 13,
-      color: "#5D6673",
+      marginTop:
+        3,
+
+      fontSize:
+        13,
+
+      color:
+        "#5D6673",
     },
 
     rankingMeta: {
-      marginTop: 4,
-      fontSize: 12,
-      color: "#7A838E",
+      marginTop:
+        4,
+
+      fontSize:
+        12,
+
+      lineHeight:
+        17,
+
+      color:
+        "#7A838E",
     },
 
     rankingValue: {
-      fontSize: 15,
-      fontWeight: "800",
-      color: "#15803D",
+      fontSize:
+        15,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#15803D",
     },
 
     emptyContainer: {
-      paddingVertical: 30,
-      alignItems: "center",
+      paddingVertical:
+        30,
+
+      alignItems:
+        "center",
     },
 
     emptyText: {
-      fontSize: 14,
-      lineHeight: 20,
-      textAlign: "center",
-      color: "#6B7280",
+      fontSize:
+        14,
+
+      lineHeight:
+        20,
+
+      textAlign:
+        "center",
+
+      color:
+        "#6B7280",
     },
   });
