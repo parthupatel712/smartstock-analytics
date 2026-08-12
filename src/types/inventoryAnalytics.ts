@@ -128,6 +128,33 @@ export interface ProductTrend {
     ProductTrendType;
 }
 
+/*
+ * Detailed per-product/per-day sales data.
+ *
+ * This is used by the interactive chart
+ * when the user filters by category or
+ * individual product.
+ */
+export interface SalesTrendMetric {
+  date: string;
+
+  productId: number;
+
+  productName: string;
+
+  brand: string;
+
+  department: string;
+
+  category: string;
+
+  salesValue: number;
+
+  salesUnits: number;
+
+  estimatedProfit: number;
+}
+
 export interface InventoryAnalyticsSummary {
   dailyMetrics:
     DailyInventoryMetric[];
@@ -143,4 +170,7 @@ export interface InventoryAnalyticsSummary {
 
   productTrends:
     ProductTrend[];
+
+  salesTrendMetrics:
+    SalesTrendMetric[];
 }

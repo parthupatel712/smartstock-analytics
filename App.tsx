@@ -189,6 +189,8 @@ const INITIAL_ANALYTICS_SUMMARY: InventoryAnalyticsSummary = {
   },
 
   productTrends: [],
+
+  salesTrendMetrics: [],
 };
 
 export default function App() {

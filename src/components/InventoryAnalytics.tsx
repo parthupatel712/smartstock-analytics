@@ -7,6 +7,8 @@ import {
   View,
 } from "react-native";
 
+import { SalesLineChart } from "./SalesLineChart";
+
 import {
   ANALYTICS_PERIOD_OPTIONS,
   type AnalyticsPeriodDays,
@@ -14,7 +16,6 @@ import {
 
 import type {
   CategorySalesMetric,
-  DailyInventoryMetric,
   InventoryAnalyticsSummary,
   ProductSalesMetric,
   ProductTrend,
@@ -48,15 +49,6 @@ export function InventoryAnalytics({
   const previous =
     summary.comparison.previous;
 
-  const maxDailySales =
-    Math.max(
-      ...summary.dailyMetrics.map(
-        (metric) =>
-          metric.salesValue,
-      ),
-      1,
-    );
-
   const currentAverageSale =
     calculateAverageSale(
       current.salesValue,
@@ -75,10 +67,6 @@ export function InventoryAnalytics({
       previousAverageSale,
     );
 
-  /*
-   * Fast sellers that are NOT
-   * currently low on stock.
-   */
   const fasterProducts =
     summary.productTrends.filter(
       (trend) =>
@@ -91,10 +79,6 @@ export function InventoryAnalytics({
         !trend.needsRestock,
     );
 
-  /*
-   * Fast sellers that now need
-   * restocking attention.
-   */
   const lowStockFastProducts =
     summary.productTrends.filter(
       (trend) =>
@@ -362,7 +346,7 @@ export function InventoryAnalytics({
             styles.sectionDescription
           }
         >
-          See how sales changed during the selected time period.
+          Explore store, category, or individual product performance over time.
         </Text>
 
         <View
@@ -377,12 +361,12 @@ export function InventoryAnalytics({
             />
           ) : (
             <>
-              <SalesChart
+              <SalesLineChart
                 metrics={
                   summary.dailyMetrics
                 }
-                maxSales={
-                  maxDailySales
+                salesTrendMetrics={
+                  summary.salesTrendMetrics
                 }
               />
 
@@ -397,7 +381,7 @@ export function InventoryAnalytics({
                       styles.chartFooterText
                     }
                   >
-                    Total sales
+                    Total store sales
                   </Text>
 
                   <Text
@@ -785,112 +769,6 @@ function ComparisonCard({
           }
         >
           vs previous period
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-function SalesChart({
-  metrics,
-  maxSales,
-}: {
-  metrics:
-    DailyInventoryMetric[];
-
-  maxSales: number;
-}) {
-  const visibleMetrics =
-    reduceChartPoints(
-      metrics,
-      14,
-    );
-
-  return (
-    <View>
-      <View
-        style={
-          styles.salesChart
-        }
-      >
-        {visibleMetrics.map(
-          (metric) => {
-            const heightPercent =
-              Math.max(
-                (
-                  metric.salesValue /
-                  maxSales
-                ) * 100,
-
-                metric.salesValue >
-                  0
-                  ? 5
-                  : 2,
-              );
-
-            return (
-              <View
-                key={
-                  metric.date
-                }
-                style={
-                  styles.chartColumn
-                }
-              >
-                <View
-                  style={
-                    styles.chartBarArea
-                  }
-                >
-                  <View
-                    style={[
-                      styles.chartBar,
-
-                      {
-                        height:
-                          `${heightPercent}%`,
-                      },
-                    ]}
-                  />
-                </View>
-
-                <Text
-                  style={
-                    styles.chartDate
-                  }
-                  numberOfLines={
-                    1
-                  }
-                >
-                  {formatShortDate(
-                    metric.date,
-                  )}
-                </Text>
-              </View>
-            );
-          },
-        )}
-      </View>
-
-      <View
-        style={
-          styles.chartScaleRow
-        }
-      >
-        <Text
-          style={
-            styles.chartScaleText
-          }
-        >
-          Lower sales
-        </Text>
-
-        <Text
-          style={
-            styles.chartScaleText
-          }
-        >
-          Higher sales
         </Text>
       </View>
     </View>
@@ -1294,145 +1172,6 @@ function EmptyMessage({
   );
 }
 
-function reduceChartPoints(
-  metrics:
-    DailyInventoryMetric[],
-
-  maxPoints:
-    number,
-): DailyInventoryMetric[] {
-  if (
-    metrics.length <=
-    maxPoints
-  ) {
-    return metrics;
-  }
-
-  const step =
-    Math.ceil(
-      metrics.length /
-        maxPoints,
-    );
-
-  const result:
-    DailyInventoryMetric[] = [];
-
-  for (
-    let index = 0;
-    index < metrics.length;
-    index += step
-  ) {
-    const group =
-      metrics.slice(
-        index,
-        index + step,
-      );
-
-    if (
-      group.length === 0
-    ) {
-      continue;
-    }
-
-    result.push({
-      date:
-        group[
-          group.length - 1
-        ].date,
-
-      salesValue:
-        group.reduce(
-          (
-            total,
-            item,
-          ) =>
-            total +
-            item.salesValue,
-          0,
-        ),
-
-      estimatedProfit:
-        group.reduce(
-          (
-            total,
-            item,
-          ) =>
-            total +
-            item.estimatedProfit,
-          0,
-        ),
-
-      stockInValue:
-        group.reduce(
-          (
-            total,
-            item,
-          ) =>
-            total +
-            item.stockInValue,
-          0,
-        ),
-
-      damageValue:
-        group.reduce(
-          (
-            total,
-            item,
-          ) =>
-            total +
-            item.damageValue,
-          0,
-        ),
-
-      salesUnits:
-        group.reduce(
-          (
-            total,
-            item,
-          ) =>
-            total +
-            item.salesUnits,
-          0,
-        ),
-
-      stockInUnits:
-        group.reduce(
-          (
-            total,
-            item,
-          ) =>
-            total +
-            item.stockInUnits,
-          0,
-        ),
-
-      damageUnits:
-        group.reduce(
-          (
-            total,
-            item,
-          ) =>
-            total +
-            item.damageUnits,
-          0,
-        ),
-
-      transactionCount:
-        group.reduce(
-          (
-            total,
-            item,
-          ) =>
-            total +
-            item.transactionCount,
-          0,
-        ),
-    });
-  }
-
-  return result;
-}
-
 function calculateAverageSale(
   salesValue: number,
   salesUnits: number,
@@ -1551,26 +1290,6 @@ function formatPeriodLabel(
   }
 
   return `${period} days`;
-}
-
-function formatShortDate(
-  date: string,
-): string {
-  const parsedDate =
-    new Date(
-      `${date}T00:00:00`,
-    );
-
-  return parsedDate.toLocaleDateString(
-    "en-CA",
-    {
-      month:
-        "short",
-
-      day:
-        "numeric",
-    },
-  );
 }
 
 const styles =
@@ -1932,101 +1651,6 @@ const styles =
 
       backgroundColor:
         "#FFFFFF",
-    },
-
-    salesChart: {
-      height:
-        190,
-
-      flexDirection:
-        "row",
-
-      alignItems:
-        "flex-end",
-
-      justifyContent:
-        "space-between",
-
-      gap:
-        4,
-    },
-
-    chartColumn: {
-      flex:
-        1,
-
-      minWidth:
-        14,
-
-      alignItems:
-        "center",
-    },
-
-    chartBarArea: {
-      width:
-        "100%",
-
-      height:
-        155,
-
-      justifyContent:
-        "flex-end",
-
-      alignItems:
-        "center",
-
-      borderBottomWidth:
-        1,
-
-      borderBottomColor:
-        "#E5E7EB",
-    },
-
-    chartBar: {
-      width:
-        "68%",
-
-      minHeight:
-        3,
-
-      borderTopLeftRadius:
-        5,
-
-      borderTopRightRadius:
-        5,
-
-      backgroundColor:
-        "#2563EB",
-    },
-
-    chartDate: {
-      marginTop:
-        7,
-
-      fontSize:
-        8,
-
-      color:
-        "#8B949E",
-    },
-
-    chartScaleRow: {
-      marginTop:
-        12,
-
-      flexDirection:
-        "row",
-
-      justifyContent:
-        "space-between",
-    },
-
-    chartScaleText: {
-      fontSize:
-        10,
-
-      color:
-        "#9CA3AF",
     },
 
     chartFooter: {

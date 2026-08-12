@@ -6,6 +6,7 @@ import type {
   InventoryAnalyticsSummary,
   ProductSalesMetric,
   ProductTrend,
+  SalesTrendMetric,
 } from "../types/inventoryAnalytics";
 
 import { getDatabase } from "./database";
@@ -140,6 +141,29 @@ interface ProductComparisonRow {
     number | null;
 }
 
+interface SalesTrendRow {
+  date: string;
+
+  product_id: number;
+
+  product_name: string;
+
+  brand: string;
+
+  department: string;
+
+  category: string;
+
+  sales_value:
+    number | null;
+
+  sales_units:
+    number | null;
+
+  estimated_profit:
+    number | null;
+}
+
 function mapDailyMetricRow(
   row: DailyMetricRow,
 ): DailyInventoryMetric {
@@ -262,6 +286,39 @@ function mapPeriodTotalsRow(
   };
 }
 
+function mapSalesTrendRow(
+  row: SalesTrendRow,
+): SalesTrendMetric {
+  return {
+    date:
+      row.date,
+
+    productId:
+      row.product_id,
+
+    productName:
+      row.product_name,
+
+    brand:
+      row.brand,
+
+    department:
+      row.department,
+
+    category:
+      row.category,
+
+    salesValue:
+      row.sales_value ?? 0,
+
+    salesUnits:
+      row.sales_units ?? 0,
+
+    estimatedProfit:
+      row.estimated_profit ?? 0,
+  };
+}
+
 function calculatePercentChange(
   current: number,
   previous: number,
@@ -367,11 +424,6 @@ function buildProductTrends(
         previousUnits,
       );
 
-    /*
-     * A product needs restocking
-     * when it is at or below its
-     * reorder level.
-     */
     const needsRestock =
       row.current_stock <=
       row.reorder_level;
@@ -417,12 +469,6 @@ function buildProductTrends(
       changePercent,
     };
 
-    /*
-     * New strong seller.
-     *
-     * Very little activity before,
-     * but meaningful activity now.
-     */
     if (
       previousUnits <= 2 &&
       currentUnits >= 8
@@ -437,12 +483,6 @@ function buildProductTrends(
       continue;
     }
 
-    /*
-     * Selling significantly faster.
-     *
-     * Minimum sales are required
-     * to avoid noisy alerts.
-     */
     if (
       previousUnits >= 5 &&
       currentUnits >= 10 &&
@@ -459,9 +499,6 @@ function buildProductTrends(
       continue;
     }
 
-    /*
-     * Sales dropped sharply.
-     */
     if (
       previousUnits >= 10 &&
       changePercent !== null &&
@@ -481,10 +518,6 @@ function buildProductTrends(
       first,
       second,
     ) => {
-      /*
-       * Products that need stock
-       * attention appear first.
-       */
       if (
         first.needsRestock !==
         second.needsRestock
@@ -565,6 +598,7 @@ export async function getInventoryAnalyticsSummary(
     currentTotalsRow,
     previousTotalsRow,
     productComparisonRows,
+    salesTrendRows,
   ] = await Promise.all([
     database.getAllAsync<DailyMetricRow>(
       `
@@ -1261,6 +1295,95 @@ export async function getInventoryAnalyticsSummary(
 
       previousStart,
     ),
+
+    /*
+     * Detailed daily product sales.
+     *
+     * Used by the draggable chart
+     * when filtering by product
+     * or category.
+     */
+    database.getAllAsync<SalesTrendRow>(
+      `
+        SELECT
+          date(
+            transactions.created_at,
+            'localtime'
+          ) AS date,
+
+          products.id
+            AS product_id,
+
+          products.name
+            AS product_name,
+
+          products.brand,
+
+          products.department,
+
+          products.category,
+
+          COALESCE(
+            SUM(
+              transactions.transaction_value
+            ),
+            0
+          ) AS sales_value,
+
+          COALESCE(
+            SUM(
+              transactions.quantity
+            ),
+            0
+          ) AS sales_units,
+
+          COALESCE(
+            SUM(
+              (
+                transactions.unit_price -
+                transactions.unit_cost
+              ) *
+              transactions.quantity
+            ),
+            0
+          ) AS estimated_profit
+
+        FROM inventory_transactions
+          AS transactions
+
+        INNER JOIN products
+          ON products.id =
+            transactions.product_id
+
+        WHERE
+          transactions.transaction_type =
+            'sale'
+
+          AND datetime(
+            transactions.created_at
+          ) >= datetime(
+            'now',
+            ?
+          )
+
+        GROUP BY
+          date(
+            transactions.created_at,
+            'localtime'
+          ),
+
+          products.id,
+          products.name,
+          products.brand,
+          products.department,
+          products.category
+
+        ORDER BY
+          date ASC,
+          products.name ASC;
+      `,
+      currentStart,
+    ),
   ]);
 
   const currentTotals =
@@ -1298,6 +1421,11 @@ export async function getInventoryAnalyticsSummary(
     productTrends:
       buildProductTrends(
         productComparisonRows,
+      ),
+
+    salesTrendMetrics:
+      salesTrendRows.map(
+        mapSalesTrendRow,
       ),
   };
 }
