@@ -157,7 +157,7 @@ const INITIAL_ANALYTICS_SUMMARY: InventoryAnalyticsSummary = {
   dailyMetrics: [],
   topProducts: [],
   topCategories: [],
-
+  categoryShareMetrics: [],
   comparison: {
     current: {
       salesValue: 0,

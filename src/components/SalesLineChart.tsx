@@ -49,120 +49,75 @@ interface SalesLineChartProps {
 
 interface ChartPoint {
   date: string;
-
   value: number;
-
   x: number;
-
   y: number;
 }
 
 interface CategoryOption {
   key: string;
-
   department: string;
-
   category: string;
-
   label: string;
 }
 
 interface ProductOption {
   id: number;
-
   name: string;
-
   brand: string;
-
   label: string;
 }
 
 const METRIC_OPTIONS: {
   label: string;
-
-  value:
-    SalesChartMetric;
+  value: SalesChartMetric;
 }[] = [
   {
-    label:
-      "Sales",
-
-    value:
-      "sales",
+    label: "Sales",
+    value: "sales",
   },
-
   {
-    label:
-      "Items Sold",
-
-    value:
-      "items",
+    label: "Items Sold",
+    value: "items",
   },
-
   {
-    label:
-      "Est. Profit",
-
-    value:
-      "profit",
+    label: "Est. Profit",
+    value: "profit",
   },
 ];
 
 const FILTER_MODE_OPTIONS: {
   label: string;
-
-  value:
-    TrendFilterMode;
+  value: TrendFilterMode;
 }[] = [
   {
-    label:
-      "All Store",
-
-    value:
-      "all",
+    label: "All Store",
+    value: "all",
   },
-
   {
-    label:
-      "Category",
-
-    value:
-      "category",
+    label: "Category",
+    value: "category",
   },
-
   {
-    label:
-      "Product",
-
-    value:
-      "product",
+    label: "Product",
+    value: "product",
   },
 ];
 
-const CHART_HEIGHT =
-  260;
+const CHART_HEIGHT = 260;
 
-const LEFT_PADDING =
-  48;
-
-const RIGHT_PADDING =
-  16;
-
-const TOP_PADDING =
-  22;
-
-const BOTTOM_PADDING =
-  38;
+const LEFT_PADDING = 48;
+const RIGHT_PADDING = 16;
+const TOP_PADDING = 22;
+const BOTTOM_PADDING = 38;
 
 export function SalesLineChart({
   metrics,
   salesTrendMetrics,
 }: SalesLineChartProps) {
   const {
-    width:
-      screenWidth,
-  } =
-    useWindowDimensions();
+    width: screenWidth,
+  } = useWindowDimensions();
 
   const [
     selectedMetric,
@@ -205,7 +160,6 @@ export function SalesLineChart({
   const chartWidth =
     Math.max(
       280,
-
       Math.min(
         screenWidth - 72,
         520,
@@ -226,26 +180,28 @@ export function SalesLineChart({
             `${item.department}::${item.category}`;
 
           if (
-            !categoryMap.has(
+            categoryMap.has(
               key,
             )
           ) {
-            categoryMap.set(
-              key,
-              {
-                key,
-
-                department:
-                  item.department,
-
-                category:
-                  item.category,
-
-                label:
-                  `${item.department} · ${item.category}`,
-              },
-            );
+            return;
           }
+
+          categoryMap.set(
+            key,
+            {
+              key,
+
+              department:
+                item.department,
+
+              category:
+                item.category,
+
+              label:
+                `${item.department} · ${item.category}`,
+            },
+          );
         },
       );
 
@@ -496,6 +452,67 @@ export function SalesLineChart({
         ),
     );
 
+  /*
+   * Percentage for the entire
+   * displayed period.
+   *
+   * Example:
+   *
+   * Aug 11 = $15
+   * Aug 12 = $30
+   *
+   * Period change = +100%
+   */
+  const periodChange =
+    chartMetrics.length >= 2
+      ? calculatePercentChange(
+          getMetricValue(
+            chartMetrics[
+              chartMetrics.length - 1
+            ],
+            selectedMetric,
+          ),
+
+          getMetricValue(
+            chartMetrics[0],
+            selectedMetric,
+          ),
+        )
+      : null;
+
+  /*
+   * When the crosshair is being used,
+   * calculate change compared with
+   * the previous displayed sales day.
+   */
+  const selectedPointIndex =
+    selectedPoint
+      ? chartMetrics.findIndex(
+          (metric) =>
+            metric.date ===
+            selectedPoint.date,
+        )
+      : -1;
+
+  const selectedDayChange =
+    selectedPointIndex > 0
+      ? calculatePercentChange(
+          getMetricValue(
+            chartMetrics[
+              selectedPointIndex
+            ],
+            selectedMetric,
+          ),
+
+          getMetricValue(
+            chartMetrics[
+              selectedPointIndex - 1
+            ],
+            selectedMetric,
+          ),
+        )
+      : null;
+
   const maximumValue =
     Math.max(
       ...values,
@@ -598,49 +615,8 @@ export function SalesLineChart({
       0,
     );
 
-  const panResponder =
-    useMemo(
-      () =>
-        PanResponder.create({
-          onStartShouldSetPanResponder:
-            () =>
-              points.length >
-              0,
-
-          onMoveShouldSetPanResponder:
-            () =>
-              points.length >
-              0,
-
-          onPanResponderGrant:
-            (
-              event,
-            ) => {
-              selectPointFromX(
-                event.nativeEvent
-                  .locationX,
-              );
-            },
-
-          onPanResponderMove:
-            (
-              event,
-            ) => {
-              selectPointFromX(
-                event.nativeEvent
-                  .locationX,
-              );
-            },
-        }),
-      [
-        points,
-        chartWidth,
-      ],
-    );
-
   function selectPointFromX(
-    touchX:
-      number,
+    touchX: number,
   ): void {
     if (
       points.length ===
@@ -697,6 +673,46 @@ export function SalesLineChart({
       nearestPoint,
     );
   }
+
+  const panResponder =
+    useMemo(
+      () =>
+        PanResponder.create({
+          onStartShouldSetPanResponder:
+            () =>
+              points.length >
+              0,
+
+          onMoveShouldSetPanResponder:
+            () =>
+              points.length >
+              0,
+
+          onPanResponderGrant:
+            (
+              event,
+            ) => {
+              selectPointFromX(
+                event.nativeEvent
+                  .locationX,
+              );
+            },
+
+          onPanResponderMove:
+            (
+              event,
+            ) => {
+              selectPointFromX(
+                event.nativeEvent
+                  .locationX,
+              );
+            },
+        }),
+      [
+        points,
+        chartWidth,
+      ],
+    );
 
   function changeMetric(
     metric:
@@ -891,65 +907,48 @@ export function SalesLineChart({
             styles.filterOptionsRow
           }
         >
-          {categories.length ===
-          0 ? (
-            <Text
-              style={
-                styles.noOptionsText
-              }
-            >
-              No categories have sales for this period.
-            </Text>
-          ) : (
-            categories.map(
-              (category) => {
-                const isSelected =
-                  selectedCategoryKey ===
-                  category.key;
+          {categories.map(
+            (category) => {
+              const isSelected =
+                selectedCategoryKey ===
+                category.key;
 
-                return (
-                  <Pressable
-                    key={
-                      category.key
-                    }
-                    accessibilityRole="button"
-                    onPress={() => {
-                      setSelectedCategoryKey(
-                        category.key,
-                      );
+              return (
+                <Pressable
+                  key={
+                    category.key
+                  }
+                  onPress={() => {
+                    setSelectedCategoryKey(
+                      category.key,
+                    );
 
-                      setSelectedPoint(
-                        null,
-                      );
-                    }}
-                    style={({
-                      pressed,
-                    }) => [
-                      styles.filterChip,
+                    setSelectedPoint(
+                      null,
+                    );
+                  }}
+                  style={[
+                    styles.filterChip,
+
+                    isSelected &&
+                      styles.filterChipSelected,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
 
                       isSelected &&
-                        styles.filterChipSelected,
-
-                      pressed &&
-                        styles.buttonPressed,
+                        styles.filterChipTextSelected,
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.filterChipText,
-
-                        isSelected &&
-                          styles.filterChipTextSelected,
-                      ]}
-                    >
-                      {
-                        category.label
-                      }
-                    </Text>
-                  </Pressable>
-                );
-              },
-            )
+                    {
+                      category.label
+                    }
+                  </Text>
+                </Pressable>
+              );
+            },
           )}
         </ScrollView>
       ) : null}
@@ -965,65 +964,48 @@ export function SalesLineChart({
             styles.filterOptionsRow
           }
         >
-          {products.length ===
-          0 ? (
-            <Text
-              style={
-                styles.noOptionsText
-              }
-            >
-              No products have sales for this period.
-            </Text>
-          ) : (
-            products.map(
-              (product) => {
-                const isSelected =
-                  selectedProductId ===
-                  product.id;
+          {products.map(
+            (product) => {
+              const isSelected =
+                selectedProductId ===
+                product.id;
 
-                return (
-                  <Pressable
-                    key={
-                      product.id
-                    }
-                    accessibilityRole="button"
-                    onPress={() => {
-                      setSelectedProductId(
-                        product.id,
-                      );
+              return (
+                <Pressable
+                  key={
+                    product.id
+                  }
+                  onPress={() => {
+                    setSelectedProductId(
+                      product.id,
+                    );
 
-                      setSelectedPoint(
-                        null,
-                      );
-                    }}
-                    style={({
-                      pressed,
-                    }) => [
-                      styles.filterChip,
+                    setSelectedPoint(
+                      null,
+                    );
+                  }}
+                  style={[
+                    styles.filterChip,
+
+                    isSelected &&
+                      styles.filterChipSelected,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
 
                       isSelected &&
-                        styles.filterChipSelected,
-
-                      pressed &&
-                        styles.buttonPressed,
+                        styles.filterChipTextSelected,
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.filterChipText,
-
-                        isSelected &&
-                          styles.filterChipTextSelected,
-                      ]}
-                    >
-                      {
-                        product.label
-                      }
-                    </Text>
-                  </Pressable>
-                );
-              },
-            )
+                    {
+                      product.label
+                    }
+                  </Text>
+                </Pressable>
+              );
+            },
           )}
         </ScrollView>
       ) : null}
@@ -1091,6 +1073,26 @@ export function SalesLineChart({
                   selectedMetric,
                 )}
           </Text>
+
+          <TrendChange
+            change={
+              selectedPoint
+                ? selectedDayChange
+                : periodChange
+            }
+            hasPrevious={
+              selectedPoint
+                ? selectedPointIndex >
+                  0
+                : chartMetrics.length >
+                  1
+            }
+            caption={
+              selectedPoint
+                ? "vs previous sales day"
+                : "first to latest sales day"
+            }
+          />
         </View>
 
         <View
@@ -1427,7 +1429,7 @@ export function SalesLineChart({
                   styles.singlePointText
                 }
               >
-                More sales dates are needed to create a full trend line for this selection.
+                More sales dates are needed to calculate a trend percentage.
               </Text>
             </View>
           ) : (
@@ -1495,6 +1497,31 @@ export function SalesLineChart({
                     selectedMetric,
                   )}
                 </Text>
+
+                {selectedPointIndex >
+                0 ? (
+                  <Text
+                    style={[
+                      styles.tooltipChange,
+
+                      selectedDayChange !==
+                        null &&
+                        selectedDayChange >
+                          0 &&
+                        styles.changePositive,
+
+                      selectedDayChange !==
+                        null &&
+                        selectedDayChange <
+                          0 &&
+                        styles.changeNegative,
+                    ]}
+                  >
+                    {formatPercentChange(
+                      selectedDayChange,
+                    )}
+                  </Text>
+                ) : null}
               </View>
             </View>
           ) : null}
@@ -1502,6 +1529,162 @@ export function SalesLineChart({
       )}
     </View>
   );
+}
+
+function TrendChange({
+  change,
+  hasPrevious,
+  caption,
+}: {
+  change:
+    number | null;
+
+  hasPrevious:
+    boolean;
+
+  caption:
+    string;
+}) {
+  if (
+    !hasPrevious
+  ) {
+    return (
+      <View
+        style={
+          styles.changeContainer
+        }
+      >
+        <Text
+          style={
+            styles.changeUnavailable
+          }
+        >
+          First recorded day
+        </Text>
+      </View>
+    );
+  }
+
+  if (
+    change === null
+  ) {
+    return (
+      <View
+        style={
+          styles.changeContainer
+        }
+      >
+        <Text
+          style={
+            styles.changeNew
+          }
+        >
+          New activity
+        </Text>
+
+        <Text
+          style={
+            styles.changeCaption
+          }
+        >
+          Previous value was zero
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={
+        styles.changeContainer
+      }
+    >
+      <Text
+        style={[
+          styles.changeValue,
+
+          change > 0 &&
+            styles.changePositive,
+
+          change < 0 &&
+            styles.changeNegative,
+
+          change === 0 &&
+            styles.changeNeutral,
+        ]}
+      >
+        {formatPercentChange(
+          change,
+        )}
+      </Text>
+
+      <Text
+        style={
+          styles.changeCaption
+        }
+      >
+        {caption}
+      </Text>
+    </View>
+  );
+}
+
+function calculatePercentChange(
+  current:
+    number,
+
+  previous:
+    number,
+): number | null {
+  if (
+    previous === 0
+  ) {
+    return current === 0
+      ? 0
+      : null;
+  }
+
+  return (
+    (
+      current -
+      previous
+    ) /
+    previous
+  ) * 100;
+}
+
+function formatPercentChange(
+  value:
+    number | null,
+): string {
+  if (
+    value === null
+  ) {
+    return "New";
+  }
+
+  const rounded =
+    Math.round(
+      value * 10,
+    ) / 10;
+
+  if (
+    Math.abs(
+      rounded,
+    ) < 0.05
+  ) {
+    return "0%";
+  }
+
+  if (
+    rounded > 0
+  ) {
+    return `↑ ${rounded}%`;
+  }
+
+  return `↓ ${Math.abs(
+    rounded,
+  )}%`;
 }
 
 function getFilterDescription(
@@ -1969,551 +2152,322 @@ function formatDate(
 const styles =
   StyleSheet.create({
     controlLabel: {
-      marginTop:
-        3,
-
-      marginBottom:
-        8,
-
-      fontSize:
-        10,
-
-      fontWeight:
-        "800",
-
-      textTransform:
-        "uppercase",
-
-      letterSpacing:
-        0.4,
-
-      color:
-        "#8B949E",
+      marginTop: 3,
+      marginBottom: 8,
+      fontSize: 10,
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 0.4,
+      color: "#8B949E",
     },
 
     metricRow: {
-      gap:
-        8,
-
-      paddingRight:
-        10,
-
-      paddingBottom:
-        16,
+      gap: 8,
+      paddingRight: 10,
+      paddingBottom: 16,
     },
 
     metricButton: {
-      minHeight:
-        38,
-
-      justifyContent:
-        "center",
-
-      borderWidth:
-        1,
-
-      borderColor:
-        "#D6DCE3",
-
-      borderRadius:
-        999,
-
-      paddingHorizontal:
-        13,
-
-      backgroundColor:
-        "#FFFFFF",
+      minHeight: 38,
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: "#D6DCE3",
+      borderRadius: 999,
+      paddingHorizontal: 13,
+      backgroundColor: "#FFFFFF",
     },
 
     metricButtonSelected: {
-      borderColor:
-        "#20252B",
-
-      backgroundColor:
-        "#20252B",
+      borderColor: "#20252B",
+      backgroundColor: "#20252B",
     },
 
     metricButtonText: {
-      fontSize:
-        12,
-
-      fontWeight:
-        "700",
-
-      color:
-        "#52606D",
+      fontSize: 12,
+      fontWeight: "700",
+      color: "#52606D",
     },
 
     metricButtonTextSelected: {
-      color:
-        "#FFFFFF",
+      color: "#FFFFFF",
     },
 
     filterModeRow: {
-      flexDirection:
-        "row",
-
-      gap:
-        7,
-
-      marginBottom:
-        10,
+      flexDirection: "row",
+      gap: 7,
+      marginBottom: 10,
     },
 
     filterModeButton: {
-      flex:
-        1,
-
-      minHeight:
-        38,
-
-      alignItems:
-        "center",
-
-      justifyContent:
-        "center",
-
-      borderWidth:
-        1,
-
-      borderColor:
-        "#D6DCE3",
-
-      borderRadius:
-        10,
-
-      paddingHorizontal:
-        8,
-
-      backgroundColor:
-        "#FFFFFF",
+      flex: 1,
+      minHeight: 38,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: "#D6DCE3",
+      borderRadius: 10,
+      paddingHorizontal: 8,
+      backgroundColor: "#FFFFFF",
     },
 
     filterModeButtonSelected: {
-      borderColor:
-        "#0F766E",
-
-      backgroundColor:
-        "#ECFDF5",
+      borderColor: "#0F766E",
+      backgroundColor: "#ECFDF5",
     },
 
     filterModeText: {
-      fontSize:
-        11,
-
-      fontWeight:
-        "700",
-
-      color:
-        "#6B7280",
+      fontSize: 11,
+      fontWeight: "700",
+      color: "#6B7280",
     },
 
     filterModeTextSelected: {
-      color:
-        "#0F766E",
+      color: "#0F766E",
     },
 
     filterOptionsRow: {
-      gap:
-        7,
-
-      paddingRight:
-        10,
-
-      paddingBottom:
-        12,
+      gap: 7,
+      paddingRight: 10,
+      paddingBottom: 12,
     },
 
     filterChip: {
-      minHeight:
-        36,
-
-      justifyContent:
-        "center",
-
-      borderWidth:
-        1,
-
-      borderColor:
-        "#D6DCE3",
-
-      borderRadius:
-        999,
-
-      paddingHorizontal:
-        12,
-
-      backgroundColor:
-        "#FFFFFF",
+      minHeight: 36,
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: "#D6DCE3",
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      backgroundColor: "#FFFFFF",
     },
 
     filterChipSelected: {
-      borderColor:
-        "#20252B",
-
-      backgroundColor:
-        "#20252B",
+      borderColor: "#20252B",
+      backgroundColor: "#20252B",
     },
 
     filterChipText: {
-      fontSize:
-        11,
-
-      fontWeight:
-        "700",
-
-      color:
-        "#52606D",
+      fontSize: 11,
+      fontWeight: "700",
+      color: "#52606D",
     },
 
     filterChipTextSelected: {
-      color:
-        "#FFFFFF",
-    },
-
-    noOptionsText: {
-      paddingVertical:
-        8,
-
-      fontSize:
-        11,
-
-      color:
-        "#8B949E",
+      color: "#FFFFFF",
     },
 
     activeFilterBar: {
-      marginBottom:
-        16,
-
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      borderRadius:
-        10,
-
-      paddingHorizontal:
-        11,
-
-      paddingVertical:
-        9,
-
-      backgroundColor:
-        "#F8FAFC",
+      marginBottom: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      borderRadius: 10,
+      paddingHorizontal: 11,
+      paddingVertical: 9,
+      backgroundColor: "#F8FAFC",
     },
 
     activeFilterLabel: {
-      fontSize:
-        10,
-
-      fontWeight:
-        "700",
-
-      textTransform:
-        "uppercase",
-
-      color:
-        "#8B949E",
+      fontSize: 10,
+      fontWeight: "700",
+      textTransform: "uppercase",
+      color: "#8B949E",
     },
 
     activeFilterValue: {
-      flex:
-        1,
-
-      marginLeft:
-        8,
-
-      fontSize:
-        11,
-
-      fontWeight:
-        "700",
-
-      color:
-        "#374151",
+      flex: 1,
+      marginLeft: 8,
+      fontSize: 11,
+      fontWeight: "700",
+      color: "#374151",
     },
 
     buttonPressed: {
-      opacity:
-        0.72,
+      opacity: 0.72,
     },
 
     chartHeader: {
-      marginBottom:
-        8,
-
-      flexDirection:
-        "row",
-
-      alignItems:
-        "flex-end",
-
-      justifyContent:
-        "space-between",
+      marginBottom: 8,
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
     },
 
     chartHeaderMain: {
-      flex:
-        1,
-
-      marginRight:
-        12,
+      flex: 1,
+      marginRight: 12,
     },
 
     chartHeaderLabel: {
-      fontSize:
-        11,
-
-      fontWeight:
-        "700",
-
-      color:
-        "#6B7280",
+      fontSize: 11,
+      fontWeight: "700",
+      color: "#6B7280",
     },
 
     chartHeaderValue: {
-      marginTop:
-        3,
+      marginTop: 3,
+      fontSize: 21,
+      fontWeight: "800",
+      color: "#111827",
+    },
 
-      fontSize:
-        21,
+    changeContainer: {
+      marginTop: 6,
+    },
 
-      fontWeight:
-        "800",
+    changeValue: {
+      fontSize: 13,
+      fontWeight: "800",
+    },
 
-      color:
-        "#111827",
+    changePositive: {
+      color: "#15803D",
+    },
+
+    changeNegative: {
+      color: "#B42318",
+    },
+
+    changeNeutral: {
+      color: "#6B7280",
+    },
+
+    changeNew: {
+      fontSize: 12,
+      fontWeight: "800",
+      color: "#2563EB",
+    },
+
+    changeUnavailable: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: "#8B949E",
+    },
+
+    changeCaption: {
+      marginTop: 2,
+      fontSize: 9,
+      color: "#9CA3AF",
     },
 
     rangeContainer: {
-      alignItems:
-        "flex-end",
+      alignItems: "flex-end",
     },
 
     rangeLabel: {
-      fontSize:
-        10,
-
-      color:
-        "#8B949E",
+      fontSize: 10,
+      color: "#8B949E",
     },
 
     rangeValue: {
-      marginTop:
-        2,
-
-      fontSize:
-        12,
-
-      fontWeight:
-        "700",
-
-      color:
-        "#52606D",
+      marginTop: 2,
+      fontSize: 12,
+      fontWeight: "700",
+      color: "#52606D",
     },
 
     chartContainer: {
-      alignSelf:
-        "center",
-
-      overflow:
-        "hidden",
-
-      borderRadius:
-        12,
-
-      backgroundColor:
-        "#FFFFFF",
+      alignSelf: "center",
+      overflow: "hidden",
+      borderRadius: 12,
+      backgroundColor: "#FFFFFF",
     },
 
     dragHint: {
-      marginTop:
-        10,
-
-      fontSize:
-        11,
-
-      textAlign:
-        "center",
-
-      color:
-        "#7A838E",
+      marginTop: 10,
+      fontSize: 11,
+      textAlign: "center",
+      color: "#7A838E",
     },
 
     tooltip: {
-      marginTop:
-        12,
-
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      justifyContent:
-        "space-between",
-
-      borderWidth:
-        1,
-
-      borderColor:
-        "#E0E4E8",
-
-      borderRadius:
-        12,
-
-      paddingHorizontal:
-        14,
-
-      paddingVertical:
-        11,
-
-      backgroundColor:
-        "#F8FAFC",
+      marginTop: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderWidth: 1,
+      borderColor: "#E0E4E8",
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 11,
+      backgroundColor: "#F8FAFC",
     },
 
     tooltipDate: {
-      fontSize:
-        11,
-
-      fontWeight:
-        "700",
-
-      color:
-        "#374151",
+      fontSize: 11,
+      fontWeight: "700",
+      color: "#374151",
     },
 
     tooltipLabel: {
-      marginTop:
-        3,
-
-      maxWidth:
-        190,
-
-      fontSize:
-        10,
-
-      color:
-        "#8B949E",
+      marginTop: 3,
+      maxWidth: 190,
+      fontSize: 10,
+      color: "#8B949E",
     },
 
     tooltipValueContainer: {
-      marginLeft:
-        12,
-
-      alignItems:
-        "flex-end",
+      marginLeft: 12,
+      alignItems: "flex-end",
     },
 
     tooltipMetricLabel: {
-      fontSize:
-        9,
-
-      fontWeight:
-        "700",
-
-      textTransform:
-        "uppercase",
-
-      color:
-        "#8B949E",
+      fontSize: 9,
+      fontWeight: "700",
+      textTransform: "uppercase",
+      color: "#8B949E",
     },
 
     tooltipValue: {
-      marginTop:
-        2,
+      marginTop: 2,
+      fontSize: 16,
+      fontWeight: "800",
+      color: "#111827",
+    },
 
-      fontSize:
-        16,
-
-      fontWeight:
-        "800",
-
-      color:
-        "#111827",
+    tooltipChange: {
+      marginTop: 3,
+      fontSize: 11,
+      fontWeight: "800",
     },
 
     singlePointCard: {
-      marginTop:
-        10,
-
-      borderRadius:
-        10,
-
-      padding:
-        11,
-
-      backgroundColor:
-        "#F8FAFC",
+      marginTop: 10,
+      borderRadius: 10,
+      padding: 11,
+      backgroundColor: "#F8FAFC",
     },
 
     singlePointTitle: {
-      fontSize:
-        12,
-
-      fontWeight:
-        "800",
-
-      color:
-        "#374151",
+      fontSize: 12,
+      fontWeight: "800",
+      color: "#374151",
     },
 
     singlePointText: {
-      marginTop:
-        3,
-
-      fontSize:
-        11,
-
-      lineHeight:
-        16,
-
-      color:
-        "#6B7280",
+      marginTop: 3,
+      fontSize: 11,
+      lineHeight: 16,
+      color: "#6B7280",
     },
 
     emptyChart: {
-      minHeight:
-        180,
-
-      alignItems:
-        "center",
-
-      justifyContent:
-        "center",
-
-      paddingHorizontal:
-        20,
+      minHeight: 180,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 20,
     },
 
     emptyTitle: {
-      fontSize:
-        15,
-
-      fontWeight:
-        "800",
-
-      color:
-        "#111827",
+      fontSize: 15,
+      fontWeight: "800",
+      color: "#111827",
     },
 
     emptyText: {
-      marginTop:
-        5,
-
-      fontSize:
-        12,
-
-      lineHeight:
-        18,
-
-      textAlign:
-        "center",
-
-      color:
-        "#6B7280",
+      marginTop: 5,
+      fontSize: 12,
+      lineHeight: 18,
+      textAlign: "center",
+      color: "#6B7280",
     },
   });

@@ -128,13 +128,6 @@ export interface ProductTrend {
     ProductTrendType;
 }
 
-/*
- * Detailed per-product/per-day sales data.
- *
- * This is used by the interactive chart
- * when the user filters by category or
- * individual product.
- */
 export interface SalesTrendMetric {
   date: string;
 
@@ -163,6 +156,17 @@ export interface InventoryAnalyticsSummary {
     ProductSalesMetric[];
 
   topCategories:
+    CategorySalesMetric[];
+
+  /*
+   * Unlike topCategories,
+   * this contains every category
+   * with sales in the selected period.
+   *
+   * It is used for the category-share
+   * donut chart.
+   */
+  categoryShareMetrics:
     CategorySalesMetric[];
 
   comparison:

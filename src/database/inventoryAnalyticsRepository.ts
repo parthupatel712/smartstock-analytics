@@ -595,6 +595,7 @@ export async function getInventoryAnalyticsSummary(
     dailyRows,
     productRows,
     categoryRows,
+    categoryShareRows,
     currentTotalsRow,
     previousTotalsRow,
     productComparisonRows,
@@ -860,6 +861,79 @@ export async function getInventoryAnalyticsSummary(
       `,
       currentStart,
       safeTopLimit,
+    ),
+
+    /*
+     * All category sales.
+     *
+     * No LIMIT because the donut chart
+     * needs the full category total.
+     */
+    database.getAllAsync<CategorySalesRow>(
+      `
+        SELECT
+          products.department,
+
+          products.category,
+
+          COALESCE(
+            SUM(
+              transactions.quantity
+            ),
+            0
+          ) AS units_sold,
+
+          COALESCE(
+            SUM(
+              transactions.transaction_value
+            ),
+            0
+          ) AS sales_value,
+
+          COALESCE(
+            SUM(
+              (
+                transactions.unit_price -
+                transactions.unit_cost
+              ) *
+              transactions.quantity
+            ),
+            0
+          ) AS estimated_profit,
+
+          COUNT(
+            transactions.id
+          ) AS transaction_count
+
+        FROM inventory_transactions
+          AS transactions
+
+        INNER JOIN products
+          ON products.id =
+            transactions.product_id
+
+        WHERE
+          transactions.transaction_type =
+            'sale'
+
+          AND datetime(
+            transactions.created_at
+          ) >= datetime(
+            'now',
+            ?
+          )
+
+        GROUP BY
+          products.department,
+          products.category
+
+        ORDER BY
+          sales_value DESC,
+          units_sold DESC,
+          products.department ASC,
+          products.category ASC;
+      `,
+      currentStart,
     ),
 
     database.getFirstAsync<PeriodTotalsRow>(
@@ -1296,13 +1370,6 @@ export async function getInventoryAnalyticsSummary(
       previousStart,
     ),
 
-    /*
-     * Detailed daily product sales.
-     *
-     * Used by the draggable chart
-     * when filtering by product
-     * or category.
-     */
     database.getAllAsync<SalesTrendRow>(
       `
         SELECT
@@ -1371,7 +1438,6 @@ export async function getInventoryAnalyticsSummary(
             transactions.created_at,
             'localtime'
           ),
-
           products.id,
           products.name,
           products.brand,
@@ -1409,6 +1475,11 @@ export async function getInventoryAnalyticsSummary(
 
     topCategories:
       categoryRows.map(
+        mapCategorySalesRow,
+      ),
+
+    categoryShareMetrics:
+      categoryShareRows.map(
         mapCategorySalesRow,
       ),
 
