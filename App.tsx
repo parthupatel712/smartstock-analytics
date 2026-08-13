@@ -21,6 +21,7 @@ import {
 
 import { ArchivedProducts } from "./src/components/ArchivedProducts";
 import { BarcodeScanner } from "./src/components/BarcodeScanner";
+import { CloudSyncStatus } from "./src/components/CloudSyncStatus";
 import { EditProductForm } from "./src/components/EditProductForm";
 import { ExportReports } from "./src/components/ExportReports";
 import { GlobalTransactions } from "./src/components/GlobalTransactions";
@@ -94,6 +95,12 @@ import {
   type AnalyticsPeriodDays,
 } from "./src/types/analyticsPeriod";
 
+import {
+  INITIAL_CLOUD_SYNC_STATUS,
+  type CloudSyncOperation,
+  type CloudSyncStatusState,
+} from "./src/types/cloudSyncStatus";
+
 import type { DashboardRecentActivity } from "./src/types/dashboardRecentActivity";
 
 import type {
@@ -123,9 +130,9 @@ import type { ProductFormValues } from "./src/types/productForm";
 
 import type { ReorderItem } from "./src/types/reorderItem";
 
-import type { UpdateProductInput } from "./src/types/productUpdate";
-
 import type { TransactionHistoryItem } from "./src/types/transactionHistory";
+
+import type { UpdateProductInput } from "./src/types/productUpdate";
 
 type AppStatus =
   | "loading"
@@ -150,6 +157,9 @@ type AppView =
 type TransactionReturnView =
   | "inventory"
   | "reorder-management";
+
+const CLOUD_SYNC_TIMEOUT_MS =
+  8000;
 
 const INITIAL_DASHBOARD_SUMMARY: InventoryDashboardSummary = {
   totalProducts: 0,
@@ -202,9 +212,51 @@ const INITIAL_ANALYTICS_SUMMARY: InventoryAnalyticsSummary = {
   },
 
   productTrends: [],
-
   salesTrendMetrics: [],
 };
+
+async function withCloudTimeout<T>(
+  operation: Promise<T>,
+): Promise<T> {
+  let timeoutId:
+    ReturnType<typeof setTimeout> | undefined;
+
+  const timeoutPromise =
+    new Promise<never>(
+      (
+        _resolve,
+        reject,
+      ) => {
+        timeoutId =
+          setTimeout(
+            () => {
+              reject(
+                new Error(
+                  "Cloud connection timed out. Check your internet connection.",
+                ),
+              );
+            },
+            CLOUD_SYNC_TIMEOUT_MS,
+          );
+      },
+    );
+
+  try {
+    return await Promise.race([
+      operation,
+      timeoutPromise,
+    ]);
+  } finally {
+    if (
+      timeoutId !==
+      undefined
+    ) {
+      clearTimeout(
+        timeoutId,
+      );
+    }
+  }
+}
 
 export default function App() {
   const [
@@ -253,6 +305,14 @@ export default function App() {
   ] =
     useState<ReorderItem[]>(
       [],
+    );
+
+  const [
+    cloudSyncStatus,
+    setCloudSyncStatus,
+  ] =
+    useState<CloudSyncStatusState>(
+      INITIAL_CLOUD_SYNC_STATUS,
     );
 
   const [
@@ -604,6 +664,164 @@ export default function App() {
       [],
     );
 
+  const beginCloudSync =
+    useCallback(
+      (
+        operation:
+          CloudSyncOperation,
+      ): void => {
+        setCloudSyncStatus(
+          (
+            previous,
+          ) => ({
+            ...previous,
+
+            state:
+              "syncing",
+
+            operation,
+
+            errorMessage:
+              null,
+          }),
+        );
+      },
+      [],
+    );
+
+  const markCloudSyncSuccessful =
+    useCallback(
+      (): void => {
+        setCloudSyncStatus(
+          {
+            state:
+              "synced",
+
+            operation:
+              null,
+
+            lastSuccessfulSync:
+              new Date().toISOString(),
+
+            errorMessage:
+              null,
+          },
+        );
+      },
+      [],
+    );
+
+  const markCloudSyncFailed =
+    useCallback(
+      (
+        error:
+          unknown,
+      ): void => {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Cloud synchronization failed.";
+
+        setCloudSyncStatus(
+          (
+            previous,
+          ) => ({
+            ...previous,
+
+            state:
+              "error",
+
+            operation:
+              null,
+
+            errorMessage:
+              message,
+          }),
+        );
+      },
+      [],
+    );
+
+  const pullFromCloud =
+    useCallback(
+      async (
+        operation:
+          CloudSyncOperation,
+      ): Promise<boolean> => {
+        beginCloudSync(
+          operation,
+        );
+
+        try {
+          await withCloudTimeout(
+            pullInventoryFromCloud(),
+          );
+
+          markCloudSyncSuccessful();
+
+          return true;
+        } catch (
+          error
+        ) {
+          console.warn(
+            "Cloud download unavailable:",
+            error,
+          );
+
+          markCloudSyncFailed(
+            error,
+          );
+
+          return false;
+        }
+      },
+      [
+        beginCloudSync,
+        markCloudSyncFailed,
+        markCloudSyncSuccessful,
+      ],
+    );
+
+  const pushToCloud =
+    useCallback(
+      async (
+        operation:
+          CloudSyncOperation,
+      ): Promise<boolean> => {
+        beginCloudSync(
+          operation,
+        );
+
+        try {
+          await withCloudTimeout(
+            pushInventoryToCloud(),
+          );
+
+          markCloudSyncSuccessful();
+
+          return true;
+        } catch (
+          error
+        ) {
+          console.warn(
+            "Cloud upload unavailable:",
+            error,
+          );
+
+          markCloudSyncFailed(
+            error,
+          );
+
+          return false;
+        }
+      },
+      [
+        beginCloudSync,
+        markCloudSyncFailed,
+        markCloudSyncSuccessful,
+      ],
+    );
+
   const loadProducts =
     useCallback(
       async (
@@ -626,28 +844,15 @@ export default function App() {
 
           await initializeDatabase();
 
-          /*
-           * Startup and pull-to-refresh
-           * only pull FROM Supabase.
-           *
-           * This prevents stale data on
-           * another device from overwriting
-           * newer cloud stock.
-           */
-          try {
-            await pullInventoryFromCloud();
-          } catch (
-            syncError
-          ) {
-            console.error(
-              "Cloud download failed:",
-              syncError,
-            );
-          }
+          await pullFromCloud(
+            isPullToRefresh
+              ? "refresh"
+              : "startup",
+          );
 
           /*
-           * After cloud data has been saved
-           * into SQLite, reload all UI data.
+           * Even if cloud sync fails,
+           * local SQLite inventory still loads.
            */
           await loadInventoryData();
 
@@ -658,13 +863,12 @@ export default function App() {
           error
         ) {
           console.error(
-            "Could not load inventory:",
+            "Could not load local inventory:",
             error,
           );
 
           setErrorMessage(
-            error instanceof
-              Error
+            error instanceof Error
               ? error.message
               : "An unexpected inventory error occurred.",
           );
@@ -680,6 +884,7 @@ export default function App() {
       },
       [
         loadInventoryData,
+        pullFromCloud,
       ],
     );
 
@@ -691,6 +896,54 @@ export default function App() {
       loadProducts,
     ],
   );
+
+  async function handleManualSync(): Promise<void> {
+    if (
+      cloudSyncStatus.state ===
+      "syncing"
+    ) {
+      return;
+    }
+
+    beginCloudSync(
+      "manual",
+    );
+
+    try {
+      /*
+       * Push this device's local changes first.
+       */
+      await withCloudTimeout(
+        pushInventoryToCloud(),
+      );
+
+      /*
+       * Then pull the latest cloud inventory.
+       */
+      await withCloudTimeout(
+        pullInventoryFromCloud(),
+      );
+
+      /*
+       * Refresh Product Cards,
+       * Dashboard, Reorder list, etc.
+       */
+      await loadInventoryData();
+
+      markCloudSyncSuccessful();
+    } catch (
+      error
+    ) {
+      console.warn(
+        "Manual cloud sync unavailable:",
+        error,
+      );
+
+      markCloudSyncFailed(
+        error,
+      );
+    }
+  }
 
   async function handleCreateProduct(
     values:
@@ -733,13 +986,6 @@ export default function App() {
               values.unitPrice,
             ),
 
-          /*
-           * Product starts at zero.
-           *
-           * Opening stock is recorded
-           * as a real Stock Added
-           * transaction below.
-           */
           currentStock:
             0,
 
@@ -776,20 +1022,9 @@ export default function App() {
 
       await loadInventoryData();
 
-      /*
-       * Local change occurred.
-       * PUSH only.
-       */
-      try {
-        await pushInventoryToCloud();
-      } catch (
-        syncError
-      ) {
-        console.error(
-          "Product saved locally but cloud sync failed:",
-          syncError,
-        );
-      }
+      await pushToCloud(
+        "product-create",
+      );
 
       setScannedBarcode(
         "",
@@ -813,8 +1048,7 @@ export default function App() {
       );
 
       const message =
-        error instanceof
-        Error
+        error instanceof Error
           ? error.message
           : "The product could not be saved.";
 
@@ -893,8 +1127,7 @@ export default function App() {
       Alert.alert(
         "Barcode lookup failed",
 
-        error instanceof
-          Error
+        error instanceof Error
           ? error.message
           : "The barcode could not be processed.",
       );
@@ -939,16 +1172,9 @@ export default function App() {
 
       await loadInventoryData();
 
-      try {
-        await pushInventoryToCloud();
-      } catch (
-        syncError
-      ) {
-        console.error(
-          "Product updated locally but cloud sync failed:",
-          syncError,
-        );
-      }
+      await pushToCloud(
+        "product-update",
+      );
 
       setSelectedProduct(
         null,
@@ -974,8 +1200,7 @@ export default function App() {
       Alert.alert(
         "Could not update product",
 
-        error instanceof
-          Error
+        error instanceof Error
           ? error.message
           : "The product could not be updated.",
       );
@@ -1032,16 +1257,9 @@ export default function App() {
 
       await loadInventoryData();
 
-      try {
-        await pushInventoryToCloud();
-      } catch (
-        syncError
-      ) {
-        console.error(
-          "Product archived locally but cloud sync failed:",
-          syncError,
-        );
-      }
+      await pushToCloud(
+        "product-archive",
+      );
 
       if (
         selectedProduct?.id ===
@@ -1068,8 +1286,7 @@ export default function App() {
       Alert.alert(
         "Could not archive product",
 
-        error instanceof
-          Error
+        error instanceof Error
           ? error.message
           : "The product could not be archived.",
       );
@@ -1107,8 +1324,7 @@ export default function App() {
       Alert.alert(
         "Could not load archived products",
 
-        error instanceof
-          Error
+        error instanceof Error
           ? error.message
           : "Archived products could not be loaded.",
       );
@@ -1162,16 +1378,9 @@ export default function App() {
 
       await loadInventoryData();
 
-      try {
-        await pushInventoryToCloud();
-      } catch (
-        syncError
-      ) {
-        console.error(
-          "Product restored locally but cloud sync failed:",
-          syncError,
-        );
-      }
+      await pushToCloud(
+        "product-restore",
+      );
 
       const refreshedArchivedProducts =
         await getArchivedProducts();
@@ -1196,8 +1405,7 @@ export default function App() {
       Alert.alert(
         "Could not restore product",
 
-        error instanceof
-          Error
+        error instanceof Error
           ? error.message
           : "The product could not be restored.",
       );
@@ -1237,8 +1445,7 @@ export default function App() {
       Alert.alert(
         "Could not load transactions",
 
-        error instanceof
-          Error
+        error instanceof Error
           ? error.message
           : "Global transaction history could not be loaded.",
       );
@@ -1280,8 +1487,7 @@ export default function App() {
       Alert.alert(
         "Could not load reorder list",
 
-        error instanceof
-          Error
+        error instanceof Error
           ? error.message
           : "The reorder list could not be loaded.",
       );
@@ -1360,35 +1566,12 @@ export default function App() {
           input,
         );
 
-      /*
-       * Reload local products,
-       * Dashboard, deliveries and
-       * reorder queue immediately.
-       */
       await loadInventoryData();
 
-      /*
-       * Stock changed locally.
-       * PUSH products + transactions
-       * to Supabase.
-       */
-      try {
-        await pushInventoryToCloud();
-      } catch (
-        syncError
-      ) {
-        console.error(
-          "Inventory updated locally but cloud sync failed:",
-          syncError,
-        );
-      }
+      await pushToCloud(
+        "inventory-update",
+      );
 
-      /*
-       * If this transaction was opened
-       * from Reorder Management,
-       * reload the queue again before
-       * returning there.
-       */
       if (
         returnView ===
         "reorder-management"
@@ -1429,8 +1612,7 @@ export default function App() {
       Alert.alert(
         "Could not update inventory",
 
-        error instanceof
-          Error
+        error instanceof Error
           ? error.message
           : "The inventory transaction could not be saved.",
       );
@@ -1489,8 +1671,7 @@ export default function App() {
       Alert.alert(
         "Could not load history",
 
-        error instanceof
-          Error
+        error instanceof Error
           ? error.message
           : "Transaction history could not be loaded.",
       );
@@ -1559,8 +1740,7 @@ export default function App() {
       Alert.alert(
         "Could not load dashboard",
 
-        error instanceof
-          Error
+        error instanceof Error
           ? error.message
           : "The dashboard could not be loaded.",
       );
@@ -1614,8 +1794,7 @@ export default function App() {
       Alert.alert(
         "Could not load analytics",
 
-        error instanceof
-          Error
+        error instanceof Error
           ? error.message
           : "Inventory analytics could not be loaded.",
       );
@@ -1660,8 +1839,7 @@ export default function App() {
       Alert.alert(
         "Could not update analytics",
 
-        error instanceof
-          Error
+        error instanceof Error
           ? error.message
           : "Analytics could not be loaded for the selected period.",
       );
@@ -1804,8 +1982,7 @@ export default function App() {
       Alert.alert(
         "Export failed",
 
-        error instanceof
-          Error
+        error instanceof Error
           ? error.message
           : "The report could not be generated.",
       );
@@ -2401,36 +2578,36 @@ export default function App() {
 
     return (
       <InventoryTransactionForm
-  product={
-    selectedProduct
-  }
-  isSubmitting={
-    isTransactionSubmitting
-  }
-  initialTransactionType={
-    transactionReturnView ===
-    "reorder-management"
-      ? "stock_in"
-      : undefined
-  }
-  initialQuantity={
-    transactionReturnView ===
-    "reorder-management"
-      ? Math.max(
-          selectedProduct.reorderLevel *
-            2 -
-            selectedProduct.currentStock,
-          0,
-        )
-      : undefined
-  }
-  onCancel={
-    closeTransactionForm
-  }
-  onSubmit={
-    handleInventoryTransaction
-  }
-/>
+        product={
+          selectedProduct
+        }
+        isSubmitting={
+          isTransactionSubmitting
+        }
+        initialTransactionType={
+          transactionReturnView ===
+          "reorder-management"
+            ? "stock_in"
+            : undefined
+        }
+        initialQuantity={
+          transactionReturnView ===
+          "reorder-management"
+            ? Math.max(
+                selectedProduct.reorderLevel *
+                  2 -
+                  selectedProduct.currentStock,
+                0,
+              )
+            : undefined
+        }
+        onCancel={
+          closeTransactionForm
+        }
+        onSubmit={
+          handleInventoryTransaction
+        }
+      />
     );
   }
 
@@ -2727,6 +2904,15 @@ export default function App() {
                 active products
               </Text>
 
+              <CloudSyncStatus
+                status={
+                  cloudSyncStatus
+                }
+                onSync={() =>
+                  void handleManualSync()
+                }
+              />
+
               <View
                 style={
                   styles.actionMenuWrapper
@@ -2949,51 +3135,40 @@ function ActionMenuItem({
 const styles =
   StyleSheet.create({
     screen: {
-      flex:
-        1,
+      flex: 1,
 
       backgroundColor:
         "#F4F6F8",
     },
 
     listContent: {
-      padding:
-        16,
+      padding: 16,
 
-      paddingBottom:
-        40,
+      paddingBottom: 40,
     },
 
     header: {
-      marginBottom:
-        18,
+      marginBottom: 18,
     },
 
     title: {
-      fontSize:
-        30,
+      fontSize: 30,
 
-      fontWeight:
-        "800",
+      fontWeight: "800",
 
-      color:
-        "#111827",
+      color: "#111827",
     },
 
     summary: {
-      marginTop:
-        4,
+      marginTop: 4,
 
-      fontSize:
-        15,
+      fontSize: 15,
 
-      color:
-        "#5D6673",
+      color: "#5D6673",
     },
 
     actionMenuWrapper: {
-      marginTop:
-        18,
+      marginTop: 18,
 
       marginHorizontal:
         -16,
@@ -3003,28 +3178,22 @@ const styles =
     },
 
     actionMenu: {
-      flexDirection:
-        "row",
+      flexDirection: "row",
 
-      alignItems:
-        "center",
+      alignItems: "center",
 
-      paddingHorizontal:
-        8,
+      paddingHorizontal: 8,
     },
 
     actionMenuItem: {
-      minHeight:
-        54,
+      minHeight: 54,
 
-      alignItems:
-        "center",
+      alignItems: "center",
 
       justifyContent:
         "center",
 
-      paddingHorizontal:
-        20,
+      paddingHorizontal: 20,
 
       backgroundColor:
         "#FFFFFF",
@@ -3036,158 +3205,119 @@ const styles =
     },
 
     actionMenuText: {
-      fontSize:
-        13,
+      fontSize: 13,
 
-      fontWeight:
-        "800",
+      fontWeight: "800",
 
-      letterSpacing:
-        0.3,
+      letterSpacing: 0.3,
 
-      color:
-        "#7A858B",
+      color: "#7A858B",
     },
 
     topBar: {
-      alignItems:
-        "flex-end",
+      alignItems: "flex-end",
 
-      paddingHorizontal:
-        20,
+      paddingHorizontal: 20,
 
-      paddingTop:
-        8,
+      paddingTop: 8,
     },
 
     centeredContainer: {
-      flex:
-        1,
+      flex: 1,
 
-      alignItems:
-        "center",
+      alignItems: "center",
 
       justifyContent:
         "center",
 
-      padding:
-        24,
+      padding: 24,
     },
 
     statusText: {
-      marginTop:
-        10,
+      marginTop: 10,
 
-      fontSize:
-        15,
+      fontSize: 15,
 
-      textAlign:
-        "center",
+      textAlign: "center",
 
-      color:
-        "#5D6673",
+      color: "#5D6673",
     },
 
     errorTitle: {
-      fontSize:
-        21,
+      fontSize: 21,
 
-      fontWeight:
-        "700",
+      fontWeight: "700",
 
-      textAlign:
-        "center",
+      textAlign: "center",
     },
 
     errorMessage: {
-      marginTop:
-        12,
+      marginTop: 12,
 
-      fontSize:
-        15,
+      fontSize: 15,
 
-      lineHeight:
-        22,
+      lineHeight: 22,
 
-      textAlign:
-        "center",
+      textAlign: "center",
 
-      color:
-        "#5D6673",
+      color: "#5D6673",
     },
 
     primaryButton: {
-      marginTop:
-        18,
+      marginTop: 18,
 
-      minHeight:
-        46,
+      minHeight: 46,
 
-      alignItems:
-        "center",
+      alignItems: "center",
 
       justifyContent:
         "center",
 
-      borderRadius:
-        10,
+      borderRadius: 10,
 
-      paddingHorizontal:
-        18,
+      paddingHorizontal: 18,
 
       backgroundColor:
         "#20252B",
     },
 
     primaryButtonText: {
-      fontWeight:
-        "700",
+      fontWeight: "700",
 
-      color:
-        "#FFFFFF",
+      color: "#FFFFFF",
     },
 
     secondaryButton: {
-      borderWidth:
-        1,
+      borderWidth: 1,
 
       borderColor:
         "#C8CED6",
 
-      borderRadius:
-        10,
+      borderRadius: 10,
 
-      paddingHorizontal:
-        14,
+      paddingHorizontal: 14,
 
-      paddingVertical:
-        9,
+      paddingVertical: 9,
 
       backgroundColor:
         "#FFFFFF",
     },
 
     secondaryButtonText: {
-      fontWeight:
-        "700",
+      fontWeight: "700",
 
-      color:
-        "#20252B",
+      color: "#20252B",
     },
 
     emptyContainer: {
-      paddingVertical:
-        60,
+      paddingVertical: 60,
 
-      alignItems:
-        "center",
+      alignItems: "center",
     },
 
     emptyTitle: {
-      fontSize:
-        20,
+      fontSize: 20,
 
-      fontWeight:
-        "700",
+      fontWeight: "700",
     },
   });
