@@ -14,6 +14,8 @@ interface CloudProductRow {
   id: number;
 
   barcode: string;
+
+  updated_at: string;
 }
 
 export interface ProductSyncResult {
@@ -26,11 +28,16 @@ export interface ProductSyncResult {
   updated:
     number;
 
+  skippedNewerCloud:
+    number;
+
   failed:
     number;
 }
 
-export async function syncLocalProductsToCloud(): Promise<ProductSyncResult> {
+export async function syncLocalProductsToCloud(): Promise<
+  ProductSyncResult
+> {
   const localProducts =
     await getAllProducts();
 
@@ -40,14 +47,9 @@ export async function syncLocalProductsToCloud(): Promise<ProductSyncResult> {
   let updated =
     0;
 
-  /*
-   * On a successful complete sync,
-   * failed will remain zero.
-   *
-   * If a product cannot sync,
-   * we throw immediately so App.tsx
-   * can display Cloud unavailable.
-   */
+  let skippedNewerCloud =
+    0;
+
   let failed =
     0;
 
@@ -61,57 +63,110 @@ export async function syncLocalProductsToCloud(): Promise<ProductSyncResult> {
           product.barcode,
         );
 
+      /*
+       * Product does not exist in cloud.
+       *
+       * Upload it.
+       */
       if (
-        existingCloudProduct
+        !existingCloudProduct
       ) {
-        await updateCloudProduct(
-          existingCloudProduct.id,
-          product,
-        );
-
-        updated +=
-          1;
-      } else {
         await insertCloudProduct(
           product,
         );
 
         uploaded +=
           1;
+
+        continue;
       }
+
+      /*
+       * Compare timestamps before
+       * overwriting Supabase.
+       *
+       * This prevents an old/stale device
+       * from overwriting newer cloud stock.
+       */
+      const localUpdatedAt =
+        new Date(
+          product.updatedAt,
+        ).getTime();
+
+      const cloudUpdatedAt =
+        new Date(
+          existingCloudProduct.updated_at,
+        ).getTime();
+
+      /*
+       * If either timestamp is invalid,
+       * fail instead of guessing which
+       * version should win.
+       */
+      if (
+        Number.isNaN(
+          localUpdatedAt,
+        ) ||
+        Number.isNaN(
+          cloudUpdatedAt,
+        )
+      ) {
+        throw new Error(
+          `Invalid updated_at timestamp for product ${product.barcode}.`,
+        );
+      }
+
+      /*
+       * Cloud is newer OR exactly equal.
+       *
+       * Do not overwrite it.
+       *
+       * The following pull will bring
+       * that newer cloud version into
+       * this device's SQLite database.
+       */
+      if (
+        localUpdatedAt <=
+        cloudUpdatedAt
+      ) {
+        skippedNewerCloud +=
+          1;
+
+        continue;
+      }
+
+      /*
+       * Local version is genuinely newer.
+       *
+       * This commonly happens when:
+       *
+       * - stock changed while offline
+       * - product was edited locally
+       * - archive/restore occurred locally
+       */
+      await updateCloudProduct(
+        existingCloudProduct.id,
+        product,
+      );
+
+      updated +=
+        1;
     } catch (
       error
     ) {
       failed +=
         1;
 
-      /*
-       * Network/cloud failure is an
-       * expected runtime condition.
-       *
-       * Use console.warn instead of
-       * console.error so Expo does not
-       * treat it like an application
-       * programming error.
-       */
       console.warn(
         `Could not sync product ${product.barcode}:`,
         error,
       );
 
-      /*
-       * IMPORTANT:
-       *
-       * Do not swallow the failure.
-       *
-       * App.tsx needs this rejection
-       * so CloudSyncStatus becomes
-       * "Cloud unavailable".
-       */
-      throw normalizeSyncError(
-        error,
-        product.barcode,
-      );
+      throw error instanceof Error
+        ? error
+        : new Error(
+            `Could not sync product ${product.barcode}.`,
+          );
     }
   }
 
@@ -122,6 +177,8 @@ export async function syncLocalProductsToCloud(): Promise<ProductSyncResult> {
     uploaded,
 
     updated,
+
+    skippedNewerCloud,
 
     failed,
   };
@@ -142,7 +199,8 @@ async function findCloudProductByBarcode(
       .select(
         `
           id,
-          barcode
+          barcode,
+          updated_at
         `,
       )
       .eq(
@@ -262,23 +320,4 @@ function mapProductToCloudRow(
     updated_at:
       product.updatedAt,
   };
-}
-
-function normalizeSyncError(
-  error:
-    unknown,
-
-  barcode:
-    string,
-): Error {
-  if (
-    error instanceof
-    Error
-  ) {
-    return error;
-  }
-
-  return new Error(
-    `Could not sync product ${barcode}.`,
-  );
 }

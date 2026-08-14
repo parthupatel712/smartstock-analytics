@@ -6,7 +6,9 @@ import type {
   InventoryTransaction,
 } from "../types/inventoryTransaction";
 
-import { supabase } from "../services/supabase";
+import {
+  supabase,
+} from "../services/supabase";
 
 interface CloudInventoryTransactionRow {
   id: number;
@@ -37,7 +39,8 @@ interface CloudInventoryTransactionRow {
 }
 
 function mapCloudTransactionRow(
-  row: CloudInventoryTransactionRow,
+  row:
+    CloudInventoryTransactionRow,
 ): CloudInventoryTransaction {
   return {
     id:
@@ -90,20 +93,25 @@ export async function getCloudInventoryTransactions(): Promise<
   const {
     data,
     error,
-  } = await supabase
-    .from(
-      "inventory_transactions",
-    )
-    .select("*")
-    .order(
-      "created_at",
-      {
-        ascending:
-          true,
-      },
-    );
+  } =
+    await supabase
+      .from(
+        "inventory_transactions",
+      )
+      .select(
+        "*",
+      )
+      .order(
+        "created_at",
+        {
+          ascending:
+            true,
+        },
+      );
 
-  if (error) {
+  if (
+    error
+  ) {
     throw new Error(
       `Could not load cloud transactions: ${error.message}`,
     );
@@ -117,5 +125,61 @@ export async function getCloudInventoryTransactions(): Promise<
     ) ?? []
   ).map(
     mapCloudTransactionRow,
+  );
+}
+
+/*
+ * Incremental realtime fetch.
+ *
+ * Downloads ONE transaction by its
+ * Supabase transaction ID.
+ */
+export async function getCloudInventoryTransactionById(
+  id:
+    number,
+): Promise<CloudInventoryTransaction | null> {
+  if (
+    !Number.isInteger(
+      id,
+    ) ||
+    id <= 0
+  ) {
+    return null;
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await supabase
+      .from(
+        "inventory_transactions",
+      )
+      .select(
+        "*",
+      )
+      .eq(
+        "id",
+        id,
+      )
+      .maybeSingle();
+
+  if (
+    error
+  ) {
+    throw new Error(
+      `Could not load cloud transaction: ${error.message}`,
+    );
+  }
+
+  if (
+    !data
+  ) {
+    return null;
+  }
+
+  return mapCloudTransactionRow(
+    data as
+      CloudInventoryTransactionRow,
   );
 }

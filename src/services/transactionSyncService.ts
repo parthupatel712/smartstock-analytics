@@ -159,22 +159,26 @@ export async function syncLocalTransactionsToCloud(): Promise<
       },
     );
 
-  if (error) {
-    console.error(
+  if (
+    error
+  ) {
+    /*
+     * Do not silently return a failed
+     * result here.
+     *
+     * App.tsx needs the rejected Promise
+     * so Cloud Sync can display:
+     *
+     * Cloud unavailable
+     */
+    console.warn(
       "Could not sync transactions:",
       error,
     );
 
-    return {
-      totalLocalTransactions:
-        localTransactions.length,
-
-      uploadedOrMatched:
-        0,
-
-      failed:
-        localTransactions.length,
-    };
+    throw new Error(
+      `Could not sync inventory transactions: ${error.message}`,
+    );
   }
 
   return {

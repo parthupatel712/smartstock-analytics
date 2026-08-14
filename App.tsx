@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -35,7 +36,9 @@ import { ProductForm } from "./src/components/ProductForm";
 import { ProductTransactionHistory } from "./src/components/ProductTransactionHistory";
 import { ReorderManagement } from "./src/components/ReorderManagement";
 
-import { getInventoryAnalyticsSummary } from "./src/database/inventoryAnalyticsRepository";
+import {
+  getInventoryAnalyticsSummary,
+} from "./src/database/inventoryAnalyticsRepository";
 
 import {
   getDashboardRecentActivity,
@@ -63,7 +66,18 @@ import {
   getReorderItems,
 } from "./src/database/reorderRepository";
 
-import { initializeDatabase } from "./src/database/schema";
+import {
+  initializeDatabase,
+} from "./src/database/schema";
+
+import {
+  downloadCloudProductToLocalByBarcode,
+} from "./src/services/cloudProductDownloadService";
+
+import {
+  downloadCloudTransactionToLocalById,
+  reconcileLocalTransactionsFromCloud,
+} from "./src/services/cloudTransactionDownloadService";
 
 import {
   pullInventoryFromCloud,
@@ -83,12 +97,23 @@ import {
 } from "./src/services/excelExportService";
 
 import {
+  subscribeToInventoryRealtime,
+  unsubscribeFromInventoryRealtime,
+} from "./src/services/inventoryRealtimeService";
+
+import type {
+  InventoryRealtimeChange,
+} from "./src/services/inventoryRealtimeService";
+
+import {
   exportAnalyticsPdf,
   exportInventoryPdf,
   exportTransactionsPdf,
 } from "./src/services/pdfExportService";
 
-import { shareExportedReport } from "./src/services/reportSharingService";
+import {
+  shareExportedReport,
+} from "./src/services/reportSharingService";
 
 import {
   DEFAULT_ANALYTICS_PERIOD,
@@ -101,7 +126,9 @@ import {
   type CloudSyncStatusState,
 } from "./src/types/cloudSyncStatus";
 
-import type { DashboardRecentActivity } from "./src/types/dashboardRecentActivity";
+import type {
+  DashboardRecentActivity,
+} from "./src/types/dashboardRecentActivity";
 
 import type {
   ExportedReport,
@@ -109,30 +136,50 @@ import type {
   ExportReportType,
 } from "./src/types/exportReport";
 
-import type { GlobalTransaction } from "./src/types/globalTransaction";
+import type {
+  GlobalTransaction,
+} from "./src/types/globalTransaction";
 
-import type { InventoryAnalyticsSummary } from "./src/types/inventoryAnalytics";
+import type {
+  InventoryAnalyticsSummary,
+} from "./src/types/inventoryAnalytics";
 
-import type { InventoryDashboardSummary } from "./src/types/inventoryDashboard";
+import type {
+  InventoryDashboardSummary,
+} from "./src/types/inventoryDashboard";
 
 import {
   DEFAULT_INVENTORY_FILTERS,
   type InventoryFilterState,
 } from "./src/types/inventoryFilter";
 
-import type { CreateInventoryTransactionInput } from "./src/types/inventoryTransaction";
+import type {
+  CreateInventoryTransactionInput,
+} from "./src/types/inventoryTransaction";
 
-import type { Product } from "./src/types/product";
+import type {
+  Product,
+} from "./src/types/product";
 
-import type { ProductDeliverySummary } from "./src/types/productDelivery";
+import type {
+  ProductDeliverySummary,
+} from "./src/types/productDelivery";
 
-import type { ProductFormValues } from "./src/types/productForm";
+import type {
+  ProductFormValues,
+} from "./src/types/productForm";
 
-import type { ReorderItem } from "./src/types/reorderItem";
+import type {
+  ReorderItem,
+} from "./src/types/reorderItem";
 
-import type { TransactionHistoryItem } from "./src/types/transactionHistory";
+import type {
+  TransactionHistoryItem,
+} from "./src/types/transactionHistory";
 
-import type { UpdateProductInput } from "./src/types/productUpdate";
+import type {
+  UpdateProductInput,
+} from "./src/types/productUpdate";
 
 type AppStatus =
   | "loading"
@@ -512,6 +559,11 @@ export default function App() {
   ] =
     useState("");
 
+  const realtimeRefreshQueue =
+    useRef<Promise<void>>(
+      Promise.resolve(),
+    );
+
   const visibleProducts =
     useMemo(
       () => {
@@ -692,21 +744,19 @@ export default function App() {
   const markCloudSyncSuccessful =
     useCallback(
       (): void => {
-        setCloudSyncStatus(
-          {
-            state:
-              "synced",
+        setCloudSyncStatus({
+          state:
+            "synced",
 
-            operation:
-              null,
+          operation:
+            null,
 
-            lastSuccessfulSync:
-              new Date().toISOString(),
+          lastSuccessfulSync:
+            new Date().toISOString(),
 
-            errorMessage:
-              null,
-          },
-        );
+          errorMessage:
+            null,
+        });
       },
       [],
     );
@@ -740,46 +790,6 @@ export default function App() {
         );
       },
       [],
-    );
-
-  const pullFromCloud =
-    useCallback(
-      async (
-        operation:
-          CloudSyncOperation,
-      ): Promise<boolean> => {
-        beginCloudSync(
-          operation,
-        );
-
-        try {
-          await withCloudTimeout(
-            pullInventoryFromCloud(),
-          );
-
-          markCloudSyncSuccessful();
-
-          return true;
-        } catch (
-          error
-        ) {
-          console.warn(
-            "Cloud download unavailable:",
-            error,
-          );
-
-          markCloudSyncFailed(
-            error,
-          );
-
-          return false;
-        }
-      },
-      [
-        beginCloudSync,
-        markCloudSyncFailed,
-        markCloudSyncSuccessful,
-      ],
     );
 
   const pushToCloud =
@@ -822,6 +832,70 @@ export default function App() {
       ],
     );
 
+  const refreshInventoryFromRealtime =
+    useCallback(
+      (
+        change:
+          InventoryRealtimeChange,
+      ): void => {
+        realtimeRefreshQueue.current =
+          realtimeRefreshQueue.current
+            .catch(
+              () => undefined,
+            )
+            .then(
+              async () => {
+                try {
+                  if (
+                    change.table ===
+                    "products"
+                  ) {
+                    if (
+                      !change.productBarcode ||
+                      change.eventType ===
+                        "DELETE"
+                    ) {
+                      return;
+                    }
+
+                    await withCloudTimeout(
+                      downloadCloudProductToLocalByBarcode(
+                        change.productBarcode,
+                      ),
+                    );
+                  } else {
+                    if (
+                      !change.transactionId ||
+                      change.eventType ===
+                        "DELETE"
+                    ) {
+                      return;
+                    }
+
+                    await withCloudTimeout(
+                      downloadCloudTransactionToLocalById(
+                        change.transactionId,
+                      ),
+                    );
+                  }
+
+                  await loadInventoryData();
+                } catch (
+                  error
+                ) {
+                  console.warn(
+                    "Incremental realtime refresh unavailable:",
+                    error,
+                  );
+                }
+              },
+            );
+      },
+      [
+        loadInventoryData,
+      ],
+    );
+
   const loadProducts =
     useCallback(
       async (
@@ -840,19 +914,72 @@ export default function App() {
             );
           }
 
-          setErrorMessage("");
+          setErrorMessage(
+            "",
+          );
 
           await initializeDatabase();
 
-          await pullFromCloud(
+          beginCloudSync(
             isPullToRefresh
               ? "refresh"
               : "startup",
           );
 
+          try {
+            /*
+             * STEP 1
+             *
+             * Protect any local changes
+             * created while offline.
+             */
+            await withCloudTimeout(
+              pushInventoryToCloud(),
+            );
+
+            /*
+             * STEP 2
+             *
+             * Pull latest cloud products
+             * and cloud transactions.
+             */
+            await withCloudTimeout(
+              pullInventoryFromCloud(),
+            );
+
+            /*
+             * STEP 3
+             *
+             * Rebuild local transaction
+             * history from the canonical
+             * Supabase history.
+             */
+            await withCloudTimeout(
+              reconcileLocalTransactionsFromCloud(),
+            );
+
+            markCloudSyncSuccessful();
+          } catch (
+            syncError
+          ) {
+            console.warn(
+              "Startup cloud sync unavailable:",
+              syncError,
+            );
+
+            markCloudSyncFailed(
+              syncError,
+            );
+          }
+
           /*
-           * Even if cloud sync fails,
-           * local SQLite inventory still loads.
+           * Always load local SQLite.
+           *
+           * If online, it now contains
+           * synchronized cloud data.
+           *
+           * If offline, the existing
+           * local inventory remains usable.
            */
           await loadInventoryData();
 
@@ -883,8 +1010,10 @@ export default function App() {
         }
       },
       [
+        beginCloudSync,
         loadInventoryData,
-        pullFromCloud,
+        markCloudSyncFailed,
+        markCloudSyncSuccessful,
       ],
     );
 
@@ -894,6 +1023,45 @@ export default function App() {
     },
     [
       loadProducts,
+    ],
+  );
+
+  useEffect(
+    () => {
+      const channel =
+        subscribeToInventoryRealtime({
+          onChange:
+            (
+              change,
+            ) => {
+              refreshInventoryFromRealtime(
+                change,
+              );
+            },
+
+          onStatusChange:
+            (
+              realtimeStatus,
+            ) => {
+              if (
+                realtimeStatus ===
+                "CHANNEL_ERROR"
+              ) {
+                console.warn(
+                  "Inventory realtime channel unavailable.",
+                );
+              }
+            },
+        });
+
+      return () => {
+        void unsubscribeFromInventoryRealtime(
+          channel,
+        );
+      };
+    },
+    [
+      refreshInventoryFromRealtime,
     ],
   );
 
@@ -910,24 +1078,18 @@ export default function App() {
     );
 
     try {
-      /*
-       * Push this device's local changes first.
-       */
       await withCloudTimeout(
         pushInventoryToCloud(),
       );
 
-      /*
-       * Then pull the latest cloud inventory.
-       */
       await withCloudTimeout(
         pullInventoryFromCloud(),
       );
 
-      /*
-       * Refresh Product Cards,
-       * Dashboard, Reorder list, etc.
-       */
+      await withCloudTimeout(
+        reconcileLocalTransactionsFromCloud(),
+      );
+
       await loadInventoryData();
 
       markCloudSyncSuccessful();
@@ -935,7 +1097,7 @@ export default function App() {
       error
     ) {
       console.warn(
-        "Manual cloud sync unavailable:",
+        "Manual cloud reconciliation unavailable:",
         error,
       );
 
@@ -999,25 +1161,23 @@ export default function App() {
         openingStock >
         0
       ) {
-        await createInventoryTransaction(
-          {
-            productId,
+        await createInventoryTransaction({
+          productId,
 
-            transactionType:
-              "stock_in",
+          transactionType:
+            "stock_in",
 
-            quantity:
-              openingStock,
+          quantity:
+            openingStock,
 
-            source:
-              scannedBarcode
-                ? "camera"
-                : "manual",
+          source:
+            scannedBarcode
+              ? "camera"
+              : "manual",
 
-            notes:
-              "Opening stock",
-          },
-        );
+          notes:
+            "Opening stock",
+        });
       }
 
       await loadInventoryData();
@@ -1052,22 +1212,19 @@ export default function App() {
           ? error.message
           : "The product could not be saved.";
 
+      const lowerMessage =
+        message.toLowerCase();
+
       const isDuplicateBarcode =
-        message
-          .toLowerCase()
-          .includes(
-            "unique",
-          ) ||
-        message
-          .toLowerCase()
-          .includes(
-            "constraint",
-          ) ||
-        message
-          .toLowerCase()
-          .includes(
-            "already uses this barcode",
-          );
+        lowerMessage.includes(
+          "unique",
+        ) ||
+        lowerMessage.includes(
+          "constraint",
+        ) ||
+        lowerMessage.includes(
+          "already uses this barcode",
+        );
 
       Alert.alert(
         isDuplicateBarcode

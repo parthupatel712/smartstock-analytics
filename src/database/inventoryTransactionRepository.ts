@@ -3,10 +3,22 @@ import type {
   InventoryTransaction,
   InventoryTransactionType,
 } from "../types/inventoryTransaction";
-import type { TransactionHistoryItem } from "../types/transactionHistory";
-import type { ProductDeliverySummary } from "../types/productDelivery";
-import type { GlobalTransaction } from "../types/globalTransaction";
-import { getDatabase } from "./database";
+
+import type {
+  TransactionHistoryItem,
+} from "../types/transactionHistory";
+
+import type {
+  ProductDeliverySummary,
+} from "../types/productDelivery";
+
+import type {
+  GlobalTransaction,
+} from "../types/globalTransaction";
+
+import {
+  getDatabase,
+} from "./database";
 
 interface ProductStockRow {
   id: number;
@@ -18,110 +30,250 @@ interface ProductStockRow {
 
 interface InventoryTransactionRow {
   id: number;
+
   product_id: number;
-  transaction_type: InventoryTransactionType;
+
+  transaction_type:
+    InventoryTransactionType;
+
   quantity: number;
+
   stock_before: number;
+
   stock_after: number;
+
   unit_cost: number;
+
   unit_price: number;
+
   transaction_value: number;
-  source: InventoryTransaction["source"];
+
+  source:
+    InventoryTransaction["source"];
+
   notes: string | null;
+
   created_at: string;
 }
 
 interface TransactionHistoryRow {
   id: number;
+
   product_id: number;
 
   product_name: string;
+
   product_brand: string;
+
   product_barcode: string;
+
   product_department: string;
+
   product_category: string;
 
-  transaction_type: InventoryTransactionType;
+  transaction_type:
+    InventoryTransactionType;
+
   quantity: number;
+
   stock_before: number;
+
   stock_after: number;
+
   unit_cost: number;
+
   unit_price: number;
+
   transaction_value: number;
-  source: InventoryTransaction["source"];
+
+  source:
+    InventoryTransaction["source"];
+
   notes: string | null;
+
   created_at: string;
 }
+
 interface ProductDeliverySummaryRow {
   transaction_id: number;
+
   product_id: number;
+
   quantity_received: number;
+
   stock_before: number;
+
   stock_after: number;
+
   unit_cost: number;
+
   delivery_value: number;
-  source: ProductDeliverySummary["source"];
+
+  source:
+    ProductDeliverySummary["source"];
+
   notes: string | null;
+
   received_at: string;
 }
 
 function mapTransactionRow(
-  row: InventoryTransactionRow,
+  row:
+    InventoryTransactionRow,
 ): InventoryTransaction {
   return {
-    id: row.id,
-    productId: row.product_id,
-    transactionType: row.transaction_type,
-    quantity: row.quantity,
-    stockBefore: row.stock_before,
-    stockAfter: row.stock_after,
-    unitCost: row.unit_cost,
-    unitPrice: row.unit_price,
-    transactionValue: row.transaction_value,
-    source: row.source,
-    notes: row.notes,
-    createdAt: row.created_at,
+    id:
+      row.id,
+
+    productId:
+      row.product_id,
+
+    transactionType:
+      row.transaction_type,
+
+    quantity:
+      row.quantity,
+
+    stockBefore:
+      row.stock_before,
+
+    stockAfter:
+      row.stock_after,
+
+    unitCost:
+      row.unit_cost,
+
+    unitPrice:
+      row.unit_price,
+
+    transactionValue:
+      row.transaction_value,
+
+    source:
+      row.source,
+
+    notes:
+      row.notes,
+
+    createdAt:
+      row.created_at,
   };
 }
 
 function mapTransactionHistoryRow(
-  row: TransactionHistoryRow,
+  row:
+    TransactionHistoryRow,
 ): TransactionHistoryItem {
   return {
-    id: row.id,
-    productId: row.product_id,
+    id:
+      row.id,
 
-    productName: row.product_name,
-    productBrand: row.product_brand,
-    productBarcode: row.product_barcode,
-    productDepartment: row.product_department,
-    productCategory: row.product_category,
+    productId:
+      row.product_id,
 
-    transactionType: row.transaction_type,
-    quantity: row.quantity,
-    stockBefore: row.stock_before,
-    stockAfter: row.stock_after,
-    unitCost: row.unit_cost,
-    unitPrice: row.unit_price,
-    transactionValue: row.transaction_value,
-    source: row.source,
-    notes: row.notes,
-    createdAt: row.created_at,
+    productName:
+      row.product_name,
+
+    productBrand:
+      row.product_brand,
+
+    productBarcode:
+      row.product_barcode,
+
+    productDepartment:
+      row.product_department,
+
+    productCategory:
+      row.product_category,
+
+    transactionType:
+      row.transaction_type,
+
+    quantity:
+      row.quantity,
+
+    stockBefore:
+      row.stock_before,
+
+    stockAfter:
+      row.stock_after,
+
+    unitCost:
+      row.unit_cost,
+
+    unitPrice:
+      row.unit_price,
+
+    transactionValue:
+      row.transaction_value,
+
+    source:
+      row.source,
+
+    notes:
+      row.notes,
+
+    createdAt:
+      row.created_at,
+  };
+}
+
+function mapProductDeliverySummaryRow(
+  row:
+    ProductDeliverySummaryRow,
+): ProductDeliverySummary {
+  return {
+    transactionId:
+      row.transaction_id,
+
+    productId:
+      row.product_id,
+
+    quantityReceived:
+      row.quantity_received,
+
+    stockBefore:
+      row.stock_before,
+
+    stockAfter:
+      row.stock_after,
+
+    unitCost:
+      row.unit_cost,
+
+    deliveryValue:
+      row.delivery_value,
+
+    source:
+      row.source,
+
+    notes:
+      row.notes,
+
+    receivedAt:
+      row.received_at,
   };
 }
 
 function validateTransactionInput(
-  input: CreateInventoryTransactionInput,
+  input:
+    CreateInventoryTransactionInput,
 ): void {
   if (
-    !Number.isInteger(input.productId) ||
+    !Number.isInteger(
+      input.productId,
+    ) ||
     input.productId <= 0
   ) {
-    throw new Error("A valid product ID is required.");
+    throw new Error(
+      "A valid product ID is required.",
+    );
   }
 
   if (
-    !Number.isInteger(input.quantity) ||
+    !Number.isInteger(
+      input.quantity,
+    ) ||
     input.quantity < 0
   ) {
     throw new Error(
@@ -130,7 +282,8 @@ function validateTransactionInput(
   }
 
   if (
-    input.transactionType !== "adjustment" &&
+    input.transactionType !==
+      "adjustment" &&
     input.quantity === 0
   ) {
     throw new Error(
@@ -140,24 +293,39 @@ function validateTransactionInput(
 }
 
 function calculateStockAfter(
-  transactionType: InventoryTransactionType,
-  stockBefore: number,
-  quantity: number,
+  transactionType:
+    InventoryTransactionType,
+
+  stockBefore:
+    number,
+
+  quantity:
+    number,
 ): number {
-  switch (transactionType) {
+  switch (
+    transactionType
+  ) {
     case "stock_in":
     case "return":
-      return stockBefore + quantity;
+      return (
+        stockBefore +
+        quantity
+      );
 
     case "sale":
     case "damage":
-      return stockBefore - quantity;
+      return (
+        stockBefore -
+        quantity
+      );
 
     case "adjustment":
       return quantity;
 
     default: {
-      const exhaustiveCheck: never = transactionType;
+      const exhaustiveCheck:
+        never =
+          transactionType;
 
       throw new Error(
         `Unsupported transaction type: ${exhaustiveCheck}`,
@@ -167,29 +335,54 @@ function calculateStockAfter(
 }
 
 function calculateTransactionValue(
-  transactionType: InventoryTransactionType,
-  quantity: number,
-  stockBefore: number,
-  stockAfter: number,
-  unitCost: number,
-  unitPrice: number,
+  transactionType:
+    InventoryTransactionType,
+
+  quantity:
+    number,
+
+  stockBefore:
+    number,
+
+  stockAfter:
+    number,
+
+  unitCost:
+    number,
+
+  unitPrice:
+    number,
 ): number {
-  switch (transactionType) {
+  switch (
+    transactionType
+  ) {
     case "sale":
-      return quantity * unitPrice;
+      return (
+        quantity *
+        unitPrice
+      );
 
     case "stock_in":
     case "return":
     case "damage":
-      return quantity * unitCost;
+      return (
+        quantity *
+        unitCost
+      );
 
     case "adjustment":
       return (
-        Math.abs(stockAfter - stockBefore) * unitCost
+        Math.abs(
+          stockAfter -
+            stockBefore,
+        ) *
+        unitCost
       );
 
     default: {
-      const exhaustiveCheck: never = transactionType;
+      const exhaustiveCheck:
+        never =
+          transactionType;
 
       throw new Error(
         `Unsupported transaction type: ${exhaustiveCheck}`,
@@ -198,35 +391,25 @@ function calculateTransactionValue(
   }
 }
 
-function mapProductDeliverySummaryRow(
-  row: ProductDeliverySummaryRow,
-): ProductDeliverySummary {
-  return {
-    transactionId: row.transaction_id,
-    productId: row.product_id,
-    quantityReceived: row.quantity_received,
-    stockBefore: row.stock_before,
-    stockAfter: row.stock_after,
-    unitCost: row.unit_cost,
-    deliveryValue: row.delivery_value,
-    source: row.source,
-    notes: row.notes,
-    receivedAt: row.received_at,
-  };
-}
-
 export async function createInventoryTransaction(
-  input: CreateInventoryTransactionInput,
+  input:
+    CreateInventoryTransactionInput,
 ): Promise<InventoryTransaction> {
-  validateTransactionInput(input);
+  validateTransactionInput(
+    input,
+  );
 
-  const database = await getDatabase();
+  const database =
+    await getDatabase();
 
-  let createdTransaction: InventoryTransaction | null =
-    null;
+  let createdTransaction:
+    InventoryTransaction | null =
+      null;
 
   await database.withExclusiveTransactionAsync(
-    async (transaction) => {
+    async (
+      transaction,
+    ) => {
       const product =
         await transaction.getFirstAsync<ProductStockRow>(
           `
@@ -236,28 +419,39 @@ export async function createInventoryTransaction(
               unit_cost,
               unit_price,
               is_active
+
             FROM products
+
             WHERE id = ?
-            LIMIT 1
+
+            LIMIT 1;
           `,
           input.productId,
         );
 
-      if (!product || product.is_active !== 1) {
+      if (
+        !product ||
+        product.is_active !==
+          1
+      ) {
         throw new Error(
           "The selected product does not exist or is inactive.",
         );
       }
 
-      const stockBefore = product.current_stock;
+      const stockBefore =
+        product.current_stock;
 
-      const stockAfter = calculateStockAfter(
-        input.transactionType,
-        stockBefore,
-        input.quantity,
-      );
+      const stockAfter =
+        calculateStockAfter(
+          input.transactionType,
+          stockBefore,
+          input.quantity,
+        );
 
-      if (stockAfter < 0) {
+      if (
+        stockAfter < 0
+      ) {
         throw new Error(
           `Insufficient stock. Only ${stockBefore} units are available.`,
         );
@@ -273,17 +467,26 @@ export async function createInventoryTransaction(
           product.unit_price,
         );
 
-      const createdAt = new Date().toISOString();
-      const source = input.source ?? "manual";
-      const notes = input.notes?.trim() || null;
+      const createdAt =
+        new Date().toISOString();
+
+      const source =
+        input.source ??
+        "manual";
+
+      const notes =
+        input.notes?.trim() ||
+        null;
 
       await transaction.runAsync(
         `
           UPDATE products
+
           SET
             current_stock = ?,
             updated_at = ?
-          WHERE id = ?
+
+          WHERE id = ?;
         `,
         stockAfter,
         createdAt,
@@ -306,7 +509,10 @@ export async function createInventoryTransaction(
               notes,
               created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+
+            VALUES (
+              ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            );
           `,
           product.id,
           input.transactionType,
@@ -337,25 +543,34 @@ export async function createInventoryTransaction(
               source,
               notes,
               created_at
+
             FROM inventory_transactions
+
             WHERE id = ?
-            LIMIT 1
+
+            LIMIT 1;
           `,
           insertResult.lastInsertRowId,
         );
 
-      if (!insertedRow) {
+      if (
+        !insertedRow
+      ) {
         throw new Error(
           "The inventory transaction could not be retrieved.",
         );
       }
 
       createdTransaction =
-        mapTransactionRow(insertedRow);
+        mapTransactionRow(
+          insertedRow,
+        );
     },
   );
 
-  if (!createdTransaction) {
+  if (
+    !createdTransaction
+  ) {
     throw new Error(
       "The inventory transaction could not be completed.",
     );
@@ -365,16 +580,24 @@ export async function createInventoryTransaction(
 }
 
 export async function getTransactionsForProduct(
-  productId: number,
-): Promise<InventoryTransaction[]> {
+  productId:
+    number,
+): Promise<
+  InventoryTransaction[]
+> {
   if (
-    !Number.isInteger(productId) ||
+    !Number.isInteger(
+      productId,
+    ) ||
     productId <= 0
   ) {
-    throw new Error("A valid product ID is required.");
+    throw new Error(
+      "A valid product ID is required.",
+    );
   }
 
-  const database = await getDatabase();
+  const database =
+    await getDatabase();
 
   const rows =
     await database.getAllAsync<InventoryTransactionRow>(
@@ -392,25 +615,43 @@ export async function getTransactionsForProduct(
           source,
           notes,
           created_at
+
         FROM inventory_transactions
+
         WHERE product_id = ?
-        ORDER BY created_at DESC, id DESC
+
+        ORDER BY
+          datetime(created_at) DESC,
+          id DESC;
       `,
       productId,
     );
 
-  return rows.map(mapTransactionRow);
+  return rows.map(
+    mapTransactionRow,
+  );
 }
 
 export async function getRecentInventoryTransactions(
-  limit = 50,
-): Promise<InventoryTransaction[]> {
-  const database = await getDatabase();
+  limit =
+    50,
+): Promise<
+  InventoryTransaction[]
+> {
+  const database =
+    await getDatabase();
 
-  const safeLimit = Math.max(
-    1,
-    Math.min(Math.trunc(limit), 500),
-  );
+  const safeLimit =
+    Math.max(
+      1,
+
+      Math.min(
+        Math.trunc(
+          limit,
+        ),
+        500,
+      ),
+    );
 
   const rows =
     await database.getAllAsync<InventoryTransactionRow>(
@@ -428,182 +669,302 @@ export async function getRecentInventoryTransactions(
           source,
           notes,
           created_at
+
         FROM inventory_transactions
-        ORDER BY created_at DESC, id DESC
-        LIMIT ?
+
+        ORDER BY
+          datetime(created_at) DESC,
+          id DESC
+
+        LIMIT ?;
       `,
       safeLimit,
     );
 
-  return rows.map(mapTransactionRow);
+  return rows.map(
+    mapTransactionRow,
+  );
 }
 
 export async function getTransactionHistoryForProduct(
-  productId: number,
-): Promise<TransactionHistoryItem[]> {
+  productId:
+    number,
+): Promise<
+  TransactionHistoryItem[]
+> {
   if (
-    !Number.isInteger(productId) ||
+    !Number.isInteger(
+      productId,
+    ) ||
     productId <= 0
   ) {
-    throw new Error("A valid product ID is required.");
+    throw new Error(
+      "A valid product ID is required.",
+    );
   }
 
-  const database = await getDatabase();
+  const database =
+    await getDatabase();
 
   const rows =
     await database.getAllAsync<TransactionHistoryRow>(
       `
         SELECT
           transactions.id,
+
           transactions.product_id,
 
-          products.name AS product_name,
-          products.brand AS product_brand,
-          products.barcode AS product_barcode,
-          products.department AS product_department,
-          products.category AS product_category,
+          products.name
+            AS product_name,
+
+          products.brand
+            AS product_brand,
+
+          products.barcode
+            AS product_barcode,
+
+          products.department
+            AS product_department,
+
+          products.category
+            AS product_category,
 
           transactions.transaction_type,
+
           transactions.quantity,
+
           transactions.stock_before,
+
           transactions.stock_after,
+
           transactions.unit_cost,
+
           transactions.unit_price,
+
           transactions.transaction_value,
+
           transactions.source,
+
           transactions.notes,
+
           transactions.created_at
 
-        FROM inventory_transactions AS transactions
+        FROM inventory_transactions
+          AS transactions
 
         INNER JOIN products
-          ON products.id = transactions.product_id
+          ON products.id =
+            transactions.product_id
 
-        WHERE transactions.product_id = ?
+        WHERE
+          transactions.product_id = ?
 
         ORDER BY
-          transactions.created_at DESC,
-          transactions.id DESC
+          datetime(
+            transactions.created_at
+          ) DESC,
+          transactions.id DESC;
       `,
       productId,
     );
 
-  return rows.map(mapTransactionHistoryRow);
+  return rows.map(
+    mapTransactionHistoryRow,
+  );
 }
 
 export async function getLatestDeliveriesByProduct(): Promise<
-  Map<number, ProductDeliverySummary>
+  Map<
+    number,
+    ProductDeliverySummary
+  >
 > {
-  const database = await getDatabase();
+  const database =
+    await getDatabase();
 
   const rows =
-    await database.getAllAsync<ProductDeliverySummaryRow>(`
-      SELECT
-        transactions.id AS transaction_id,
-        transactions.product_id,
-        transactions.quantity AS quantity_received,
-        transactions.stock_before,
-        transactions.stock_after,
-        transactions.unit_cost,
-        transactions.transaction_value AS delivery_value,
-        transactions.source,
-        transactions.notes,
-        transactions.created_at AS received_at
-
-      FROM inventory_transactions AS transactions
-
-      INNER JOIN (
+    await database.getAllAsync<ProductDeliverySummaryRow>(
+      `
         SELECT
-          product_id,
-          MAX(id) AS latest_transaction_id
-        FROM inventory_transactions
-        WHERE transaction_type = 'stock_in'
-        GROUP BY product_id
-      ) AS latest_deliveries
-        ON latest_deliveries.latest_transaction_id =
           transactions.id
+            AS transaction_id,
 
-      ORDER BY transactions.created_at DESC;
-    `);
+          transactions.product_id,
+
+          transactions.quantity
+            AS quantity_received,
+
+          transactions.stock_before,
+
+          transactions.stock_after,
+
+          transactions.unit_cost,
+
+          transactions.transaction_value
+            AS delivery_value,
+
+          transactions.source,
+
+          transactions.notes,
+
+          transactions.created_at
+            AS received_at
+
+        FROM inventory_transactions
+          AS transactions
+
+        INNER JOIN (
+          SELECT
+            product_id,
+
+            MAX(id)
+              AS latest_transaction_id
+
+          FROM inventory_transactions
+
+          WHERE
+            transaction_type =
+              'stock_in'
+
+          GROUP BY
+            product_id
+        ) AS latest_deliveries
+
+          ON
+            latest_deliveries.latest_transaction_id =
+              transactions.id
+
+        ORDER BY
+          datetime(
+            transactions.created_at
+          ) DESC;
+      `,
+    );
 
   const deliveryMap =
-    new Map<number, ProductDeliverySummary>();
+    new Map<
+      number,
+      ProductDeliverySummary
+    >();
 
-  rows.forEach((row) => {
-    const delivery = mapProductDeliverySummaryRow(row);
+  for (
+    const row of
+    rows
+  ) {
+    const delivery =
+      mapProductDeliverySummaryRow(
+        row,
+      );
 
-    deliveryMap.set(delivery.productId, delivery);
-  });
+    deliveryMap.set(
+      delivery.productId,
+      delivery,
+    );
+  }
 
   return deliveryMap;
 }
 
 export async function getGlobalTransactions(
-  limit = 100,
-): Promise<GlobalTransaction[]> {
-  const database = await getDatabase();
+  limit =
+    100,
+): Promise<
+  GlobalTransaction[]
+> {
+  const database =
+    await getDatabase();
 
-  const safeLimit = Math.max(
-    1,
-    Math.min(
-      Math.floor(limit),
-      500,
-    ),
-  );
+  const safeLimit =
+    Math.max(
+      1,
+
+      Math.min(
+        Math.floor(
+          limit,
+        ),
+        500,
+      ),
+    );
 
   const rows =
     await database.getAllAsync<GlobalTransaction>(
       `
         SELECT
-          t.id AS transactionId,
+          t.id
+            AS transactionId,
 
-          t.product_id AS productId,
+          t.product_id
+            AS productId,
 
-          p.name AS productName,
+          p.name
+            AS productName,
 
-          p.brand AS productBrand,
+          p.brand
+            AS productBrand,
 
-          p.department AS department,
+          p.department
+            AS department,
 
-          p.category AS category,
+          p.category
+            AS category,
 
-          p.barcode AS barcode,
+          p.barcode
+            AS barcode,
 
-          t.transaction_type AS transactionType,
+          t.transaction_type
+            AS transactionType,
 
-          t.quantity AS quantity,
+          t.quantity
+            AS quantity,
 
-          t.stock_before AS stockBefore,
+          t.stock_before
+            AS stockBefore,
 
-          t.stock_after AS stockAfter,
+          t.stock_after
+            AS stockAfter,
 
-          t.unit_cost AS unitCost,
+          t.unit_cost
+            AS unitCost,
 
-          t.unit_price AS unitPrice,
+          t.unit_price
+            AS unitPrice,
 
-          t.transaction_value AS transactionValue,
+          t.transaction_value
+            AS transactionValue,
 
-          t.notes AS notes,
+          t.notes
+            AS notes,
 
-          t.source AS source,
+          t.source
+            AS source,
 
-          t.created_at AS createdAt
+          t.created_at
+            AS createdAt
 
-        FROM inventory_transactions AS t
+        FROM inventory_transactions
+          AS t
 
-        INNER JOIN products AS p
-          ON p.id = t.product_id
+        INNER JOIN products
+          AS p
 
-        WHERE t.transaction_type IN (
-          'sale',
-          'stock_in',
-          'damage',
-          'return',
-          'adjustment'
-        )
+          ON
+            p.id =
+              t.product_id
+
+        WHERE
+          t.transaction_type
+            IN (
+              'sale',
+              'stock_in',
+              'damage',
+              'return',
+              'adjustment'
+            )
 
         ORDER BY
-          datetime(t.created_at) DESC,
+          datetime(
+            t.created_at
+          ) DESC,
           t.id DESC
 
         LIMIT ?;

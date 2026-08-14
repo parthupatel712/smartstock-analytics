@@ -50,10 +50,16 @@ export async function getCloudProducts(): Promise<
   } = await supabase
     .from("products")
     .select("*")
-    .eq("is_active", true)
-    .order("name", {
-      ascending: true,
-    });
+    .eq(
+      "is_active",
+      true,
+    )
+    .order(
+      "name",
+      {
+        ascending: true,
+      },
+    );
 
   if (error) {
     throw new Error(
@@ -62,7 +68,11 @@ export async function getCloudProducts(): Promise<
   }
 
   return (
-    (data as CloudProductRow[] | null) ?? []
+    (
+      data as
+        | CloudProductRow[]
+        | null
+    ) ?? []
   ).map(
     mapCloudProductRow,
   );
@@ -77,9 +87,12 @@ export async function getAllCloudProducts(): Promise<
   } = await supabase
     .from("products")
     .select("*")
-    .order("name", {
-      ascending: true,
-    });
+    .order(
+      "name",
+      {
+        ascending: true,
+      },
+    );
 
   if (error) {
     throw new Error(
@@ -88,9 +101,58 @@ export async function getAllCloudProducts(): Promise<
   }
 
   return (
-    (data as CloudProductRow[] | null) ?? []
+    (
+      data as
+        | CloudProductRow[]
+        | null
+    ) ?? []
   ).map(
     mapCloudProductRow,
+  );
+}
+
+/*
+ * NEW
+ *
+ * Used by realtime.
+ *
+ * Downloads ONE product
+ * instead of every product.
+ */
+export async function getCloudProductByBarcode(
+  barcode: string,
+): Promise<Product | null> {
+  const normalizedBarcode =
+    barcode.trim();
+
+  if (!normalizedBarcode) {
+    return null;
+  }
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("products")
+    .select("*")
+    .eq(
+      "barcode",
+      normalizedBarcode,
+    )
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Could not load cloud product: ${error.message}`,
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  return mapCloudProductRow(
+    data as CloudProductRow,
   );
 }
 
