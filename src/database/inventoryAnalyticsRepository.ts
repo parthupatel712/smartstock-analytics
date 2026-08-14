@@ -9,10 +9,13 @@ import type {
   SalesTrendMetric,
 } from "../types/inventoryAnalytics";
 
-import { getDatabase } from "./database";
+import {
+  getDatabase,
+} from "./database";
 
 interface DailyMetricRow {
-  date: string;
+  date:
+    string;
 
   sales_value:
     number | null;
@@ -40,15 +43,20 @@ interface DailyMetricRow {
 }
 
 interface ProductSalesRow {
-  product_id: number;
+  product_id:
+    number;
 
-  product_name: string;
+  product_name:
+    string;
 
-  brand: string;
+  brand:
+    string;
 
-  department: string;
+  department:
+    string;
 
-  category: string;
+  category:
+    string;
 
   units_sold:
     number | null;
@@ -64,9 +72,11 @@ interface ProductSalesRow {
 }
 
 interface CategorySalesRow {
-  department: string;
+  department:
+    string;
 
-  category: string;
+  category:
+    string;
 
   units_sold:
     number | null;
@@ -81,46 +91,77 @@ interface CategorySalesRow {
     number | null;
 }
 
-interface PeriodTotalsRow {
-  sales_value:
+interface CombinedPeriodTotalsRow {
+  current_sales_value:
     number | null;
 
-  estimated_profit:
+  current_estimated_profit:
     number | null;
 
-  sales_units:
+  current_sales_units:
     number | null;
 
-  stock_in_value:
+  current_stock_in_value:
     number | null;
 
-  stock_in_units:
+  current_stock_in_units:
     number | null;
 
-  damage_value:
+  current_damage_value:
     number | null;
 
-  damage_units:
+  current_damage_units:
     number | null;
 
-  transaction_count:
+  current_transaction_count:
+    number | null;
+
+  previous_sales_value:
+    number | null;
+
+  previous_estimated_profit:
+    number | null;
+
+  previous_sales_units:
+    number | null;
+
+  previous_stock_in_value:
+    number | null;
+
+  previous_stock_in_units:
+    number | null;
+
+  previous_damage_value:
+    number | null;
+
+  previous_damage_units:
+    number | null;
+
+  previous_transaction_count:
     number | null;
 }
 
 interface ProductComparisonRow {
-  product_id: number;
+  product_id:
+    number;
 
-  product_name: string;
+  product_name:
+    string;
 
-  brand: string;
+  brand:
+    string;
 
-  department: string;
+  department:
+    string;
 
-  category: string;
+  category:
+    string;
 
-  current_stock: number;
+  current_stock:
+    number;
 
-  reorder_level: number;
+  reorder_level:
+    number;
 
   current_units_sold:
     number | null;
@@ -142,17 +183,23 @@ interface ProductComparisonRow {
 }
 
 interface SalesTrendRow {
-  date: string;
+  date:
+    string;
 
-  product_id: number;
+  product_id:
+    number;
 
-  product_name: string;
+  product_name:
+    string;
 
-  brand: string;
+  brand:
+    string;
 
-  department: string;
+  department:
+    string;
 
-  category: string;
+  category:
+    string;
 
   sales_value:
     number | null;
@@ -164,41 +211,65 @@ interface SalesTrendRow {
     number | null;
 }
 
+function getPeriodStartIso(
+  days:
+    number,
+): string {
+  return new Date(
+    Date.now() -
+      days *
+        24 *
+        60 *
+        60 *
+        1000,
+  ).toISOString();
+}
+
 function mapDailyMetricRow(
-  row: DailyMetricRow,
+  row:
+    DailyMetricRow,
 ): DailyInventoryMetric {
   return {
     date:
       row.date,
 
     salesValue:
-      row.sales_value ?? 0,
+      row.sales_value ??
+      0,
 
     estimatedProfit:
-      row.estimated_profit ?? 0,
+      row.estimated_profit ??
+      0,
 
     stockInValue:
-      row.stock_in_value ?? 0,
+      row.stock_in_value ??
+      0,
 
     damageValue:
-      row.damage_value ?? 0,
+      row.damage_value ??
+      0,
 
     salesUnits:
-      row.sales_units ?? 0,
+      row.sales_units ??
+      0,
 
     stockInUnits:
-      row.stock_in_units ?? 0,
+      row.stock_in_units ??
+      0,
 
     damageUnits:
-      row.damage_units ?? 0,
+      row.damage_units ??
+      0,
 
     transactionCount:
-      row.transaction_count ?? 0,
+      row.transaction_count ??
+      0,
   };
 }
 
 function mapProductSalesRow(
-  row: ProductSalesRow,
+  row:
+    ProductSalesRow,
 ): ProductSalesMetric {
   return {
     productId:
@@ -217,21 +288,26 @@ function mapProductSalesRow(
       row.category,
 
     unitsSold:
-      row.units_sold ?? 0,
+      row.units_sold ??
+      0,
 
     salesValue:
-      row.sales_value ?? 0,
+      row.sales_value ??
+      0,
 
     estimatedProfit:
-      row.estimated_profit ?? 0,
+      row.estimated_profit ??
+      0,
 
     transactionCount:
-      row.transaction_count ?? 0,
+      row.transaction_count ??
+      0,
   };
 }
 
 function mapCategorySalesRow(
-  row: CategorySalesRow,
+  row:
+    CategorySalesRow,
 ): CategorySalesMetric {
   return {
     department:
@@ -241,53 +317,26 @@ function mapCategorySalesRow(
       row.category,
 
     unitsSold:
-      row.units_sold ?? 0,
+      row.units_sold ??
+      0,
 
     salesValue:
-      row.sales_value ?? 0,
+      row.sales_value ??
+      0,
 
     estimatedProfit:
-      row.estimated_profit ?? 0,
+      row.estimated_profit ??
+      0,
 
     transactionCount:
-      row.transaction_count ?? 0,
-  };
-}
-
-function mapPeriodTotalsRow(
-  row:
-    | PeriodTotalsRow
-    | null,
-): AnalyticsPeriodTotals {
-  return {
-    salesValue:
-      row?.sales_value ?? 0,
-
-    estimatedProfit:
-      row?.estimated_profit ?? 0,
-
-    salesUnits:
-      row?.sales_units ?? 0,
-
-    stockInValue:
-      row?.stock_in_value ?? 0,
-
-    stockInUnits:
-      row?.stock_in_units ?? 0,
-
-    damageValue:
-      row?.damage_value ?? 0,
-
-    damageUnits:
-      row?.damage_units ?? 0,
-
-    transactionCount:
-      row?.transaction_count ?? 0,
+      row.transaction_count ??
+      0,
   };
 }
 
 function mapSalesTrendRow(
-  row: SalesTrendRow,
+  row:
+    SalesTrendRow,
 ): SalesTrendMetric {
   return {
     date:
@@ -309,24 +358,32 @@ function mapSalesTrendRow(
       row.category,
 
     salesValue:
-      row.sales_value ?? 0,
+      row.sales_value ??
+      0,
 
     salesUnits:
-      row.sales_units ?? 0,
+      row.sales_units ??
+      0,
 
     estimatedProfit:
-      row.estimated_profit ?? 0,
+      row.estimated_profit ??
+      0,
   };
 }
 
 function calculatePercentChange(
-  current: number,
-  previous: number,
+  current:
+    number,
+
+  previous:
+    number,
 ): number | null {
   if (
-    previous === 0
+    previous ===
+    0
   ) {
-    return current === 0
+    return current ===
+      0
       ? 0
       : null;
   }
@@ -389,10 +446,12 @@ function buildProductTrends(
     ProductComparisonRow[],
 ): ProductTrend[] {
   const trends:
-    ProductTrend[] = [];
+    ProductTrend[] =
+      [];
 
   for (
-    const row of rows
+    const row of
+    rows
   ) {
     const currentUnits =
       row.current_units_sold ??
@@ -470,8 +529,10 @@ function buildProductTrends(
     };
 
     if (
-      previousUnits <= 2 &&
-      currentUnits >= 8
+      previousUnits <=
+        2 &&
+      currentUnits >=
+        8
     ) {
       trends.push({
         ...baseTrend,
@@ -484,10 +545,14 @@ function buildProductTrends(
     }
 
     if (
-      previousUnits >= 5 &&
-      currentUnits >= 10 &&
-      changePercent !== null &&
-      changePercent >= 40
+      previousUnits >=
+        5 &&
+      currentUnits >=
+        10 &&
+      changePercent !==
+        null &&
+      changePercent >=
+        40
     ) {
       trends.push({
         ...baseTrend,
@@ -500,9 +565,12 @@ function buildProductTrends(
     }
 
     if (
-      previousUnits >= 10 &&
-      changePercent !== null &&
-      changePercent <= -35
+      previousUnits >=
+        10 &&
+      changePercent !==
+        null &&
+      changePercent <=
+        -35
     ) {
       trends.push({
         ...baseTrend,
@@ -547,9 +615,110 @@ function buildProductTrends(
   );
 }
 
+function buildPeriodTotals(
+  row:
+    CombinedPeriodTotalsRow | null,
+
+  period:
+    "current" |
+    "previous",
+): AnalyticsPeriodTotals {
+  if (
+    period ===
+    "current"
+  ) {
+    return {
+      salesValue:
+        row
+          ?.current_sales_value ??
+        0,
+
+      estimatedProfit:
+        row
+          ?.current_estimated_profit ??
+        0,
+
+      salesUnits:
+        row
+          ?.current_sales_units ??
+        0,
+
+      stockInValue:
+        row
+          ?.current_stock_in_value ??
+        0,
+
+      stockInUnits:
+        row
+          ?.current_stock_in_units ??
+        0,
+
+      damageValue:
+        row
+          ?.current_damage_value ??
+        0,
+
+      damageUnits:
+        row
+          ?.current_damage_units ??
+        0,
+
+      transactionCount:
+        row
+          ?.current_transaction_count ??
+        0,
+    };
+  }
+
+  return {
+    salesValue:
+      row
+        ?.previous_sales_value ??
+      0,
+
+    estimatedProfit:
+      row
+        ?.previous_estimated_profit ??
+      0,
+
+    salesUnits:
+      row
+        ?.previous_sales_units ??
+      0,
+
+    stockInValue:
+      row
+        ?.previous_stock_in_value ??
+      0,
+
+    stockInUnits:
+      row
+        ?.previous_stock_in_units ??
+      0,
+
+    damageValue:
+      row
+        ?.previous_damage_value ??
+      0,
+
+    damageUnits:
+      row
+        ?.previous_damage_units ??
+      0,
+
+    transactionCount:
+      row
+        ?.previous_transaction_count ??
+      0,
+  };
+}
+
 export async function getInventoryAnalyticsSummary(
-  days = 30,
-  topLimit = 5,
+  days =
+    30,
+
+  topLimit =
+    5,
 ): Promise<InventoryAnalyticsSummary> {
   if (
     !Number.isInteger(
@@ -583,883 +752,941 @@ export async function getInventoryAnalyticsSummary(
     );
 
   const currentStart =
-    `-${days} days`;
+    getPeriodStartIso(
+      days,
+    );
 
   const previousStart =
-    `-${days * 2} days`;
-
-  const previousEnd =
-    `-${days} days`;
+    getPeriodStartIso(
+      days *
+        2,
+    );
 
   const [
     dailyRows,
     productRows,
-    categoryRows,
-    categoryShareRows,
-    currentTotalsRow,
-    previousTotalsRow,
+    allCategoryRows,
+    combinedTotalsRow,
     productComparisonRows,
     salesTrendRows,
-  ] = await Promise.all([
-    database.getAllAsync<DailyMetricRow>(
-      `
-        SELECT
-          date(
-            created_at,
-            'localtime'
-          ) AS date,
+  ] =
+    await Promise.all([
+      /*
+       * Daily totals.
+       */
+      database.getAllAsync<DailyMetricRow>(
+        `
+          SELECT
+            date(
+              created_at,
+              'localtime'
+            )
+              AS date,
 
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'sale'
-                THEN transaction_value
-                ELSE 0
-              END
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    transaction_type = 'sale'
+
+                  THEN
+                    transaction_value
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS sales_value,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    transaction_type = 'sale'
+
+                  THEN
+                    (
+                      unit_price -
+                      unit_cost
+                    ) *
+                    quantity
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS estimated_profit,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    transaction_type = 'stock_in'
+
+                  THEN
+                    transaction_value
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS stock_in_value,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    transaction_type = 'damage'
+
+                  THEN
+                    transaction_value
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS damage_value,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    transaction_type = 'sale'
+
+                  THEN
+                    quantity
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS sales_units,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    transaction_type = 'stock_in'
+
+                  THEN
+                    quantity
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS stock_in_units,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    transaction_type = 'damage'
+
+                  THEN
+                    quantity
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS damage_units,
+
+            COUNT(*)
+              AS transaction_count
+
+          FROM inventory_transactions
+
+          WHERE
+            created_at >= ?
+
+          GROUP BY
+            date(
+              created_at,
+              'localtime'
+            )
+
+          ORDER BY
+            date ASC;
+        `,
+        currentStart,
+      ),
+
+      /*
+       * Top selling products.
+       */
+      database.getAllAsync<ProductSalesRow>(
+        `
+          SELECT
+            products.id
+              AS product_id,
+
+            products.name
+              AS product_name,
+
+            products.brand,
+
+            products.department,
+
+            products.category,
+
+            COALESCE(
+              SUM(
+                transactions.quantity
+              ),
+              0
+            )
+              AS units_sold,
+
+            COALESCE(
+              SUM(
+                transactions.transaction_value
+              ),
+              0
+            )
+              AS sales_value,
+
+            COALESCE(
+              SUM(
+                (
+                  transactions.unit_price -
+                  transactions.unit_cost
+                ) *
+                transactions.quantity
+              ),
+              0
+            )
+              AS estimated_profit,
+
+            COUNT(
+              transactions.id
+            )
+              AS transaction_count
+
+          FROM inventory_transactions
+            AS transactions
+
+          INNER JOIN products
+
+            ON
+              products.id =
+                transactions.product_id
+
+          WHERE
+            transactions.transaction_type =
+              'sale'
+
+            AND
+              transactions.created_at >= ?
+
+          GROUP BY
+            products.id,
+            products.name,
+            products.brand,
+            products.department,
+            products.category
+
+          ORDER BY
+            sales_value DESC,
+            units_sold DESC,
+            product_name COLLATE NOCASE ASC
+
+          LIMIT ?;
+        `,
+        currentStart,
+        safeTopLimit,
+      ),
+
+      /*
+       * Category metrics are calculated
+       * only once.
+       *
+       * We use the complete result for the
+       * category-share chart and slice it
+       * in JavaScript for Top Categories.
+       */
+      database.getAllAsync<CategorySalesRow>(
+        `
+          SELECT
+            products.department,
+
+            products.category,
+
+            COALESCE(
+              SUM(
+                transactions.quantity
+              ),
+              0
+            )
+              AS units_sold,
+
+            COALESCE(
+              SUM(
+                transactions.transaction_value
+              ),
+              0
+            )
+              AS sales_value,
+
+            COALESCE(
+              SUM(
+                (
+                  transactions.unit_price -
+                  transactions.unit_cost
+                ) *
+                transactions.quantity
+              ),
+              0
+            )
+              AS estimated_profit,
+
+            COUNT(
+              transactions.id
+            )
+              AS transaction_count
+
+          FROM inventory_transactions
+            AS transactions
+
+          INNER JOIN products
+
+            ON
+              products.id =
+                transactions.product_id
+
+          WHERE
+            transactions.transaction_type =
+              'sale'
+
+            AND
+              transactions.created_at >= ?
+
+          GROUP BY
+            products.department,
+            products.category
+
+          ORDER BY
+            sales_value DESC,
+            units_sold DESC,
+            products.department COLLATE NOCASE ASC,
+            products.category COLLATE NOCASE ASC;
+        `,
+        currentStart,
+      ),
+
+      /*
+       * Current + previous period totals
+       * are calculated in one scan.
+       */
+      database.getFirstAsync<CombinedPeriodTotalsRow>(
+        `
+          SELECT
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    created_at >= ?
+                    AND transaction_type = 'sale'
+
+                  THEN
+                    transaction_value
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS current_sales_value,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    created_at >= ?
+                    AND transaction_type = 'sale'
+
+                  THEN
+                    (
+                      unit_price -
+                      unit_cost
+                    ) *
+                    quantity
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS current_estimated_profit,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    created_at >= ?
+                    AND transaction_type = 'sale'
+
+                  THEN
+                    quantity
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS current_sales_units,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    created_at >= ?
+                    AND transaction_type = 'stock_in'
+
+                  THEN
+                    transaction_value
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS current_stock_in_value,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    created_at >= ?
+                    AND transaction_type = 'stock_in'
+
+                  THEN
+                    quantity
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS current_stock_in_units,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    created_at >= ?
+                    AND transaction_type = 'damage'
+
+                  THEN
+                    transaction_value
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS current_damage_value,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    created_at >= ?
+                    AND transaction_type = 'damage'
+
+                  THEN
+                    quantity
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS current_damage_units,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    created_at >= ?
+
+                  THEN
+                    1
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS current_transaction_count,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    created_at >= ?
+                    AND created_at < ?
+                    AND transaction_type = 'sale'
+
+                  THEN
+                    transaction_value
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS previous_sales_value,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    created_at >= ?
+                    AND created_at < ?
+                    AND transaction_type = 'sale'
+
+                  THEN
+                    (
+                      unit_price -
+                      unit_cost
+                    ) *
+                    quantity
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS previous_estimated_profit,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    created_at >= ?
+                    AND created_at < ?
+                    AND transaction_type = 'sale'
+
+                  THEN
+                    quantity
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS previous_sales_units,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    created_at >= ?
+                    AND created_at < ?
+                    AND transaction_type = 'stock_in'
+
+                  THEN
+                    transaction_value
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS previous_stock_in_value,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    created_at >= ?
+                    AND created_at < ?
+                    AND transaction_type = 'stock_in'
+
+                  THEN
+                    quantity
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS previous_stock_in_units,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    created_at >= ?
+                    AND created_at < ?
+                    AND transaction_type = 'damage'
+
+                  THEN
+                    transaction_value
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS previous_damage_value,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    created_at >= ?
+                    AND created_at < ?
+                    AND transaction_type = 'damage'
+
+                  THEN
+                    quantity
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS previous_damage_units,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    created_at >= ?
+                    AND created_at < ?
+
+                  THEN
+                    1
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS previous_transaction_count
+
+          FROM inventory_transactions
+
+          WHERE
+            created_at >= ?;
+        `,
+        currentStart,
+        currentStart,
+        currentStart,
+        currentStart,
+        currentStart,
+        currentStart,
+        currentStart,
+        currentStart,
+
+        previousStart,
+        currentStart,
+
+        previousStart,
+        currentStart,
+
+        previousStart,
+        currentStart,
+
+        previousStart,
+        currentStart,
+
+        previousStart,
+        currentStart,
+
+        previousStart,
+        currentStart,
+
+        previousStart,
+        currentStart,
+
+        previousStart,
+        currentStart,
+
+        previousStart,
+      ),
+
+      /*
+       * Product trend comparison.
+       *
+       * Only SALE transactions from the
+       * required two-period range enter
+       * the join.
+       */
+      database.getAllAsync<ProductComparisonRow>(
+        `
+          SELECT
+            products.id
+              AS product_id,
+
+            products.name
+              AS product_name,
+
+            products.brand,
+
+            products.department,
+
+            products.category,
+
+            products.current_stock,
+
+            products.reorder_level,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    transactions.created_at >= ?
+
+                  THEN
+                    transactions.quantity
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS current_units_sold,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    transactions.created_at >= ?
+
+                  THEN
+                    transactions.transaction_value
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS current_sales_value,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    transactions.created_at >= ?
+
+                  THEN
+                    (
+                      transactions.unit_price -
+                      transactions.unit_cost
+                    ) *
+                    transactions.quantity
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS current_estimated_profit,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    transactions.created_at < ?
+
+                  THEN
+                    transactions.quantity
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS previous_units_sold,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    transactions.created_at < ?
+
+                  THEN
+                    transactions.transaction_value
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS previous_sales_value,
+
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN
+                    transactions.created_at < ?
+
+                  THEN
+                    (
+                      transactions.unit_price -
+                      transactions.unit_cost
+                    ) *
+                    transactions.quantity
+
+                  ELSE 0
+                END
+              ),
+              0
+            )
+              AS previous_estimated_profit
+
+          FROM products
+
+          LEFT JOIN inventory_transactions
+            AS transactions
+
+            ON
+              products.id =
+                transactions.product_id
+
+              AND
+                transactions.transaction_type =
+                  'sale'
+
+              AND
+                transactions.created_at >= ?
+
+          WHERE
+            products.is_active =
+              1
+
+          GROUP BY
+            products.id,
+            products.name,
+            products.brand,
+            products.department,
+            products.category,
+            products.current_stock,
+            products.reorder_level;
+        `,
+        currentStart,
+        currentStart,
+        currentStart,
+
+        currentStart,
+        currentStart,
+        currentStart,
+
+        previousStart,
+      ),
+
+      /*
+       * Daily per-product sales trend.
+       */
+      database.getAllAsync<SalesTrendRow>(
+        `
+          SELECT
+            date(
+              transactions.created_at,
+              'localtime'
+            )
+              AS date,
+
+            products.id
+              AS product_id,
+
+            products.name
+              AS product_name,
+
+            products.brand,
+
+            products.department,
+
+            products.category,
+
+            COALESCE(
+              SUM(
+                transactions.transaction_value
+              ),
+              0
+            )
+              AS sales_value,
+
+            COALESCE(
+              SUM(
+                transactions.quantity
+              ),
+              0
+            )
+              AS sales_units,
+
+            COALESCE(
+              SUM(
+                (
+                  transactions.unit_price -
+                  transactions.unit_cost
+                ) *
+                transactions.quantity
+              ),
+              0
+            )
+              AS estimated_profit
+
+          FROM inventory_transactions
+            AS transactions
+
+          INNER JOIN products
+
+            ON
+              products.id =
+                transactions.product_id
+
+          WHERE
+            transactions.transaction_type =
+              'sale'
+
+            AND
+              transactions.created_at >= ?
+
+          GROUP BY
+            date(
+              transactions.created_at,
+              'localtime'
             ),
-            0
-          ) AS sales_value,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'sale'
-                THEN
-                  (
-                    unit_price -
-                    unit_cost
-                  ) * quantity
-                ELSE 0
-              END
-            ),
-            0
-          ) AS estimated_profit,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'stock_in'
-                THEN transaction_value
-                ELSE 0
-              END
-            ),
-            0
-          ) AS stock_in_value,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'damage'
-                THEN transaction_value
-                ELSE 0
-              END
-            ),
-            0
-          ) AS damage_value,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'sale'
-                THEN quantity
-                ELSE 0
-              END
-            ),
-            0
-          ) AS sales_units,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'stock_in'
-                THEN quantity
-                ELSE 0
-              END
-            ),
-            0
-          ) AS stock_in_units,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'damage'
-                THEN quantity
-                ELSE 0
-              END
-            ),
-            0
-          ) AS damage_units,
-
-          COUNT(*) AS transaction_count
-
-        FROM inventory_transactions
-
-        WHERE datetime(
-          created_at
-        ) >= datetime(
-          'now',
-          ?
-        )
-
-        GROUP BY
-          date(
-            created_at,
-            'localtime'
-          )
-
-        ORDER BY
-          date ASC;
-      `,
-      currentStart,
-    ),
-
-    database.getAllAsync<ProductSalesRow>(
-      `
-        SELECT
-          products.id
-            AS product_id,
-
-          products.name
-            AS product_name,
-
-          products.brand,
-
-          products.department,
-
-          products.category,
-
-          COALESCE(
-            SUM(
-              transactions.quantity
-            ),
-            0
-          ) AS units_sold,
-
-          COALESCE(
-            SUM(
-              transactions.transaction_value
-            ),
-            0
-          ) AS sales_value,
-
-          COALESCE(
-            SUM(
-              (
-                transactions.unit_price -
-                transactions.unit_cost
-              ) *
-              transactions.quantity
-            ),
-            0
-          ) AS estimated_profit,
-
-          COUNT(
-            transactions.id
-          ) AS transaction_count
-
-        FROM inventory_transactions
-          AS transactions
-
-        INNER JOIN products
-          ON products.id =
-            transactions.product_id
-
-        WHERE
-          transactions.transaction_type =
-            'sale'
-
-          AND datetime(
-            transactions.created_at
-          ) >= datetime(
-            'now',
-            ?
-          )
-
-        GROUP BY
-          products.id,
-          products.name,
-          products.brand,
-          products.department,
-          products.category
-
-        ORDER BY
-          sales_value DESC,
-          units_sold DESC,
-          product_name ASC
-
-        LIMIT ?;
-      `,
-      currentStart,
-      safeTopLimit,
-    ),
-
-    database.getAllAsync<CategorySalesRow>(
-      `
-        SELECT
-          products.department,
-
-          products.category,
-
-          COALESCE(
-            SUM(
-              transactions.quantity
-            ),
-            0
-          ) AS units_sold,
-
-          COALESCE(
-            SUM(
-              transactions.transaction_value
-            ),
-            0
-          ) AS sales_value,
-
-          COALESCE(
-            SUM(
-              (
-                transactions.unit_price -
-                transactions.unit_cost
-              ) *
-              transactions.quantity
-            ),
-            0
-          ) AS estimated_profit,
-
-          COUNT(
-            transactions.id
-          ) AS transaction_count
-
-        FROM inventory_transactions
-          AS transactions
-
-        INNER JOIN products
-          ON products.id =
-            transactions.product_id
-
-        WHERE
-          transactions.transaction_type =
-            'sale'
-
-          AND datetime(
-            transactions.created_at
-          ) >= datetime(
-            'now',
-            ?
-          )
-
-        GROUP BY
-          products.department,
-          products.category
-
-        ORDER BY
-          sales_value DESC,
-          units_sold DESC,
-          products.department ASC,
-          products.category ASC
-
-        LIMIT ?;
-      `,
-      currentStart,
-      safeTopLimit,
-    ),
-
-    /*
-     * All category sales.
-     *
-     * No LIMIT because the donut chart
-     * needs the full category total.
-     */
-    database.getAllAsync<CategorySalesRow>(
-      `
-        SELECT
-          products.department,
-
-          products.category,
-
-          COALESCE(
-            SUM(
-              transactions.quantity
-            ),
-            0
-          ) AS units_sold,
-
-          COALESCE(
-            SUM(
-              transactions.transaction_value
-            ),
-            0
-          ) AS sales_value,
-
-          COALESCE(
-            SUM(
-              (
-                transactions.unit_price -
-                transactions.unit_cost
-              ) *
-              transactions.quantity
-            ),
-            0
-          ) AS estimated_profit,
-
-          COUNT(
-            transactions.id
-          ) AS transaction_count
-
-        FROM inventory_transactions
-          AS transactions
-
-        INNER JOIN products
-          ON products.id =
-            transactions.product_id
-
-        WHERE
-          transactions.transaction_type =
-            'sale'
-
-          AND datetime(
-            transactions.created_at
-          ) >= datetime(
-            'now',
-            ?
-          )
-
-        GROUP BY
-          products.department,
-          products.category
-
-        ORDER BY
-          sales_value DESC,
-          units_sold DESC,
-          products.department ASC,
-          products.category ASC;
-      `,
-      currentStart,
-    ),
-
-    database.getFirstAsync<PeriodTotalsRow>(
-      `
-        SELECT
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'sale'
-                THEN transaction_value
-                ELSE 0
-              END
-            ),
-            0
-          ) AS sales_value,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'sale'
-                THEN
-                  (
-                    unit_price -
-                    unit_cost
-                  ) * quantity
-                ELSE 0
-              END
-            ),
-            0
-          ) AS estimated_profit,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'sale'
-                THEN quantity
-                ELSE 0
-              END
-            ),
-            0
-          ) AS sales_units,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'stock_in'
-                THEN transaction_value
-                ELSE 0
-              END
-            ),
-            0
-          ) AS stock_in_value,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'stock_in'
-                THEN quantity
-                ELSE 0
-              END
-            ),
-            0
-          ) AS stock_in_units,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'damage'
-                THEN transaction_value
-                ELSE 0
-              END
-            ),
-            0
-          ) AS damage_value,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'damage'
-                THEN quantity
-                ELSE 0
-              END
-            ),
-            0
-          ) AS damage_units,
-
-          COUNT(*) AS transaction_count
-
-        FROM inventory_transactions
-
-        WHERE datetime(
-          created_at
-        ) >= datetime(
-          'now',
-          ?
-        );
-      `,
-      currentStart,
-    ),
-
-    database.getFirstAsync<PeriodTotalsRow>(
-      `
-        SELECT
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'sale'
-                THEN transaction_value
-                ELSE 0
-              END
-            ),
-            0
-          ) AS sales_value,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'sale'
-                THEN
-                  (
-                    unit_price -
-                    unit_cost
-                  ) * quantity
-                ELSE 0
-              END
-            ),
-            0
-          ) AS estimated_profit,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'sale'
-                THEN quantity
-                ELSE 0
-              END
-            ),
-            0
-          ) AS sales_units,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'stock_in'
-                THEN transaction_value
-                ELSE 0
-              END
-            ),
-            0
-          ) AS stock_in_value,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'stock_in'
-                THEN quantity
-                ELSE 0
-              END
-            ),
-            0
-          ) AS stock_in_units,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'damage'
-                THEN transaction_value
-                ELSE 0
-              END
-            ),
-            0
-          ) AS damage_value,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN transaction_type = 'damage'
-                THEN quantity
-                ELSE 0
-              END
-            ),
-            0
-          ) AS damage_units,
-
-          COUNT(*) AS transaction_count
-
-        FROM inventory_transactions
-
-        WHERE
-          datetime(
-            created_at
-          ) >= datetime(
-            'now',
-            ?
-          )
-
-          AND datetime(
-            created_at
-          ) < datetime(
-            'now',
-            ?
-          );
-      `,
-      previousStart,
-      previousEnd,
-    ),
-
-    database.getAllAsync<ProductComparisonRow>(
-      `
-        SELECT
-          products.id
-            AS product_id,
-
-          products.name
-            AS product_name,
-
-          products.brand,
-
-          products.department,
-
-          products.category,
-
-          products.current_stock,
-
-          products.reorder_level,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN
-                  transactions.transaction_type =
-                    'sale'
-
-                  AND datetime(
-                    transactions.created_at
-                  ) >= datetime(
-                    'now',
-                    ?
-                  )
-
-                THEN
-                  transactions.quantity
-
-                ELSE 0
-              END
-            ),
-            0
-          ) AS current_units_sold,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN
-                  transactions.transaction_type =
-                    'sale'
-
-                  AND datetime(
-                    transactions.created_at
-                  ) >= datetime(
-                    'now',
-                    ?
-                  )
-
-                THEN
-                  transactions.transaction_value
-
-                ELSE 0
-              END
-            ),
-            0
-          ) AS current_sales_value,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN
-                  transactions.transaction_type =
-                    'sale'
-
-                  AND datetime(
-                    transactions.created_at
-                  ) >= datetime(
-                    'now',
-                    ?
-                  )
-
-                THEN
-                  (
-                    transactions.unit_price -
-                    transactions.unit_cost
-                  ) *
-                  transactions.quantity
-
-                ELSE 0
-              END
-            ),
-            0
-          ) AS current_estimated_profit,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN
-                  transactions.transaction_type =
-                    'sale'
-
-                  AND datetime(
-                    transactions.created_at
-                  ) >= datetime(
-                    'now',
-                    ?
-                  )
-
-                  AND datetime(
-                    transactions.created_at
-                  ) < datetime(
-                    'now',
-                    ?
-                  )
-
-                THEN
-                  transactions.quantity
-
-                ELSE 0
-              END
-            ),
-            0
-          ) AS previous_units_sold,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN
-                  transactions.transaction_type =
-                    'sale'
-
-                  AND datetime(
-                    transactions.created_at
-                  ) >= datetime(
-                    'now',
-                    ?
-                  )
-
-                  AND datetime(
-                    transactions.created_at
-                  ) < datetime(
-                    'now',
-                    ?
-                  )
-
-                THEN
-                  transactions.transaction_value
-
-                ELSE 0
-              END
-            ),
-            0
-          ) AS previous_sales_value,
-
-          COALESCE(
-            SUM(
-              CASE
-                WHEN
-                  transactions.transaction_type =
-                    'sale'
-
-                  AND datetime(
-                    transactions.created_at
-                  ) >= datetime(
-                    'now',
-                    ?
-                  )
-
-                  AND datetime(
-                    transactions.created_at
-                  ) < datetime(
-                    'now',
-                    ?
-                  )
-
-                THEN
-                  (
-                    transactions.unit_price -
-                    transactions.unit_cost
-                  ) *
-                  transactions.quantity
-
-                ELSE 0
-              END
-            ),
-            0
-          ) AS previous_estimated_profit
-
-        FROM products
-
-        LEFT JOIN inventory_transactions
-          AS transactions
-
-          ON products.id =
-            transactions.product_id
-
-          AND datetime(
-            transactions.created_at
-          ) >= datetime(
-            'now',
-            ?
-          )
-
-        WHERE
-          products.is_active = 1
-
-        GROUP BY
-          products.id,
-          products.name,
-          products.brand,
-          products.department,
-          products.category,
-          products.current_stock,
-          products.reorder_level;
-      `,
-      currentStart,
-      currentStart,
-      currentStart,
-
-      previousStart,
-      previousEnd,
-
-      previousStart,
-      previousEnd,
-
-      previousStart,
-      previousEnd,
-
-      previousStart,
-    ),
-
-    database.getAllAsync<SalesTrendRow>(
-      `
-        SELECT
-          date(
-            transactions.created_at,
-            'localtime'
-          ) AS date,
-
-          products.id
-            AS product_id,
-
-          products.name
-            AS product_name,
-
-          products.brand,
-
-          products.department,
-
-          products.category,
-
-          COALESCE(
-            SUM(
-              transactions.transaction_value
-            ),
-            0
-          ) AS sales_value,
-
-          COALESCE(
-            SUM(
-              transactions.quantity
-            ),
-            0
-          ) AS sales_units,
-
-          COALESCE(
-            SUM(
-              (
-                transactions.unit_price -
-                transactions.unit_cost
-              ) *
-              transactions.quantity
-            ),
-            0
-          ) AS estimated_profit
-
-        FROM inventory_transactions
-          AS transactions
-
-        INNER JOIN products
-          ON products.id =
-            transactions.product_id
-
-        WHERE
-          transactions.transaction_type =
-            'sale'
-
-          AND datetime(
-            transactions.created_at
-          ) >= datetime(
-            'now',
-            ?
-          )
-
-        GROUP BY
-          date(
-            transactions.created_at,
-            'localtime'
-          ),
-          products.id,
-          products.name,
-          products.brand,
-          products.department,
-          products.category
-
-        ORDER BY
-          date ASC,
-          products.name ASC;
-      `,
-      currentStart,
-    ),
-  ]);
+            products.id,
+            products.name,
+            products.brand,
+            products.department,
+            products.category
+
+          ORDER BY
+            date ASC,
+            products.name COLLATE NOCASE ASC;
+        `,
+        currentStart,
+      ),
+    ]);
 
   const currentTotals =
-    mapPeriodTotalsRow(
-      currentTotalsRow,
+    buildPeriodTotals(
+      combinedTotalsRow,
+      "current",
     );
 
   const previousTotals =
-    mapPeriodTotalsRow(
-      previousTotalsRow,
+    buildPeriodTotals(
+      combinedTotalsRow,
+      "previous",
+    );
+
+  const categoryMetrics =
+    allCategoryRows.map(
+      mapCategorySalesRow,
     );
 
   return {
@@ -1474,14 +1701,13 @@ export async function getInventoryAnalyticsSummary(
       ),
 
     topCategories:
-      categoryRows.map(
-        mapCategorySalesRow,
+      categoryMetrics.slice(
+        0,
+        safeTopLimit,
       ),
 
     categoryShareMetrics:
-      categoryShareRows.map(
-        mapCategorySalesRow,
-      ),
+      categoryMetrics,
 
     comparison:
       buildComparison(

@@ -3,13 +3,24 @@ import type {
   Product,
 } from "../types/product";
 
-import type { UpdateProductInput } from "../types/productUpdate";
+import type {
+  InventoryFilterState,
+  InventorySortOption,
+} from "../types/inventoryFilter";
 
-import { getDatabase } from "./database";
+import type {
+  UpdateProductInput,
+} from "../types/productUpdate";
+
+import {
+  getDatabase,
+} from "./database";
 
 interface ProductRow {
   id: number;
+
   barcode: string;
+
   name: string;
 
   department:
@@ -21,14 +32,17 @@ interface ProductRow {
   brand: string;
 
   unit_cost: number;
+
   unit_price: number;
 
   current_stock: number;
+
   reorder_level: number;
 
   is_active: number;
 
   created_at: string;
+
   updated_at: string;
 }
 
@@ -83,8 +97,59 @@ function normalizeBarcode(
   return barcode.trim();
 }
 
+function getInventoryOrderByClause(
+  sortBy:
+    InventorySortOption,
+): string {
+  switch (
+    sortBy
+  ) {
+    case "name-desc":
+      return `
+        name COLLATE NOCASE DESC,
+        id ASC
+      `;
+
+    case "stock-asc":
+      return `
+        current_stock ASC,
+        name COLLATE NOCASE ASC,
+        id ASC
+      `;
+
+    case "stock-desc":
+      return `
+        current_stock DESC,
+        name COLLATE NOCASE ASC,
+        id ASC
+      `;
+
+    case "price-asc":
+      return `
+        unit_price ASC,
+        name COLLATE NOCASE ASC,
+        id ASC
+      `;
+
+    case "price-desc":
+      return `
+        unit_price DESC,
+        name COLLATE NOCASE ASC,
+        id ASC
+      `;
+
+    case "name-asc":
+    default:
+      return `
+        name COLLATE NOCASE ASC,
+        id ASC
+      `;
+  }
+}
+
 export async function createProduct(
-  input: CreateProductInput,
+  input:
+    CreateProductInput,
 ): Promise<number> {
   const database =
     await getDatabase();
@@ -99,39 +164,50 @@ export async function createProduct(
 
   /*
    * Brand is optional.
+   *
    * Empty brand is stored as "".
    */
   const brand =
     input.brand.trim();
 
   const currentStock =
-    input.currentStock ?? 0;
+    input.currentStock ??
+    0;
 
   const reorderLevel =
-    input.reorderLevel ?? 5;
+    input.reorderLevel ??
+    5;
 
   const now =
     new Date().toISOString();
 
-  if (!barcode) {
+  if (
+    !barcode
+  ) {
     throw new Error(
       "Barcode is required.",
     );
   }
 
-  if (!name) {
+  if (
+    !name
+  ) {
     throw new Error(
       "Product name is required.",
     );
   }
 
-  if (!input.department) {
+  if (
+    !input.department
+  ) {
     throw new Error(
       "Department is required.",
     );
   }
 
-  if (!input.category) {
+  if (
+    !input.category
+  ) {
     throw new Error(
       "Category is required.",
     );
@@ -186,15 +262,22 @@ export async function createProduct(
       id: number;
     }>(
       `
-        SELECT id
+        SELECT
+          id
+
         FROM products
-        WHERE barcode = ?
+
+        WHERE
+          barcode = ?
+
         LIMIT 1;
       `,
       barcode,
     );
 
-  if (duplicateBarcode) {
+  if (
+    duplicateBarcode
+  ) {
     throw new Error(
       "Another product already uses this barcode.",
     );
@@ -217,6 +300,7 @@ export async function createProduct(
           created_at,
           updated_at
         )
+
         VALUES (
           ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?
         );
@@ -234,7 +318,9 @@ export async function createProduct(
       now,
     );
 
-  return result.lastInsertRowId;
+  return (
+    result.lastInsertRowId
+  );
 }
 
 export async function getAllProducts(): Promise<
@@ -263,11 +349,163 @@ export async function getAllProducts(): Promise<
 
         FROM products
 
-        WHERE is_active = 1
+        WHERE
+          is_active = 1
 
         ORDER BY
-          name COLLATE NOCASE ASC;
+          name COLLATE NOCASE ASC,
+          id ASC;
       `,
+    );
+
+  return rows.map(
+    mapProductRow,
+  );
+}
+
+/*
+ * Database-backed inventory filtering.
+ *
+ * Search, department filtering,
+ * low-stock filtering and sorting
+ * now happen inside SQLite instead
+ * of repeatedly filtering thousands
+ * of products in JavaScript.
+ */
+export async function getFilteredProducts(
+  filters:
+    InventoryFilterState,
+): Promise<Product[]> {
+  const database =
+    await getDatabase();
+
+  const conditions:
+    string[] = [
+      "is_active = 1",
+    ];
+
+  const parameters:
+    (
+      | string
+      | number
+    )[] = [];
+
+  const normalizedSearch =
+    filters.searchQuery
+      .trim();
+
+  if (
+    normalizedSearch
+  ) {
+    /*
+     * Preserve the existing UX where
+     * the search can match anywhere
+     * inside:
+     *
+     * - product name
+     * - brand
+     * - barcode
+     *
+     * For ~5,000 products this remains
+     * lightweight.
+     *
+     * If the inventory becomes much
+     * larger later, this can be moved
+     * to SQLite FTS without changing
+     * the UI API.
+     */
+    const searchPattern =
+      `%${normalizedSearch}%`;
+
+    conditions.push(
+      `
+        (
+          name LIKE ?
+            COLLATE NOCASE
+
+          OR brand LIKE ?
+            COLLATE NOCASE
+
+          OR barcode LIKE ?
+            COLLATE NOCASE
+        )
+      `,
+    );
+
+    parameters.push(
+      searchPattern,
+      searchPattern,
+      searchPattern,
+    );
+  }
+
+  if (
+    filters.department !==
+    "all"
+  ) {
+    conditions.push(
+      "department = ?",
+    );
+
+    parameters.push(
+      filters.department,
+    );
+  }
+
+  if (
+    filters.lowStockOnly
+  ) {
+    conditions.push(
+      `
+        current_stock <=
+          reorder_level
+      `,
+    );
+  }
+
+  /*
+   * IMPORTANT:
+   *
+   * The ORDER BY string does not
+   * contain user input.
+   *
+   * It is selected only from our
+   * fixed InventorySortOption union.
+   */
+  const orderBy =
+    getInventoryOrderByClause(
+      filters.sortBy,
+    );
+
+  const rows =
+    await database.getAllAsync<ProductRow>(
+      `
+        SELECT
+          id,
+          barcode,
+          name,
+          department,
+          category,
+          brand,
+          unit_cost,
+          unit_price,
+          current_stock,
+          reorder_level,
+          is_active,
+          created_at,
+          updated_at
+
+        FROM products
+
+        WHERE
+          ${conditions.join(
+            "\nAND ",
+          )}
+
+        ORDER BY
+          ${orderBy};
+      `,
+      ...parameters,
     );
 
   return rows.map(
@@ -289,15 +527,20 @@ export async function getProductCount(): Promise<number> {
 
         FROM products
 
-        WHERE is_active = 1;
+        WHERE
+          is_active = 1;
       `,
     );
 
-  return result?.total ?? 0;
+  return (
+    result?.total ??
+    0
+  );
 }
 
 export async function getProductByBarcode(
-  barcode: string,
+  barcode:
+    string,
 ): Promise<Product | null> {
   const database =
     await getDatabase();
@@ -307,7 +550,9 @@ export async function getProductByBarcode(
       barcode,
     );
 
-  if (!normalizedBarcode) {
+  if (
+    !normalizedBarcode
+  ) {
     return null;
   }
 
@@ -333,6 +578,7 @@ export async function getProductByBarcode(
 
         WHERE
           barcode = ?
+
           AND is_active = 1
 
         LIMIT 1;
@@ -341,12 +587,15 @@ export async function getProductByBarcode(
     );
 
   return row
-    ? mapProductRow(row)
+    ? mapProductRow(
+        row,
+      )
     : null;
 }
 
 export async function updateProduct(
-  input: UpdateProductInput,
+  input:
+    UpdateProductInput,
 ): Promise<void> {
   const database =
     await getDatabase();
@@ -359,31 +608,36 @@ export async function updateProduct(
   const name =
     input.name.trim();
 
-  /*
-   * Brand is optional.
-   */
   const brand =
     input.brand.trim();
 
-  if (!barcode) {
+  if (
+    !barcode
+  ) {
     throw new Error(
       "Barcode is required.",
     );
   }
 
-  if (!name) {
+  if (
+    !name
+  ) {
     throw new Error(
       "Product name is required.",
     );
   }
 
-  if (!input.department) {
+  if (
+    !input.department
+  ) {
     throw new Error(
       "Department is required.",
     );
   }
 
-  if (!input.category) {
+  if (
+    !input.category
+  ) {
     throw new Error(
       "Category is required.",
     );
@@ -427,12 +681,14 @@ export async function updateProduct(
       id: number;
     }>(
       `
-        SELECT id
+        SELECT
+          id
 
         FROM products
 
         WHERE
           barcode = ?
+
           AND id != ?
 
         LIMIT 1;
@@ -441,7 +697,9 @@ export async function updateProduct(
       input.productId,
     );
 
-  if (duplicateBarcode) {
+  if (
+    duplicateBarcode
+  ) {
     throw new Error(
       "Another product already uses this barcode.",
     );
@@ -463,7 +721,8 @@ export async function updateProduct(
           reorder_level = ?,
           updated_at = ?
 
-        WHERE id = ?;
+        WHERE
+          id = ?;
       `,
       barcode,
       name,
@@ -478,7 +737,8 @@ export async function updateProduct(
     );
 
   if (
-    result.changes === 0
+    result.changes ===
+    0
   ) {
     throw new Error(
       "Product could not be found.",
@@ -487,7 +747,8 @@ export async function updateProduct(
 }
 
 export async function archiveProduct(
-  productId: number,
+  productId:
+    number,
 ): Promise<void> {
   const database =
     await getDatabase();
@@ -503,6 +764,7 @@ export async function archiveProduct(
 
         WHERE
           id = ?
+
           AND is_active = 1;
       `,
       new Date().toISOString(),
@@ -510,7 +772,8 @@ export async function archiveProduct(
     );
 
   if (
-    result.changes === 0
+    result.changes ===
+    0
   ) {
     throw new Error(
       "The product is already archived or could not be found.",
@@ -519,7 +782,8 @@ export async function archiveProduct(
 }
 
 export async function restoreProduct(
-  productId: number,
+  productId:
+    number,
 ): Promise<void> {
   const database =
     await getDatabase();
@@ -535,6 +799,7 @@ export async function restoreProduct(
 
         WHERE
           id = ?
+
           AND is_active = 0;
       `,
       new Date().toISOString(),
@@ -542,7 +807,8 @@ export async function restoreProduct(
     );
 
   if (
-    result.changes === 0
+    result.changes ===
+    0
   ) {
     throw new Error(
       "The product is already active or could not be found.",
@@ -576,10 +842,12 @@ export async function getArchivedProducts(): Promise<
 
         FROM products
 
-        WHERE is_active = 0
+        WHERE
+          is_active = 0
 
         ORDER BY
-          name COLLATE NOCASE ASC;
+          name COLLATE NOCASE ASC,
+          id ASC;
       `,
     );
 

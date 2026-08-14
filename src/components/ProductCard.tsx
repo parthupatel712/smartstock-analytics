@@ -1,4 +1,9 @@
+import {
+  memo,
+} from "react";
+
 import { Ionicons } from "@expo/vector-icons";
+
 import {
   Pressable,
   StyleSheet,
@@ -6,32 +11,43 @@ import {
   View,
 } from "react-native";
 
-import type { Product } from "../types/product";
-import type { ProductDeliverySummary } from "../types/productDelivery";
+import type {
+  Product,
+} from "../types/product";
+
+import type {
+  ProductDeliverySummary,
+} from "../types/productDelivery";
 
 interface ProductCardProps {
-  product: Product;
+  product:
+    Product;
 
-  latestDelivery?: ProductDeliverySummary;
+  latestDelivery?:
+    ProductDeliverySummary;
 
   onUpdateInventory?: (
-    product: Product,
+    product:
+      Product,
   ) => void;
 
   onViewHistory?: (
-    product: Product,
+    product:
+      Product,
   ) => void;
 
   onEditProduct?: (
-    product: Product,
+    product:
+      Product,
   ) => void;
 
   onArchiveProduct?: (
-    product: Product,
+    product:
+      Product,
   ) => void;
 }
 
-export function ProductCard({
+function ProductCardComponent({
   product,
   latestDelivery,
   onUpdateInventory,
@@ -40,40 +56,64 @@ export function ProductCard({
   onArchiveProduct,
 }: ProductCardProps) {
   const isOutOfStock =
-    product.currentStock <= 0;
+    product.currentStock <=
+    0;
 
   const isLowStock =
-    product.currentStock > 0 &&
+    product.currentStock >
+      0 &&
     product.currentStock <=
       product.reorderLevel;
 
   return (
-    <View style={styles.card}>
-      <View style={styles.headerRow}>
+    <View
+      style={
+        styles.card
+      }
+    >
+      <View
+        style={
+          styles.headerRow
+        }
+      >
         <View
           style={
             styles.productHeaderContent
           }
         >
           <Text
-            style={styles.productName}
-            numberOfLines={2}
+            style={
+              styles.productName
+            }
+            numberOfLines={
+              2
+            }
           >
-            {product.name}
+            {
+              product.name
+            }
           </Text>
 
-         {product.brand.trim() ? (
-  <Text style={styles.brand}>
-    {product.brand}
-  </Text>
-) : null}
+          {product.brand.trim() ? (
+            <Text
+              style={
+                styles.brand
+              }
+            >
+              {
+                product.brand
+              }
+            </Text>
+          ) : null}
         </View>
 
         <View
           style={[
             styles.stockBadge,
+
             isOutOfStock &&
               styles.stockBadgeDanger,
+
             isLowStock &&
               styles.stockBadgeWarning,
           ]}
@@ -81,20 +121,26 @@ export function ProductCard({
           <Text
             style={[
               styles.stockBadgeValue,
+
               isOutOfStock &&
                 styles.stockBadgeValueDanger,
+
               isLowStock &&
                 styles.stockBadgeValueWarning,
             ]}
           >
-            {product.currentStock}
+            {
+              product.currentStock
+            }
           </Text>
 
           <Text
             style={[
               styles.stockBadgeLabel,
+
               isOutOfStock &&
                 styles.stockBadgeValueDanger,
+
               isLowStock &&
                 styles.stockBadgeValueWarning,
             ]}
@@ -104,46 +150,72 @@ export function ProductCard({
         </View>
       </View>
 
-      <View style={styles.taxonomyRow}>
-        <View style={styles.taxonomyChip}>
+      <View
+        style={
+          styles.taxonomyRow
+        }
+      >
+        <View
+          style={
+            styles.taxonomyChip
+          }
+        >
           <Text
             style={
               styles.taxonomyChipText
             }
           >
-            {product.department}
+            {
+              product.department
+            }
           </Text>
         </View>
 
-        <View style={styles.taxonomyChip}>
+        <View
+          style={
+            styles.taxonomyChip
+          }
+        >
           <Text
             style={
               styles.taxonomyChipText
             }
           >
-            {product.category}
+            {
+              product.category
+            }
           </Text>
         </View>
       </View>
 
-      <View style={styles.detailsSection}>
+      <View
+        style={
+          styles.detailsSection
+        }
+      >
         <DetailRow
           label="Barcode"
-          value={product.barcode}
+          value={
+            product.barcode
+          }
         />
 
         <DetailRow
           label="Selling price"
-          value={formatCurrency(
-            product.unitPrice,
-          )}
+          value={
+            formatCurrency(
+              product.unitPrice,
+            )
+          }
         />
 
         <DetailRow
           label="Unit cost"
-          value={formatCurrency(
-            product.unitCost,
-          )}
+          value={
+            formatCurrency(
+              product.unitCost,
+            )
+          }
         />
 
         <DetailRow
@@ -153,10 +225,16 @@ export function ProductCard({
       </View>
 
       {isOutOfStock ? (
-        <View style={styles.dangerMessage}>
+        <View
+          style={
+            styles.dangerMessage
+          }
+        >
           <Ionicons
             name="alert-circle-outline"
-            size={17}
+            size={
+              17
+            }
             color="#B42318"
           />
 
@@ -169,10 +247,16 @@ export function ProductCard({
           </Text>
         </View>
       ) : isLowStock ? (
-        <View style={styles.warningMessage}>
+        <View
+          style={
+            styles.warningMessage
+          }
+        >
           <Ionicons
             name="warning-outline"
-            size={17}
+            size={
+              17
+            }
             color="#9A6700"
           />
 
@@ -186,8 +270,16 @@ export function ProductCard({
         </View>
       ) : null}
 
-      <View style={styles.deliveryCard}>
-        <View style={styles.deliveryHeader}>
+      <View
+        style={
+          styles.deliveryCard
+        }
+      >
+        <View
+          style={
+            styles.deliveryHeader
+          }
+        >
           <View
             style={
               styles.deliveryTitleRow
@@ -195,7 +287,9 @@ export function ProductCard({
           >
             <Ionicons
               name="cube-outline"
-              size={18}
+              size={
+                18
+              }
               color="#1D4ED8"
             />
 
@@ -240,9 +334,11 @@ export function ProductCard({
 
               <DeliveryMetric
                 label="Value"
-                value={formatCurrency(
-                  latestDelivery.deliveryValue,
-                )}
+                value={
+                  formatCurrency(
+                    latestDelivery.deliveryValue,
+                  )
+                }
               />
             </View>
 
@@ -254,7 +350,9 @@ export function ProductCard({
               >
                 <Ionicons
                   name="document-text-outline"
-                  size={15}
+                  size={
+                    15
+                  }
                   color="#52698E"
                 />
 
@@ -263,7 +361,9 @@ export function ProductCard({
                     styles.deliveryNoteText
                   }
                 >
-                  {latestDelivery.notes}
+                  {
+                    latestDelivery.notes
+                  }
                 </Text>
               </View>
             ) : null}
@@ -279,16 +379,26 @@ export function ProductCard({
         )}
       </View>
 
-      <View style={styles.actionDivider} />
+      <View
+        style={
+          styles.actionDivider
+        }
+      />
 
-      <View style={styles.actionRow}>
+      <View
+        style={
+          styles.actionRow
+        }
+      >
         {onViewHistory ? (
           <IconActionButton
             icon="time-outline"
             label="History"
             accessibilityLabel="View transaction history"
             onPress={() =>
-              onViewHistory(product)
+              onViewHistory(
+                product,
+              )
             }
           />
         ) : null}
@@ -299,7 +409,9 @@ export function ProductCard({
             label="Inventory"
             accessibilityLabel="Update inventory"
             onPress={() =>
-              onUpdateInventory(product)
+              onUpdateInventory(
+                product,
+              )
             }
           />
         ) : null}
@@ -310,7 +422,9 @@ export function ProductCard({
             label="Edit"
             accessibilityLabel="Edit product"
             onPress={() =>
-              onEditProduct(product)
+              onEditProduct(
+                product,
+              )
             }
           />
         ) : null}
@@ -322,7 +436,9 @@ export function ProductCard({
             accessibilityLabel="Archive product"
             destructive
             onPress={() =>
-              onArchiveProduct(product)
+              onArchiveProduct(
+                product,
+              )
             }
           />
         ) : null}
@@ -331,60 +447,214 @@ export function ProductCard({
   );
 }
 
-interface DetailRowProps {
-  label: string;
-  value: string;
-}
+export const ProductCard =
+  memo(
+    ProductCardComponent,
+    (
+      previous,
+      next,
+    ) => {
+      return (
+        previous.product.id ===
+          next.product.id &&
 
-function DetailRow({
-  label,
-  value,
-}: DetailRowProps) {
+        previous.product.barcode ===
+          next.product.barcode &&
+
+        previous.product.name ===
+          next.product.name &&
+
+        previous.product.brand ===
+          next.product.brand &&
+
+        previous.product.department ===
+          next.product.department &&
+
+        previous.product.category ===
+          next.product.category &&
+
+        previous.product.unitCost ===
+          next.product.unitCost &&
+
+        previous.product.unitPrice ===
+          next.product.unitPrice &&
+
+        previous.product.currentStock ===
+          next.product.currentStock &&
+
+        previous.product.reorderLevel ===
+          next.product.reorderLevel &&
+
+        previous.product.isActive ===
+          next.product.isActive &&
+
+        previous.product.updatedAt ===
+          next.product.updatedAt &&
+
+        deliveriesEqual(
+          previous.latestDelivery,
+          next.latestDelivery,
+        ) &&
+
+        previous.onUpdateInventory ===
+          next.onUpdateInventory &&
+
+        previous.onViewHistory ===
+          next.onViewHistory &&
+
+        previous.onEditProduct ===
+          next.onEditProduct &&
+
+        previous.onArchiveProduct ===
+          next.onArchiveProduct
+      );
+    },
+  );
+
+function deliveriesEqual(
+  previous:
+    ProductDeliverySummary | undefined,
+
+  next:
+    ProductDeliverySummary | undefined,
+): boolean {
+  if (
+    previous ===
+    next
+  ) {
+    return true;
+  }
+
+  if (
+    !previous ||
+    !next
+  ) {
+    return false;
+  }
+
   return (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>
-        {label}
-      </Text>
+    previous.transactionId ===
+      next.transactionId &&
 
-      <Text
-        style={styles.detailValue}
-        numberOfLines={1}
-      >
-        {value}
-      </Text>
-    </View>
+    previous.productId ===
+      next.productId &&
+
+    previous.quantityReceived ===
+      next.quantityReceived &&
+
+    previous.stockBefore ===
+      next.stockBefore &&
+
+    previous.stockAfter ===
+      next.stockAfter &&
+
+    previous.unitCost ===
+      next.unitCost &&
+
+    previous.deliveryValue ===
+      next.deliveryValue &&
+
+    previous.source ===
+      next.source &&
+
+    previous.notes ===
+      next.notes &&
+
+    previous.receivedAt ===
+      next.receivedAt
   );
 }
+
+interface DetailRowProps {
+  label:
+    string;
+
+  value:
+    string;
+}
+
+const DetailRow =
+  memo(
+    function DetailRow({
+      label,
+      value,
+    }: DetailRowProps) {
+      return (
+        <View
+          style={
+            styles.detailRow
+          }
+        >
+          <Text
+            style={
+              styles.detailLabel
+            }
+          >
+            {
+              label
+            }
+          </Text>
+
+          <Text
+            style={
+              styles.detailValue
+            }
+            numberOfLines={
+              1
+            }
+          >
+            {
+              value
+            }
+          </Text>
+        </View>
+      );
+    },
+  );
 
 interface DeliveryMetricProps {
-  label: string;
-  value: string;
+  label:
+    string;
+
+  value:
+    string;
 }
 
-function DeliveryMetric({
-  label,
-  value,
-}: DeliveryMetricProps) {
-  return (
-    <View style={styles.deliveryMetric}>
-      <Text
-        style={
-          styles.deliveryMetricLabel
-        }
-      >
-        {label}
-      </Text>
+const DeliveryMetric =
+  memo(
+    function DeliveryMetric({
+      label,
+      value,
+    }: DeliveryMetricProps) {
+      return (
+        <View
+          style={
+            styles.deliveryMetric
+          }
+        >
+          <Text
+            style={
+              styles.deliveryMetricLabel
+            }
+          >
+            {
+              label
+            }
+          </Text>
 
-      <Text
-        style={
-          styles.deliveryMetricValue
-        }
-      >
-        {value}
-      </Text>
-    </View>
+          <Text
+            style={
+              styles.deliveryMetricValue
+            }
+          >
+            {
+              value
+            }
+          </Text>
+        </View>
+      );
+    },
   );
-}
 
 interface IconActionButtonProps {
   icon:
@@ -393,85 +663,117 @@ interface IconActionButtonProps {
     | "pencil-outline"
     | "trash-outline";
 
-  label: string;
+  label:
+    string;
 
-  accessibilityLabel: string;
+  accessibilityLabel:
+    string;
 
-  destructive?: boolean;
+  destructive?:
+    boolean;
 
-  onPress: () => void;
+  onPress:
+    () => void;
 }
 
-function IconActionButton({
-  icon,
-  label,
-  accessibilityLabel,
-  destructive = false,
-  onPress,
-}: IconActionButtonProps) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={
-        accessibilityLabel
-      }
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.iconActionButton,
+const IconActionButton =
+  memo(
+    function IconActionButton({
+      icon,
+      label,
+      accessibilityLabel,
+      destructive =
+        false,
+      onPress,
+    }: IconActionButtonProps) {
+      return (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            accessibilityLabel
+          }
+          onPress={
+            onPress
+          }
+          style={({
+            pressed,
+          }) => [
+            styles.iconActionButton,
 
-        destructive &&
-          styles.destructiveIconActionButton,
+            destructive &&
+              styles.destructiveIconActionButton,
 
-        pressed &&
-          styles.iconActionButtonPressed,
+            pressed &&
+              styles.iconActionButtonPressed,
 
-        pressed &&
-          destructive &&
-          styles.destructiveIconActionButtonPressed,
-      ]}
-    >
-      <Ionicons
-        name={icon}
-        size={20}
-        color={
-          destructive
-            ? "#B42318"
-            : "#374151"
-        }
-      />
+            pressed &&
+              destructive &&
+              styles.destructiveIconActionButtonPressed,
+          ]}
+        >
+          <Ionicons
+            name={
+              icon
+            }
+            size={
+              20
+            }
+            color={
+              destructive
+                ? "#B42318"
+                : "#374151"
+            }
+          />
 
-      <Text
-        style={[
-          styles.iconActionLabel,
+          <Text
+            style={[
+              styles.iconActionLabel,
 
-          destructive &&
-            styles.destructiveIconActionLabel,
-        ]}
-      >
-        {label}
-      </Text>
-    </Pressable>
+              destructive &&
+                styles.destructiveIconActionLabel,
+            ]}
+          >
+            {
+              label
+            }
+          </Text>
+        </Pressable>
+      );
+    },
+  );
+
+const currencyFormatter =
+  new Intl.NumberFormat(
+    "en-CA",
+    {
+      style:
+        "currency",
+
+      currency:
+        "CAD",
+
+      maximumFractionDigits:
+        2,
+    },
+  );
+
+function formatCurrency(
+  value:
+    number,
+): string {
+  return currencyFormatter.format(
+    value,
   );
 }
 
-function formatCurrency(
-  value: number,
-): string {
-  return new Intl.NumberFormat(
-    "en-CA",
-    {
-      style: "currency",
-      currency: "CAD",
-      maximumFractionDigits: 2,
-    },
-  ).format(value);
-}
-
 function formatDateTime(
-  value: string,
+  value:
+    string,
 ): string {
   const date =
-    new Date(value);
+    new Date(
+      value,
+    );
 
   if (
     Number.isNaN(
@@ -484,355 +786,580 @@ function formatDateTime(
   return date.toLocaleString(
     "en-CA",
     {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
+      month:
+        "short",
+
+      day:
+        "numeric",
+
+      hour:
+        "numeric",
+
+      minute:
+        "2-digit",
     },
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    marginBottom: 14,
+const styles =
+  StyleSheet.create({
+    card: {
+      marginBottom:
+        14,
 
-    borderWidth: 1,
-    borderColor: "#E0E4E8",
+      borderWidth:
+        1,
 
-    borderRadius: 18,
+      borderColor:
+        "#E0E4E8",
 
-    padding: 16,
+      borderRadius:
+        18,
 
-    backgroundColor: "#FFFFFF",
-  },
+      padding:
+        16,
 
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-  },
+      backgroundColor:
+        "#FFFFFF",
+    },
 
-  productHeaderContent: {
-    flex: 1,
-    marginRight: 14,
-  },
+    headerRow: {
+      flexDirection:
+        "row",
 
-  productName: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#111827",
-  },
+      alignItems:
+        "flex-start",
 
-  brand: {
-    marginTop: 4,
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#6B7280",
-  },
+      justifyContent:
+        "space-between",
+    },
 
-  stockBadge: {
-    minWidth: 64,
+    productHeaderContent: {
+      flex:
+        1,
 
-    alignItems: "center",
-    justifyContent: "center",
+      marginRight:
+        14,
+    },
 
-    borderRadius: 14,
+    productName: {
+      fontSize:
+        20,
 
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+      fontWeight:
+        "800",
 
-    backgroundColor: "#ECFDF3",
-  },
+      color:
+        "#111827",
+    },
 
-  stockBadgeWarning: {
-    backgroundColor: "#FFF8E8",
-  },
+    brand: {
+      marginTop:
+        4,
 
-  stockBadgeDanger: {
-    backgroundColor: "#FFF1F0",
-  },
+      fontSize:
+        14,
 
-  stockBadgeValue: {
-    fontSize: 19,
-    fontWeight: "800",
-    color: "#15803D",
-  },
+      fontWeight:
+        "600",
 
-  stockBadgeLabel: {
-    marginTop: 1,
-    fontSize: 10,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    color: "#15803D",
-  },
+      color:
+        "#6B7280",
+    },
 
-  stockBadgeValueWarning: {
-    color: "#9A6700",
-  },
+    stockBadge: {
+      minWidth:
+        64,
 
-  stockBadgeValueDanger: {
-    color: "#B42318",
-  },
+      alignItems:
+        "center",
 
-  taxonomyRow: {
-    marginTop: 13,
+      justifyContent:
+        "center",
 
-    flexDirection: "row",
-    flexWrap: "wrap",
+      borderRadius:
+        14,
 
-    gap: 7,
-  },
+      paddingHorizontal:
+        12,
 
-  taxonomyChip: {
-    borderRadius: 999,
+      paddingVertical:
+        8,
 
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+      backgroundColor:
+        "#ECFDF3",
+    },
 
-    backgroundColor: "#F1F5F9",
-  },
+    stockBadgeWarning: {
+      backgroundColor:
+        "#FFF8E8",
+    },
 
-  taxonomyChipText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#52606D",
-  },
+    stockBadgeDanger: {
+      backgroundColor:
+        "#FFF1F0",
+    },
 
-  detailsSection: {
-    marginTop: 16,
+    stockBadgeValue: {
+      fontSize:
+        19,
 
-    borderTopWidth: 1,
-    borderTopColor: "#EEF0F2",
+      fontWeight:
+        "800",
 
-    paddingTop: 8,
-  },
+      color:
+        "#15803D",
+    },
 
-  detailRow: {
-    minHeight: 32,
+    stockBadgeLabel: {
+      marginTop:
+        1,
 
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
+      fontSize:
+        10,
 
-  detailLabel: {
-    marginRight: 16,
+      fontWeight:
+        "700",
 
-    fontSize: 13,
-    color: "#6B7280",
-  },
+      textTransform:
+        "uppercase",
 
-  detailValue: {
-    flexShrink: 1,
+      color:
+        "#15803D",
+    },
 
-    fontSize: 13,
-    fontWeight: "700",
-    textAlign: "right",
-    color: "#20252B",
-  },
+    stockBadgeValueWarning: {
+      color:
+        "#9A6700",
+    },
 
-  warningMessage: {
-    marginTop: 12,
+    stockBadgeValueDanger: {
+      color:
+        "#B42318",
+    },
 
-    flexDirection: "row",
-    alignItems: "center",
+    taxonomyRow: {
+      marginTop:
+        13,
 
-    gap: 7,
+      flexDirection:
+        "row",
 
-    borderRadius: 10,
+      flexWrap:
+        "wrap",
 
-    paddingHorizontal: 11,
-    paddingVertical: 9,
+      gap:
+        7,
+    },
 
-    backgroundColor: "#FFF8E8",
-  },
+    taxonomyChip: {
+      borderRadius:
+        999,
 
-  warningMessageText: {
-    flex: 1,
+      paddingHorizontal:
+        10,
 
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#9A6700",
-  },
+      paddingVertical:
+        5,
 
-  dangerMessage: {
-    marginTop: 12,
+      backgroundColor:
+        "#F1F5F9",
+    },
 
-    flexDirection: "row",
-    alignItems: "center",
+    taxonomyChipText: {
+      fontSize:
+        11,
 
-    gap: 7,
+      fontWeight:
+        "700",
 
-    borderRadius: 10,
+      color:
+        "#52606D",
+    },
 
-    paddingHorizontal: 11,
-    paddingVertical: 9,
+    detailsSection: {
+      marginTop:
+        16,
 
-    backgroundColor: "#FFF1F0",
-  },
+      borderTopWidth:
+        1,
 
-  dangerMessageText: {
-    flex: 1,
+      borderTopColor:
+        "#EEF0F2",
 
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#B42318",
-  },
+      paddingTop:
+        8,
+    },
 
-  deliveryCard: {
-    marginTop: 14,
+    detailRow: {
+      minHeight:
+        32,
 
-    borderWidth: 1,
-    borderColor: "#D9E4F5",
+      flexDirection:
+        "row",
 
-    borderRadius: 14,
+      alignItems:
+        "center",
 
-    padding: 13,
+      justifyContent:
+        "space-between",
+    },
 
-    backgroundColor: "#F8FBFF",
-  },
+    detailLabel: {
+      marginRight:
+        16,
 
-  deliveryHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
+      fontSize:
+        13,
 
-  deliveryTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
+      color:
+        "#6B7280",
+    },
 
-    gap: 6,
-  },
+    detailValue: {
+      flexShrink:
+        1,
 
-  deliveryTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#334E84",
-  },
+      fontSize:
+        13,
 
-  deliveryDate: {
-    marginLeft: 10,
+      fontWeight:
+        "700",
 
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#6B7280",
-  },
+      textAlign:
+        "right",
 
-  deliveryMetricsRow: {
-    marginTop: 12,
+      color:
+        "#20252B",
+    },
 
-    flexDirection: "row",
+    warningMessage: {
+      marginTop:
+        12,
 
-    gap: 8,
-  },
+      flexDirection:
+        "row",
 
-  deliveryMetric: {
-    flex: 1,
+      alignItems:
+        "center",
 
-    borderRadius: 10,
+      gap:
+        7,
 
-    padding: 9,
+      borderRadius:
+        10,
 
-    backgroundColor: "#FFFFFF",
-  },
+      paddingHorizontal:
+        11,
 
-  deliveryMetricLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    color: "#7A838E",
-  },
+      paddingVertical:
+        9,
 
-  deliveryMetricValue: {
-    marginTop: 4,
+      backgroundColor:
+        "#FFF8E8",
+    },
 
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#20252B",
-  },
+    warningMessageText: {
+      flex:
+        1,
 
-  deliveryNote: {
-    marginTop: 10,
+      fontSize:
+        12,
 
-    flexDirection: "row",
-    alignItems: "flex-start",
+      fontWeight:
+        "700",
 
-    gap: 7,
+      color:
+        "#9A6700",
+    },
 
-    borderTopWidth: 1,
-    borderTopColor: "#E2EAF5",
+    dangerMessage: {
+      marginTop:
+        12,
 
-    paddingTop: 10,
-  },
+      flexDirection:
+        "row",
 
-  deliveryNoteText: {
-    flex: 1,
+      alignItems:
+        "center",
 
-    fontSize: 12,
-    lineHeight: 17,
-    color: "#52698E",
-  },
+      gap:
+        7,
 
-  noDeliveryText: {
-    marginTop: 10,
+      borderRadius:
+        10,
 
-    fontSize: 12,
-    color: "#6B7280",
-  },
+      paddingHorizontal:
+        11,
 
-  actionDivider: {
-    marginTop: 15,
+      paddingVertical:
+        9,
 
-    height: 1,
+      backgroundColor:
+        "#FFF1F0",
+    },
 
-    backgroundColor: "#EEF0F2",
-  },
+    dangerMessageText: {
+      flex:
+        1,
 
-  actionRow: {
-    marginTop: 12,
+      fontSize:
+        12,
 
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-around",
+      fontWeight:
+        "700",
 
-    gap: 6,
-  },
+      color:
+        "#B42318",
+    },
 
-  iconActionButton: {
-    flex: 1,
+    deliveryCard: {
+      marginTop:
+        14,
 
-    minHeight: 58,
+      borderWidth:
+        1,
 
-    alignItems: "center",
-    justifyContent: "center",
+      borderColor:
+        "#D9E4F5",
 
-    borderRadius: 12,
+      borderRadius:
+        14,
 
-    gap: 4,
+      padding:
+        13,
 
-    backgroundColor: "#F8FAFC",
-  },
+      backgroundColor:
+        "#F8FBFF",
+    },
 
-  iconActionButtonPressed: {
-    backgroundColor: "#E5E7EB",
-  },
+    deliveryHeader: {
+      flexDirection:
+        "row",
 
-  destructiveIconActionButton: {
-    backgroundColor: "#FFF7F6",
-  },
+      alignItems:
+        "center",
 
-  destructiveIconActionButtonPressed: {
-    backgroundColor: "#FEE4E2",
-  },
+      justifyContent:
+        "space-between",
+    },
 
-  iconActionLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "#52606D",
-  },
+    deliveryTitleRow: {
+      flexDirection:
+        "row",
 
-  destructiveIconActionLabel: {
-    color: "#B42318",
-  },
-});
+      alignItems:
+        "center",
+
+      gap:
+        6,
+    },
+
+    deliveryTitle: {
+      fontSize:
+        13,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#334E84",
+    },
+
+    deliveryDate: {
+      marginLeft:
+        10,
+
+      fontSize:
+        10,
+
+      fontWeight:
+        "600",
+
+      color:
+        "#6B7280",
+    },
+
+    deliveryMetricsRow: {
+      marginTop:
+        12,
+
+      flexDirection:
+        "row",
+
+      gap:
+        8,
+    },
+
+    deliveryMetric: {
+      flex:
+        1,
+
+      borderRadius:
+        10,
+
+      padding:
+        9,
+
+      backgroundColor:
+        "#FFFFFF",
+    },
+
+    deliveryMetricLabel: {
+      fontSize:
+        10,
+
+      fontWeight:
+        "700",
+
+      textTransform:
+        "uppercase",
+
+      color:
+        "#7A838E",
+    },
+
+    deliveryMetricValue: {
+      marginTop:
+        4,
+
+      fontSize:
+        13,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#20252B",
+    },
+
+    deliveryNote: {
+      marginTop:
+        10,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "flex-start",
+
+      gap:
+        7,
+
+      borderTopWidth:
+        1,
+
+      borderTopColor:
+        "#E2EAF5",
+
+      paddingTop:
+        10,
+    },
+
+    deliveryNoteText: {
+      flex:
+        1,
+
+      fontSize:
+        12,
+
+      lineHeight:
+        17,
+
+      color:
+        "#52698E",
+    },
+
+    noDeliveryText: {
+      marginTop:
+        10,
+
+      fontSize:
+        12,
+
+      color:
+        "#6B7280",
+    },
+
+    actionDivider: {
+      marginTop:
+        15,
+
+      height:
+        1,
+
+      backgroundColor:
+        "#EEF0F2",
+    },
+
+    actionRow: {
+      marginTop:
+        12,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "space-around",
+
+      gap:
+        6,
+    },
+
+    iconActionButton: {
+      flex:
+        1,
+
+      minHeight:
+        58,
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "center",
+
+      borderRadius:
+        12,
+
+      gap:
+        4,
+
+      backgroundColor:
+        "#F8FAFC",
+    },
+
+    iconActionButtonPressed: {
+      backgroundColor:
+        "#E5E7EB",
+    },
+
+    destructiveIconActionButton: {
+      backgroundColor:
+        "#FFF7F6",
+    },
+
+    destructiveIconActionButtonPressed: {
+      backgroundColor:
+        "#FEE4E2",
+    },
+
+    iconActionLabel: {
+      fontSize:
+        10,
+
+      fontWeight:
+        "700",
+
+      color:
+        "#52606D",
+    },
+
+    destructiveIconActionLabel: {
+      color:
+        "#B42318",
+    },
+  });
