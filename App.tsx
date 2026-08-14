@@ -3,7 +3,6 @@ import { StatusBar } from "expo-status-bar";
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -57,6 +56,7 @@ import {
   createProduct,
   getAllProducts,
   getArchivedProducts,
+  getFilteredProducts,
   getProductByBarcode,
   restoreProduct,
   updateProduct,
@@ -208,6 +208,9 @@ type TransactionReturnView =
 const CLOUD_SYNC_TIMEOUT_MS =
   8000;
 
+const INVENTORY_SEARCH_DEBOUNCE_MS =
+  180;
+
 const INITIAL_DASHBOARD_SUMMARY: InventoryDashboardSummary = {
   totalProducts: 0,
   totalStockUnits: 0,
@@ -328,6 +331,22 @@ export default function App() {
   ] =
     useState<Product[]>(
       [],
+    );
+
+  const [
+    visibleProducts,
+    setVisibleProducts,
+  ] =
+    useState<Product[]>(
+      [],
+    );
+
+  const [
+    inventoryRevision,
+    setInventoryRevision,
+  ] =
+    useState(
+      0,
     );
 
   const [
@@ -564,111 +583,6 @@ export default function App() {
       Promise.resolve(),
     );
 
-  const visibleProducts =
-    useMemo(
-      () => {
-        const normalizedSearch =
-          filters.searchQuery
-            .trim()
-            .toLowerCase();
-
-        const filteredProducts =
-          products.filter(
-            (
-              product,
-            ) => {
-              const matchesSearch =
-                normalizedSearch ===
-                  "" ||
-                product.name
-                  .toLowerCase()
-                  .includes(
-                    normalizedSearch,
-                  ) ||
-                product.brand
-                  .toLowerCase()
-                  .includes(
-                    normalizedSearch,
-                  ) ||
-                product.barcode
-                  .toLowerCase()
-                  .includes(
-                    normalizedSearch,
-                  );
-
-              const matchesDepartment =
-                filters.department ===
-                  "all" ||
-                product.department ===
-                  filters.department;
-
-              const matchesLowStock =
-                !filters.lowStockOnly ||
-                product.currentStock <=
-                  product.reorderLevel;
-
-              return (
-                matchesSearch &&
-                matchesDepartment &&
-                matchesLowStock
-              );
-            },
-          );
-
-        return [
-          ...filteredProducts,
-        ].sort(
-          (
-            firstProduct,
-            secondProduct,
-          ) => {
-            switch (
-              filters.sortBy
-            ) {
-              case "name-desc":
-                return secondProduct.name.localeCompare(
-                  firstProduct.name,
-                );
-
-              case "stock-asc":
-                return (
-                  firstProduct.currentStock -
-                  secondProduct.currentStock
-                );
-
-              case "stock-desc":
-                return (
-                  secondProduct.currentStock -
-                  firstProduct.currentStock
-                );
-
-              case "price-asc":
-                return (
-                  firstProduct.unitPrice -
-                  secondProduct.unitPrice
-                );
-
-              case "price-desc":
-                return (
-                  secondProduct.unitPrice -
-                  firstProduct.unitPrice
-                );
-
-              case "name-asc":
-              default:
-                return firstProduct.name.localeCompare(
-                  secondProduct.name,
-                );
-            }
-          },
-        );
-      },
-      [
-        filters,
-        products,
-      ],
-    );
-
   const loadInventoryData =
     useCallback(
       async (): Promise<void> => {
@@ -712,9 +626,77 @@ export default function App() {
         setReorderItems(
           currentReorderItems,
         );
+
+        setInventoryRevision(
+          (
+            previous,
+          ) =>
+            previous +
+            1,
+        );
       },
       [],
     );
+
+  useEffect(
+    () => {
+      if (
+        status !==
+        "ready"
+      ) {
+        return;
+      }
+
+      let isCancelled =
+        false;
+
+      const timeoutId =
+        setTimeout(
+          () => {
+            void (
+              async () => {
+                try {
+                  const filteredProducts =
+                    await getFilteredProducts(
+                      filters,
+                    );
+
+                  if (
+                    !isCancelled
+                  ) {
+                    setVisibleProducts(
+                      filteredProducts,
+                    );
+                  }
+                } catch (
+                  error
+                ) {
+                  console.error(
+                    "Could not filter inventory:",
+                    error,
+                  );
+                }
+              }
+            )();
+          },
+          INVENTORY_SEARCH_DEBOUNCE_MS,
+        );
+
+      return () => {
+        isCancelled =
+          true;
+
+        clearTimeout(
+          timeoutId,
+        );
+      };
+    },
+    [
+      filters,
+      inventoryRevision,
+      status,
+    ],
+  );
 
   const beginCloudSync =
     useCallback(
@@ -927,33 +909,14 @@ export default function App() {
           );
 
           try {
-            /*
-             * STEP 1
-             *
-             * Protect any local changes
-             * created while offline.
-             */
             await withCloudTimeout(
               pushInventoryToCloud(),
             );
 
-            /*
-             * STEP 2
-             *
-             * Pull latest cloud products
-             * and cloud transactions.
-             */
             await withCloudTimeout(
               pullInventoryFromCloud(),
             );
 
-            /*
-             * STEP 3
-             *
-             * Rebuild local transaction
-             * history from the canonical
-             * Supabase history.
-             */
             await withCloudTimeout(
               reconcileLocalTransactionsFromCloud(),
             );
@@ -972,15 +935,6 @@ export default function App() {
             );
           }
 
-          /*
-           * Always load local SQLite.
-           *
-           * If online, it now contains
-           * synchronized cloud data.
-           *
-           * If offline, the existing
-           * local inventory remains usable.
-           */
           await loadInventoryData();
 
           setStatus(
@@ -3005,6 +2959,18 @@ export default function App() {
         contentContainerStyle={
           styles.listContent
         }
+        initialNumToRender={
+          12
+        }
+        maxToRenderPerBatch={
+          12
+        }
+        windowSize={
+          7
+        }
+        removeClippedSubviews={
+          true
+        }
         renderItem={({
           item,
         }) => (
@@ -3283,7 +3249,9 @@ function ActionMenuItem({
           styles.actionMenuText
         }
       >
-        {label}
+        {
+          label
+        }
       </Text>
     </Pressable>
   );
