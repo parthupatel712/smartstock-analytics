@@ -2,7 +2,9 @@ import {
   memo,
 } from "react";
 
-import { Ionicons } from "@expo/vector-icons";
+import {
+  Ionicons,
+} from "@expo/vector-icons";
 
 import {
   Pressable,
@@ -379,6 +381,70 @@ function ProductCardComponent({
         )}
       </View>
 
+      {onUpdateInventory ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Update inventory for ${product.name}`}
+          onPress={() =>
+            onUpdateInventory(
+              product,
+            )
+          }
+          style={({
+            pressed,
+          }) => [
+            styles.inventoryButton,
+
+            pressed &&
+              styles.inventoryButtonPressed,
+          ]}
+        >
+          <View
+            style={
+              styles.inventoryButtonContent
+            }
+          >
+            <Ionicons
+              name="cube-outline"
+              size={
+                21
+              }
+              color="#FFFFFF"
+            />
+
+            <View
+              style={
+                styles.inventoryButtonTextContainer
+              }
+            >
+              <Text
+                style={
+                  styles.inventoryButtonTitle
+                }
+              >
+                Update Inventory
+              </Text>
+
+              <Text
+                style={
+                  styles.inventoryButtonDescription
+                }
+              >
+                Stock in · Sale · Return · Damage · Count
+              </Text>
+            </View>
+          </View>
+
+          <Ionicons
+            name="chevron-forward"
+            size={
+              20
+            }
+            color="#FFFFFF"
+          />
+        </Pressable>
+      ) : null}
+
       <View
         style={
           styles.actionDivider
@@ -397,19 +463,6 @@ function ProductCardComponent({
             accessibilityLabel="View transaction history"
             onPress={() =>
               onViewHistory(
-                product,
-              )
-            }
-          />
-        ) : null}
-
-        {onUpdateInventory ? (
-          <IconActionButton
-            icon="cube-outline"
-            label="Inventory"
-            accessibilityLabel="Update inventory"
-            onPress={() =>
-              onUpdateInventory(
                 product,
               )
             }
@@ -450,65 +503,63 @@ function ProductCardComponent({
 export const ProductCard =
   memo(
     ProductCardComponent,
+
     (
       previous,
       next,
-    ) => {
-      return (
-        previous.product.id ===
-          next.product.id &&
+    ) =>
+      previous.product.id ===
+        next.product.id &&
 
-        previous.product.barcode ===
-          next.product.barcode &&
+      previous.product.barcode ===
+        next.product.barcode &&
 
-        previous.product.name ===
-          next.product.name &&
+      previous.product.name ===
+        next.product.name &&
 
-        previous.product.brand ===
-          next.product.brand &&
+      previous.product.brand ===
+        next.product.brand &&
 
-        previous.product.department ===
-          next.product.department &&
+      previous.product.department ===
+        next.product.department &&
 
-        previous.product.category ===
-          next.product.category &&
+      previous.product.category ===
+        next.product.category &&
 
-        previous.product.unitCost ===
-          next.product.unitCost &&
+      previous.product.unitCost ===
+        next.product.unitCost &&
 
-        previous.product.unitPrice ===
-          next.product.unitPrice &&
+      previous.product.unitPrice ===
+        next.product.unitPrice &&
 
-        previous.product.currentStock ===
-          next.product.currentStock &&
+      previous.product.currentStock ===
+        next.product.currentStock &&
 
-        previous.product.reorderLevel ===
-          next.product.reorderLevel &&
+      previous.product.reorderLevel ===
+        next.product.reorderLevel &&
 
-        previous.product.isActive ===
-          next.product.isActive &&
+      previous.product.isActive ===
+        next.product.isActive &&
 
-        previous.product.updatedAt ===
-          next.product.updatedAt &&
+      previous.product.updatedAt ===
+        next.product.updatedAt &&
 
-        deliveriesEqual(
-          previous.latestDelivery,
-          next.latestDelivery,
-        ) &&
+      deliveriesEqual(
+        previous.latestDelivery,
+        next.latestDelivery,
+      ) &&
 
-        previous.onUpdateInventory ===
-          next.onUpdateInventory &&
+      previous.onUpdateInventory ===
+        next.onUpdateInventory &&
 
-        previous.onViewHistory ===
-          next.onViewHistory &&
+      previous.onViewHistory ===
+        next.onViewHistory &&
 
-        previous.onEditProduct ===
-          next.onEditProduct &&
+      previous.onEditProduct ===
+        next.onEditProduct &&
 
-        previous.onArchiveProduct ===
-          next.onArchiveProduct
-      );
-    },
+      previous.onArchiveProduct ===
+        next.onArchiveProduct,
   );
 
 function deliveriesEqual(
@@ -659,7 +710,6 @@ const DeliveryMetric =
 interface IconActionButtonProps {
   icon:
     | "time-outline"
-    | "cube-outline"
     | "pencil-outline"
     | "trash-outline";
 
@@ -1281,9 +1331,81 @@ const styles =
         "#6B7280",
     },
 
+    inventoryButton: {
+      marginTop:
+        14,
+
+      minHeight:
+        62,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "space-between",
+
+      borderRadius:
+        14,
+
+      paddingHorizontal:
+        15,
+
+      backgroundColor:
+        "#20252B",
+    },
+
+    inventoryButtonPressed: {
+      opacity:
+        0.86,
+    },
+
+    inventoryButtonContent: {
+      flex:
+        1,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
+      gap:
+        11,
+    },
+
+    inventoryButtonTextContainer: {
+      flex:
+        1,
+    },
+
+    inventoryButtonTitle: {
+      fontSize:
+        14,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#FFFFFF",
+    },
+
+    inventoryButtonDescription: {
+      marginTop:
+        3,
+
+      fontSize:
+        10,
+
+      color:
+        "#D1D5DB",
+    },
+
     actionDivider: {
       marginTop:
-        15,
+        14,
 
       height:
         1,
@@ -1294,16 +1416,13 @@ const styles =
 
     actionRow: {
       marginTop:
-        12,
+        10,
 
       flexDirection:
         "row",
 
       alignItems:
         "center",
-
-      justifyContent:
-        "space-around",
 
       gap:
         6,
@@ -1314,7 +1433,7 @@ const styles =
         1,
 
       minHeight:
-        58,
+        54,
 
       alignItems:
         "center",

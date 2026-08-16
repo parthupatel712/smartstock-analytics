@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
+
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,14 +10,21 @@ import {
   View,
 } from "react-native";
 
+import {
+  SafeAreaView,
+} from "react-native-safe-area-context";
+
 import type {
   GlobalTransaction,
   GlobalTransactionType,
 } from "../types/globalTransaction";
 
 interface GlobalTransactionsProps {
-  transactions: GlobalTransaction[];
-  onClose: () => void;
+  transactions:
+    GlobalTransaction[];
+
+  onClose:
+    () => void;
 }
 
 type TransactionFilter =
@@ -31,54 +38,98 @@ type DateFilter =
   | "all-time";
 
 const TRANSACTION_FILTERS: {
-  label: string;
-  value: TransactionFilter;
+  label:
+    string;
+
+  value:
+    TransactionFilter;
 }[] = [
   {
-    label: "All",
-    value: "all",
+    label:
+      "All",
+
+    value:
+      "all",
   },
+
   {
-    label: "Sales",
-    value: "sale",
+    label:
+      "Sale",
+
+    value:
+      "sale",
   },
+
   {
-    label: "Stock Added",
-    value: "stock_in",
+    label:
+      "Stock In",
+
+    value:
+      "stock_in",
   },
+
   {
-    label: "Damaged",
-    value: "damage",
+    label:
+      "Damage",
+
+    value:
+      "damage",
   },
+
   {
-    label: "Returned",
-    value: "return",
+    label:
+      "Return",
+
+    value:
+      "return",
   },
+
   {
-    label: "Stock Count",
-    value: "adjustment",
+    label:
+      "Physical Count",
+
+    value:
+      "adjustment",
   },
 ];
 
 const DATE_FILTERS: {
-  label: string;
-  value: DateFilter;
+  label:
+    string;
+
+  value:
+    DateFilter;
 }[] = [
   {
-    label: "Today",
-    value: "today",
+    label:
+      "Today",
+
+    value:
+      "today",
   },
+
   {
-    label: "7 Days",
-    value: "7-days",
+    label:
+      "7 Days",
+
+    value:
+      "7-days",
   },
+
   {
-    label: "30 Days",
-    value: "30-days",
+    label:
+      "30 Days",
+
+    value:
+      "30-days",
   },
+
   {
-    label: "All Time",
-    value: "all-time",
+    label:
+      "All Time",
+
+    value:
+      "all-time",
   },
 ];
 
@@ -89,132 +140,189 @@ export function GlobalTransactions({
   const [
     searchQuery,
     setSearchQuery,
-  ] = useState("");
+  ] =
+    useState(
+      "",
+    );
 
   const [
     selectedFilter,
     setSelectedFilter,
-  ] = useState<TransactionFilter>(
-    "all",
-  );
+  ] =
+    useState<TransactionFilter>(
+      "all",
+    );
 
   const [
     selectedDateFilter,
     setSelectedDateFilter,
-  ] = useState<DateFilter>(
-    "30-days",
-  );
+  ] =
+    useState<DateFilter>(
+      "30-days",
+    );
 
   const filteredTransactions =
-    useMemo(() => {
-      const normalizedSearch =
-        searchQuery
-          .trim()
-          .toLowerCase();
+    useMemo(
+      () => {
+        const normalizedSearch =
+          searchQuery
+            .trim()
+            .toLowerCase();
 
-      const now =
-        new Date();
+        const now =
+          new Date();
 
-      return transactions.filter(
-        (transaction) => {
-          const matchesType =
-            selectedFilter === "all" ||
-            transaction.transactionType ===
-              selectedFilter;
+        return transactions.filter(
+          (
+            transaction,
+          ) => {
+            const matchesType =
+              selectedFilter ===
+                "all" ||
+              transaction.transactionType ===
+                selectedFilter;
 
-          const matchesSearch =
-            normalizedSearch === "" ||
-            transaction.productName
-              .toLowerCase()
-              .includes(normalizedSearch) ||
-            transaction.productBrand
-              .toLowerCase()
-              .includes(normalizedSearch) ||
-            transaction.barcode
-              .toLowerCase()
-              .includes(normalizedSearch) ||
-            transaction.department
-              .toLowerCase()
-              .includes(normalizedSearch) ||
-            transaction.category
-              .toLowerCase()
-              .includes(normalizedSearch);
+            const matchesSearch =
+              normalizedSearch ===
+                "" ||
+              transaction.productName
+                .toLowerCase()
+                .includes(
+                  normalizedSearch,
+                ) ||
+              transaction.productBrand
+                .toLowerCase()
+                .includes(
+                  normalizedSearch,
+                ) ||
+              transaction.barcode
+                .toLowerCase()
+                .includes(
+                  normalizedSearch,
+                ) ||
+              transaction.department
+                .toLowerCase()
+                .includes(
+                  normalizedSearch,
+                ) ||
+              transaction.category
+                .toLowerCase()
+                .includes(
+                  normalizedSearch,
+                );
 
-          const matchesDate =
-            transactionMatchesDateFilter(
-              transaction.createdAt,
-              selectedDateFilter,
-              now,
+            const matchesDate =
+              transactionMatchesDateFilter(
+                transaction.createdAt,
+                selectedDateFilter,
+                now,
+              );
+
+            return (
+              matchesType &&
+              matchesSearch &&
+              matchesDate
             );
-
-          return (
-            matchesType &&
-            matchesSearch &&
-            matchesDate
-          );
-        },
-      );
-    }, [
-      transactions,
-      searchQuery,
-      selectedFilter,
-      selectedDateFilter,
-    ]);
+          },
+        );
+      },
+      [
+        transactions,
+        searchQuery,
+        selectedFilter,
+        selectedDateFilter,
+      ],
+    );
 
   const transactionSummary =
-    useMemo(() => {
-      let stockAdded = 0;
-      let stockRemoved = 0;
+    useMemo(
+      () => {
+        let stockAdded =
+          0;
 
-      filteredTransactions.forEach(
-        (transaction) => {
-          const stockChange =
-            transaction.stockAfter -
-            transaction.stockBefore;
+        let stockRemoved =
+          0;
 
-          if (stockChange > 0) {
-            stockAdded +=
-              stockChange;
-          }
+        filteredTransactions.forEach(
+          (
+            transaction,
+          ) => {
+            const stockChange =
+              transaction.stockAfter -
+              transaction.stockBefore;
 
-          if (stockChange < 0) {
-            stockRemoved +=
-              Math.abs(stockChange);
-          }
-        },
-      );
+            if (
+              stockChange >
+              0
+            ) {
+              stockAdded +=
+                stockChange;
+            }
 
-      return {
-        updateCount:
-          filteredTransactions.length,
+            if (
+              stockChange <
+              0
+            ) {
+              stockRemoved +=
+                Math.abs(
+                  stockChange,
+                );
+            }
+          },
+        );
 
-        stockAdded,
+        return {
+          updateCount:
+            filteredTransactions.length,
 
-        stockRemoved,
+          stockAdded,
 
-        netStockChange:
-          stockAdded -
           stockRemoved,
-      };
-    }, [filteredTransactions]);
 
-  function clearAllFilters(): void {
-    setSearchQuery("");
-    setSelectedFilter("all");
+          netStockChange:
+            stockAdded -
+            stockRemoved,
+        };
+      },
+      [
+        filteredTransactions,
+      ],
+    );
+
+  function clearAllFilters():
+    void {
+    setSearchQuery(
+      "",
+    );
+
+    setSelectedFilter(
+      "all",
+    );
+
     setSelectedDateFilter(
       "30-days",
     );
   }
 
   const hasActiveFilters =
-    searchQuery.trim() !== "" ||
-    selectedFilter !== "all" ||
+    searchQuery.trim() !==
+      "" ||
+    selectedFilter !==
+      "all" ||
     selectedDateFilter !==
       "30-days";
 
   return (
     <SafeAreaView
-      style={styles.screen}
+      edges={[
+        "top",
+        "left",
+        "right",
+        "bottom",
+      ]}
+      style={
+        styles.screen
+      }
     >
       <ScrollView
         contentContainerStyle={
@@ -226,7 +334,9 @@ export function GlobalTransactions({
         keyboardShouldPersistTaps="handled"
       >
         <View
-          style={styles.headerRow}
+          style={
+            styles.headerRow
+          }
         >
           <View
             style={
@@ -234,22 +344,33 @@ export function GlobalTransactions({
             }
           >
             <Text
-              style={styles.title}
+              style={
+                styles.title
+              }
             >
               Stock History
             </Text>
 
             <Text
-              style={styles.subtitle}
+              style={
+                styles.subtitle
+              }
             >
-              See every stock change across your products.
+              Review inventory changes across all products.
             </Text>
           </View>
 
           <Pressable
             accessibilityRole="button"
-            onPress={onClose}
-            style={({ pressed }) => [
+            hitSlop={
+              8
+            }
+            onPress={
+              onClose
+            }
+            style={({
+              pressed,
+            }) => [
               styles.closeButton,
 
               pressed &&
@@ -273,19 +394,25 @@ export function GlobalTransactions({
         >
           <Ionicons
             name="search-outline"
-            size={20}
+            size={
+              20
+            }
             color="#7A838E"
           />
 
           <TextInput
-            value={searchQuery}
+            value={
+              searchQuery
+            }
             onChangeText={
               setSearchQuery
             }
             placeholder="Search product, brand, barcode or category"
             placeholderTextColor="#9CA3AF"
             autoCapitalize="none"
-            autoCorrect={false}
+            autoCorrect={
+              false
+            }
             style={
               styles.searchInput
             }
@@ -295,8 +422,13 @@ export function GlobalTransactions({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Clear search"
+              hitSlop={
+                6
+              }
               onPress={() =>
-                setSearchQuery("")
+                setSearchQuery(
+                  "",
+                )
               }
               style={
                 styles.clearSearchButton
@@ -304,7 +436,9 @@ export function GlobalTransactions({
             >
               <Ionicons
                 name="close-circle"
-                size={19}
+                size={
+                  19
+                }
                 color="#8B949E"
               />
             </Pressable>
@@ -321,7 +455,7 @@ export function GlobalTransactions({
               styles.filterSectionLabel
             }
           >
-            Stock Change
+            Transaction Type
           </Text>
 
           <ScrollView
@@ -334,7 +468,9 @@ export function GlobalTransactions({
             }
           >
             {TRANSACTION_FILTERS.map(
-              (filter) => {
+              (
+                filter,
+              ) => {
                 const isSelected =
                   selectedFilter ===
                   filter.value;
@@ -345,6 +481,10 @@ export function GlobalTransactions({
                       filter.value
                     }
                     accessibilityRole="button"
+                    accessibilityState={{
+                      selected:
+                        isSelected,
+                    }}
                     onPress={() =>
                       setSelectedFilter(
                         filter.value,
@@ -435,7 +575,9 @@ export function GlobalTransactions({
             }
           >
             {DATE_FILTERS.map(
-              (filter) => {
+              (
+                filter,
+              ) => {
                 const isSelected =
                   selectedDateFilter ===
                   filter.value;
@@ -446,6 +588,10 @@ export function GlobalTransactions({
                       filter.value
                     }
                     accessibilityRole="button"
+                    accessibilityState={{
+                      selected:
+                        isSelected,
+                    }}
                     onPress={() =>
                       setSelectedDateFilter(
                         filter.value,
@@ -473,7 +619,9 @@ export function GlobalTransactions({
                             ? "infinite-outline"
                             : "calendar-outline"
                       }
-                      size={15}
+                      size={
+                        15
+                      }
                       color={
                         isSelected
                           ? "#FFFFFF"
@@ -507,7 +655,7 @@ export function GlobalTransactions({
         >
           <Text
             style={
-              styles.summarySectionTitle
+              styles.sectionTitle
             }
           >
             Stock Summary
@@ -515,10 +663,10 @@ export function GlobalTransactions({
 
           <Text
             style={
-              styles.summarySectionSubtitle
+              styles.sectionSubtitle
             }
           >
-            Based on your current search and filters
+            Based on the current search and filters.
           </Text>
 
           <View
@@ -527,7 +675,7 @@ export function GlobalTransactions({
             }
           >
             <SummaryCard
-              label="Stock Updates"
+              label="Transactions"
               value={
                 transactionSummary.updateCount.toString()
               }
@@ -549,10 +697,12 @@ export function GlobalTransactions({
             />
 
             <SummaryCard
-              label="Net Stock Change"
-              value={formatSignedNumber(
-                transactionSummary.netStockChange,
-              )}
+              label="Net Change"
+              value={
+                formatSignedNumber(
+                  transactionSummary.netStockChange,
+                )
+              }
               icon="swap-vertical-outline"
               tone={
                 transactionSummary.netStockChange >
@@ -579,15 +729,15 @@ export function GlobalTransactions({
           >
             <Text
               style={
-                styles.resultsTitle
+                styles.sectionTitle
               }
             >
-              Stock Changes
+              Transactions
             </Text>
 
             <Text
               style={
-                styles.resultsSubtitle
+                styles.sectionSubtitle
               }
             >
               {
@@ -606,7 +756,7 @@ export function GlobalTransactions({
             {
               filteredTransactions.length
             }{" "}
-            update
+            result
             {filteredTransactions.length ===
             1
               ? ""
@@ -618,7 +768,9 @@ export function GlobalTransactions({
         0 ? (
           <View>
             {filteredTransactions.map(
-              (transaction) => (
+              (
+                transaction,
+              ) => (
                 <TransactionCard
                   key={
                     transaction.transactionId
@@ -638,7 +790,9 @@ export function GlobalTransactions({
           >
             <Ionicons
               name="receipt-outline"
-              size={42}
+              size={
+                42
+              }
               color="#9CA3AF"
             />
 
@@ -647,7 +801,7 @@ export function GlobalTransactions({
                 styles.emptyTitle
               }
             >
-              No stock changes found
+              No transactions found
             </Text>
 
             <Text
@@ -655,7 +809,7 @@ export function GlobalTransactions({
                 styles.emptyText
               }
             >
-              Try changing your search, stock-change filter, or time period.
+              Try changing your search, transaction type, or time period.
             </Text>
 
             {hasActiveFilters ? (
@@ -693,11 +847,14 @@ function SummaryCard({
   label,
   value,
   icon,
-  tone = "normal",
+  tone =
+    "normal",
 }: {
-  label: string;
+  label:
+    string;
 
-  value: string;
+  value:
+    string;
 
   icon:
     | "receipt-outline"
@@ -711,9 +868,11 @@ function SummaryCard({
     | "negative";
 }) {
   const iconColor =
-    tone === "positive"
+    tone ===
+    "positive"
       ? "#15803D"
-      : tone === "negative"
+      : tone ===
+          "negative"
         ? "#B42318"
         : "#52606D";
 
@@ -729,9 +888,15 @@ function SummaryCard({
         }
       >
         <Ionicons
-          name={icon}
-          size={18}
-          color={iconColor}
+          name={
+            icon
+          }
+          size={
+            18
+          }
+          color={
+            iconColor
+          }
         />
 
         <Text
@@ -739,7 +904,9 @@ function SummaryCard({
             styles.summaryCardLabel
           }
         >
-          {label}
+          {
+            label
+          }
         </Text>
       </View>
 
@@ -756,7 +923,9 @@ function SummaryCard({
             styles.summaryCardValueNegative,
         ]}
       >
-        {value}
+        {
+          value
+        }
       </Text>
     </View>
   );
@@ -765,7 +934,8 @@ function SummaryCard({
 function TransactionCard({
   transaction,
 }: {
-  transaction: GlobalTransaction;
+  transaction:
+    GlobalTransaction;
 }) {
   const stockChange =
     transaction.stockAfter -
@@ -795,6 +965,7 @@ function TransactionCard({
           <View
             style={[
               styles.iconContainer,
+
               {
                 backgroundColor:
                   activityStyle.background,
@@ -805,7 +976,9 @@ function TransactionCard({
               name={
                 activityStyle.icon
               }
-              size={21}
+              size={
+                21
+              }
               color={
                 activityStyle.color
               }
@@ -821,7 +994,9 @@ function TransactionCard({
               style={
                 styles.productName
               }
-              numberOfLines={2}
+              numberOfLines={
+                2
+              }
             >
               {
                 transaction.productName
@@ -832,6 +1007,9 @@ function TransactionCard({
               <Text
                 style={
                   styles.productBrand
+                }
+                numberOfLines={
+                  1
                 }
               >
                 {
@@ -861,6 +1039,9 @@ function TransactionCard({
                   activityStyle.color,
               },
             ]}
+            numberOfLines={
+              2
+            }
           >
             {
               activityStyle.label
@@ -896,7 +1077,9 @@ function TransactionCard({
           style={
             styles.metaText
           }
-          numberOfLines={1}
+          numberOfLines={
+            1
+          }
         >
           {
             transaction.category
@@ -910,7 +1093,9 @@ function TransactionCard({
         }
       >
         Barcode:{" "}
-        {transaction.barcode}
+        {
+          transaction.barcode
+        }
       </Text>
 
       <View
@@ -920,28 +1105,34 @@ function TransactionCard({
       >
         <Metric
           label="Change"
-          value={formatSignedNumber(
-            stockChange,
-          )}
+          value={
+            formatSignedNumber(
+              stockChange,
+            )
+          }
           tone={
-            stockChange > 0
+            stockChange >
+            0
               ? "positive"
-              : stockChange < 0
+              : stockChange <
+                  0
                 ? "negative"
                 : "normal"
           }
         />
 
         <Metric
-          label="Before → After"
+          label="Stock"
           value={`${transaction.stockBefore} → ${transaction.stockAfter}`}
         />
 
         <Metric
           label="Value"
-          value={formatCurrency(
-            transaction.transactionValue,
-          )}
+          value={
+            formatCurrency(
+              transaction.transactionValue,
+            )
+          }
         />
       </View>
 
@@ -953,7 +1144,9 @@ function TransactionCard({
         >
           <Ionicons
             name="document-text-outline"
-            size={15}
+            size={
+              15
+            }
             color="#64748B"
           />
 
@@ -962,7 +1155,9 @@ function TransactionCard({
               styles.noteText
             }
           >
-            {transaction.notes}
+            {
+              transaction.notes
+            }
           </Text>
         </View>
       ) : null}
@@ -976,11 +1171,16 @@ function TransactionCard({
           style={
             styles.sourceText
           }
+          numberOfLines={
+            1
+          }
         >
-          Added by:{" "}
-          {formatSource(
-            transaction.source,
-          )}
+          Source:{" "}
+          {
+            formatSource(
+              transaction.source,
+            )
+          }
         </Text>
 
         <Text
@@ -1000,11 +1200,14 @@ function TransactionCard({
 function Metric({
   label,
   value,
-  tone = "normal",
+  tone =
+    "normal",
 }: {
-  label: string;
+  label:
+    string;
 
-  value: string;
+  value:
+    string;
 
   tone?:
     | "normal"
@@ -1013,14 +1216,18 @@ function Metric({
 }) {
   return (
     <View
-      style={styles.metric}
+      style={
+        styles.metric
+      }
     >
       <Text
         style={
           styles.metricLabel
         }
       >
-        {label}
+        {
+          label
+        }
       </Text>
 
       <Text
@@ -1035,26 +1242,43 @@ function Metric({
             "negative" &&
             styles.metricNegative,
         ]}
+        numberOfLines={
+          1
+        }
+        adjustsFontSizeToFit
+        minimumFontScale={
+          0.8
+        }
       >
-        {value}
+        {
+          value
+        }
       </Text>
     </View>
   );
 }
 
 function transactionMatchesDateFilter(
-  createdAt: string,
-  filter: DateFilter,
-  now: Date,
+  createdAt:
+    string,
+
+  filter:
+    DateFilter,
+
+  now:
+    Date,
 ): boolean {
   if (
-    filter === "all-time"
+    filter ===
+    "all-time"
   ) {
     return true;
   }
 
   const transactionDate =
-    new Date(createdAt);
+    new Date(
+      createdAt,
+    );
 
   if (
     Number.isNaN(
@@ -1065,7 +1289,8 @@ function transactionMatchesDateFilter(
   }
 
   if (
-    filter === "today"
+    filter ===
+    "today"
   ) {
     return (
       transactionDate.getFullYear() ===
@@ -1078,12 +1303,15 @@ function transactionMatchesDateFilter(
   }
 
   const days =
-    filter === "7-days"
+    filter ===
+    "7-days"
       ? 7
       : 30;
 
   const startDate =
-    new Date(now);
+    new Date(
+      now,
+    );
 
   startDate.setHours(
     0,
@@ -1094,7 +1322,10 @@ function transactionMatchesDateFilter(
 
   startDate.setDate(
     startDate.getDate() -
-      (days - 1),
+      (
+        days -
+        1
+      ),
   );
 
   return (
@@ -1104,31 +1335,37 @@ function transactionMatchesDateFilter(
 }
 
 function getDateFilterDescription(
-  filter: DateFilter,
+  filter:
+    DateFilter,
 ): string {
-  switch (filter) {
+  switch (
+    filter
+  ) {
     case "today":
-      return "Stock changes made today";
+      return "Transactions recorded today";
 
     case "7-days":
-      return "Stock changes from the last 7 days";
+      return "Transactions from the last 7 days";
 
     case "30-days":
-      return "Stock changes from the last 30 days";
+      return "Transactions from the last 30 days";
 
     case "all-time":
-      return "All recorded stock changes";
+      return "All recorded transactions";
   }
 }
 
 function getActivityStyle(
-  type: GlobalTransactionType,
+  type:
+    GlobalTransactionType,
 ) {
-  switch (type) {
+  switch (
+    type
+  ) {
     case "stock_in":
       return {
         label:
-          "Stock Added",
+          "Stock In",
 
         icon:
           "add-circle-outline" as const,
@@ -1158,7 +1395,7 @@ function getActivityStyle(
     case "damage":
       return {
         label:
-          "Damaged",
+          "Damage",
 
         icon:
           "warning-outline" as const,
@@ -1173,7 +1410,7 @@ function getActivityStyle(
     case "return":
       return {
         label:
-          "Returned",
+          "Return",
 
         icon:
           "return-down-back-outline" as const,
@@ -1188,7 +1425,7 @@ function getActivityStyle(
     case "adjustment":
       return {
         label:
-          "Stock Count",
+          "Physical Count",
 
         icon:
           "calculator-outline" as const,
@@ -1203,32 +1440,50 @@ function getActivityStyle(
 }
 
 function formatSignedNumber(
-  value: number,
+  value:
+    number,
 ): string {
-  if (value > 0) {
+  if (
+    value >
+    0
+  ) {
     return `+${value}`;
   }
 
   return `${value}`;
 }
 
-function formatCurrency(
-  value: number,
-): string {
-  return new Intl.NumberFormat(
+const currencyFormatter =
+  new Intl.NumberFormat(
     "en-CA",
     {
-      style: "currency",
-      currency: "CAD",
-      maximumFractionDigits: 2,
+      style:
+        "currency",
+
+      currency:
+        "CAD",
+
+      maximumFractionDigits:
+        2,
     },
-  ).format(value);
+  );
+
+function formatCurrency(
+  value:
+    number,
+): string {
+  return currencyFormatter.format(
+    value,
+  );
 }
 
 function formatSource(
-  source: GlobalTransaction["source"],
+  source:
+    GlobalTransaction["source"],
 ): string {
-  switch (source) {
+  switch (
+    source
+  ) {
     case "camera":
       return "Camera";
 
@@ -1243,15 +1498,18 @@ function formatSource(
 
     case "manual":
     default:
-      return "Manual entry";
+      return "Manual";
   }
 }
 
 function formatDateTime(
-  value: string,
+  value:
+    string,
 ): string {
   const date =
-    new Date(value);
+    new Date(
+      value,
+    );
 
   if (
     Number.isNaN(
@@ -1292,8 +1550,11 @@ function formatDateTime(
     date.toLocaleTimeString(
       "en-CA",
       {
-        hour: "numeric",
-        minute: "2-digit",
+        hour:
+          "numeric",
+
+        minute:
+          "2-digit",
       },
     );
 
@@ -1314,8 +1575,11 @@ function formatDateTime(
   return date.toLocaleString(
     "en-CA",
     {
-      month: "short",
-      day: "numeric",
+      month:
+        "short",
+
+      day:
+        "numeric",
 
       year:
         date.getFullYear() ===
@@ -1323,8 +1587,11 @@ function formatDateTime(
           ? undefined
           : "numeric",
 
-      hour: "numeric",
-      minute: "2-digit",
+      hour:
+        "numeric",
+
+      minute:
+        "2-digit",
     },
   );
 }
@@ -1332,139 +1599,261 @@ function formatDateTime(
 const styles =
   StyleSheet.create({
     screen: {
-      flex: 1,
+      flex:
+        1,
+
       backgroundColor:
         "#F4F6F8",
     },
 
     content: {
-      padding: 18,
-      paddingBottom: 50,
+      paddingHorizontal:
+        18,
+
+      paddingTop:
+        12,
+
+      paddingBottom:
+        50,
     },
 
     headerRow: {
-      flexDirection: "row",
+      flexDirection:
+        "row",
+
       alignItems:
         "flex-start",
+
       justifyContent:
         "space-between",
     },
 
     headerTextContainer: {
-      flex: 1,
-      marginRight: 16,
+      flex:
+        1,
+
+      minWidth:
+        0,
+
+      marginRight:
+        16,
     },
 
     title: {
-      fontSize: 30,
-      fontWeight: "800",
-      color: "#111827",
+      fontSize:
+        28,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     subtitle: {
-      marginTop: 5,
-      fontSize: 14,
-      lineHeight: 20,
-      color: "#6B7280",
+      marginTop:
+        6,
+
+      maxWidth:
+        320,
+
+      fontSize:
+        13,
+
+      lineHeight:
+        19,
+
+      color:
+        "#6B7280",
     },
 
     closeButton: {
-      borderWidth: 1,
+      minHeight:
+        42,
+
+      justifyContent:
+        "center",
+
+      borderWidth:
+        1,
+
       borderColor:
         "#CBD2DA",
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 9,
+
+      borderRadius:
+        10,
+
+      paddingHorizontal:
+        14,
+
       backgroundColor:
         "#FFFFFF",
     },
 
     closeButtonText: {
-      fontSize: 14,
-      fontWeight: "700",
-      color: "#20252B",
+      fontSize:
+        14,
+
+      fontWeight:
+        "700",
+
+      color:
+        "#20252B",
     },
 
     buttonPressed: {
-      opacity: 0.72,
+      opacity:
+        0.72,
     },
 
     searchContainer: {
-      marginTop: 22,
-      minHeight: 50,
-      flexDirection: "row",
-      alignItems: "center",
-      borderWidth: 1,
+      marginTop:
+        22,
+
+      minHeight:
+        50,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
+      borderWidth:
+        1,
+
       borderColor:
         "#D6DCE3",
-      borderRadius: 14,
-      paddingHorizontal: 14,
+
+      borderRadius:
+        14,
+
+      paddingHorizontal:
+        14,
+
       backgroundColor:
         "#FFFFFF",
     },
 
     searchInput: {
-      flex: 1,
-      marginLeft: 9,
-      paddingVertical: 12,
-      fontSize: 15,
-      color: "#111827",
+      flex:
+        1,
+
+      minWidth:
+        0,
+
+      marginLeft:
+        9,
+
+      paddingVertical:
+        12,
+
+      fontSize:
+        15,
+
+      color:
+        "#111827",
     },
 
     clearSearchButton: {
-      marginLeft: 8,
-      padding: 3,
+      marginLeft:
+        8,
+
+      padding:
+        3,
     },
 
     filterSection: {
-      marginTop: 18,
+      marginTop:
+        18,
     },
 
     filterSectionLabel: {
-      marginBottom: 9,
-      fontSize: 12,
-      fontWeight: "800",
+      marginBottom:
+        9,
+
+      fontSize:
+        11,
+
+      fontWeight:
+        "800",
+
       textTransform:
         "uppercase",
-      letterSpacing: 0.4,
-      color: "#6B7280",
+
+      letterSpacing:
+        0.4,
+
+      color:
+        "#6B7280",
     },
 
     dateFilterHeader: {
-      flexDirection: "row",
-      alignItems: "center",
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
       justifyContent:
         "space-between",
     },
 
     clearFiltersButton: {
-      marginBottom: 7,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 8,
+      marginBottom:
+        7,
+
+      paddingHorizontal:
+        8,
+
+      paddingVertical:
+        4,
+
+      borderRadius:
+        8,
     },
 
     clearFiltersText: {
-      fontSize: 12,
-      fontWeight: "800",
-      color: "#2563EB",
+      fontSize:
+        12,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#2563EB",
     },
 
     filtersRow: {
-      paddingRight: 10,
-      gap: 8,
+      paddingRight:
+        10,
+
+      gap:
+        8,
     },
 
     filterChip: {
-      minHeight: 38,
-      alignItems: "center",
+      minHeight:
+        38,
+
+      alignItems:
+        "center",
+
       justifyContent:
         "center",
-      borderWidth: 1,
+
+      borderWidth:
+        1,
+
       borderColor:
         "#D6DCE3",
-      borderRadius: 999,
-      paddingHorizontal: 14,
+
+      borderRadius:
+        999,
+
+      paddingHorizontal:
+        14,
+
       backgroundColor:
         "#FFFFFF",
     },
@@ -1472,32 +1861,55 @@ const styles =
     filterChipSelected: {
       borderColor:
         "#20252B",
+
       backgroundColor:
         "#20252B",
     },
 
     filterChipText: {
-      fontSize: 12,
-      fontWeight: "700",
-      color: "#52606D",
+      fontSize:
+        12,
+
+      fontWeight:
+        "700",
+
+      color:
+        "#52606D",
     },
 
     filterChipTextSelected: {
-      color: "#FFFFFF",
+      color:
+        "#FFFFFF",
     },
 
     dateChip: {
-      minHeight: 38,
-      flexDirection: "row",
-      alignItems: "center",
+      minHeight:
+        38,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
       justifyContent:
         "center",
-      gap: 6,
-      borderWidth: 1,
+
+      gap:
+        6,
+
+      borderWidth:
+        1,
+
       borderColor:
         "#D6DCE3",
-      borderRadius: 999,
-      paddingHorizontal: 13,
+
+      borderRadius:
+        999,
+
+      paddingHorizontal:
+        13,
+
       backgroundColor:
         "#FFFFFF",
     },
@@ -1505,329 +1917,630 @@ const styles =
     dateChipSelected: {
       borderColor:
         "#20252B",
+
       backgroundColor:
         "#20252B",
     },
 
     dateChipText: {
-      fontSize: 12,
-      fontWeight: "700",
-      color: "#52606D",
+      fontSize:
+        12,
+
+      fontWeight:
+        "700",
+
+      color:
+        "#52606D",
     },
 
     dateChipTextSelected: {
-      color: "#FFFFFF",
+      color:
+        "#FFFFFF",
     },
 
     summarySection: {
-      marginTop: 24,
+      marginTop:
+        26,
     },
 
-    summarySectionTitle: {
-      fontSize: 20,
-      fontWeight: "800",
-      color: "#111827",
+    sectionTitle: {
+      fontSize:
+        18,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
-    summarySectionSubtitle: {
-      marginTop: 3,
-      fontSize: 12,
-      color: "#8B949E",
+    sectionSubtitle: {
+      marginTop:
+        4,
+
+      fontSize:
+        12,
+
+      lineHeight:
+        17,
+
+      color:
+        "#6B7280",
     },
 
     summaryGrid: {
-      marginTop: 12,
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 10,
+      marginTop:
+        12,
+
+      flexDirection:
+        "row",
+
+      flexWrap:
+        "wrap",
+
+      gap:
+        10,
     },
 
     summaryCard: {
-      width: "48%",
-      minHeight: 105,
-      borderWidth: 1,
+      width:
+        "48%",
+
+      minHeight:
+        105,
+
+      borderWidth:
+        1,
+
       borderColor:
         "#E0E4E8",
-      borderRadius: 15,
-      padding: 13,
+
+      borderRadius:
+        15,
+
+      padding:
+        13,
+
       backgroundColor:
         "#FFFFFF",
     },
 
     summaryCardHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
+      gap:
+        6,
     },
 
     summaryCardLabel: {
-      flex: 1,
-      fontSize: 11,
-      fontWeight: "700",
+      flex:
+        1,
+
+      fontSize:
+        10,
+
+      fontWeight:
+        "800",
+
       textTransform:
         "uppercase",
-      color: "#6B7280",
+
+      color:
+        "#6B7280",
     },
 
     summaryCardValue: {
-      marginTop: 11,
-      fontSize: 21,
-      fontWeight: "800",
-      color: "#111827",
+      marginTop:
+        11,
+
+      fontSize:
+        21,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     summaryCardValuePositive: {
-      color: "#15803D",
+      color:
+        "#15803D",
     },
 
     summaryCardValueNegative: {
-      color: "#B42318",
+      color:
+        "#B42318",
     },
 
     resultsHeader: {
-      marginTop: 26,
-      marginBottom: 12,
-      flexDirection: "row",
+      marginTop:
+        28,
+
+      marginBottom:
+        12,
+
+      flexDirection:
+        "row",
+
       alignItems:
         "flex-end",
+
       justifyContent:
         "space-between",
     },
 
     resultsHeaderText: {
-      flex: 1,
-      marginRight: 12,
-    },
+      flex:
+        1,
 
-    resultsTitle: {
-      fontSize: 20,
-      fontWeight: "800",
-      color: "#111827",
-    },
+      minWidth:
+        0,
 
-    resultsSubtitle: {
-      marginTop: 3,
-      fontSize: 11,
-      color: "#8B949E",
+      marginRight:
+        12,
     },
 
     resultsCount: {
-      fontSize: 12,
-      fontWeight: "600",
-      textAlign: "right",
-      color: "#7A838E",
+      flexShrink:
+        0,
+
+      fontSize:
+        12,
+
+      fontWeight:
+        "600",
+
+      textAlign:
+        "right",
+
+      color:
+        "#7A838E",
     },
 
     transactionCard: {
-      marginBottom: 14,
-      borderWidth: 1,
+      marginBottom:
+        14,
+
+      borderWidth:
+        1,
+
       borderColor:
         "#E0E4E8",
-      borderRadius: 18,
-      padding: 16,
+
+      borderRadius:
+        18,
+
+      padding:
+        16,
+
       backgroundColor:
         "#FFFFFF",
     },
 
     transactionHeader: {
-      flexDirection: "row",
+      flexDirection:
+        "row",
+
       alignItems:
         "flex-start",
+
       justifyContent:
         "space-between",
     },
 
     transactionIdentity: {
-      flex: 1,
-      flexDirection: "row",
-      marginRight: 10,
+      flex:
+        1,
+
+      minWidth:
+        0,
+
+      flexDirection:
+        "row",
+
+      marginRight:
+        10,
     },
 
     iconContainer: {
-      width: 43,
-      height: 43,
-      alignItems: "center",
+      width:
+        43,
+
+      height:
+        43,
+
+      flexShrink:
+        0,
+
+      alignItems:
+        "center",
+
       justifyContent:
         "center",
-      borderRadius: 22,
+
+      borderRadius:
+        22,
     },
 
     productTextContainer: {
-      flex: 1,
-      marginLeft: 11,
+      flex:
+        1,
+
+      minWidth:
+        0,
+
+      marginLeft:
+        11,
     },
 
     productName: {
-      fontSize: 17,
-      fontWeight: "800",
-      color: "#111827",
+      flexShrink:
+        1,
+
+      fontSize:
+        17,
+
+      lineHeight:
+        22,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     productBrand: {
-      marginTop: 3,
-      fontSize: 12,
-      fontWeight: "600",
-      color: "#6B7280",
+      marginTop:
+        3,
+
+      fontSize:
+        12,
+
+      fontWeight:
+        "600",
+
+      color:
+        "#6B7280",
     },
 
     transactionBadge: {
-      flexShrink: 0,
-      borderRadius: 999,
-      paddingHorizontal: 9,
-      paddingVertical: 5,
+      flexShrink:
+        0,
+
+      maxWidth:
+        105,
+
+      alignSelf:
+        "flex-start",
+
+      borderRadius:
+        999,
+
+      paddingHorizontal:
+        9,
+
+      paddingVertical:
+        5,
     },
 
     transactionBadgeText: {
-      fontSize: 10,
-      fontWeight: "800",
+      fontSize:
+        10,
+
+      lineHeight:
+        13,
+
+      fontWeight:
+        "800",
+
+      textAlign:
+        "center",
     },
 
     metaRow: {
-      marginTop: 13,
-      flexDirection: "row",
-      alignItems: "center",
-      flexWrap: "wrap",
+      marginTop:
+        13,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
+      flexWrap:
+        "wrap",
     },
 
     metaText: {
-      fontSize: 12,
-      fontWeight: "600",
-      color: "#64748B",
+      flexShrink:
+        1,
+
+      fontSize:
+        12,
+
+      fontWeight:
+        "600",
+
+      color:
+        "#64748B",
     },
 
     metaSeparator: {
-      marginHorizontal: 6,
-      color: "#CBD2DA",
+      marginHorizontal:
+        6,
+
+      color:
+        "#CBD2DA",
     },
 
     barcode: {
-      marginTop: 5,
-      fontSize: 11,
-      color: "#8B949E",
+      marginTop:
+        5,
+
+      fontSize:
+        11,
+
+      color:
+        "#8B949E",
     },
 
     metricsRow: {
-      marginTop: 15,
-      flexDirection: "row",
-      borderTopWidth: 1,
+      marginTop:
+        15,
+
+      flexDirection:
+        "row",
+
+      borderTopWidth:
+        1,
+
       borderTopColor:
         "#EEF0F2",
-      paddingTop: 13,
-      gap: 8,
+
+      paddingTop:
+        13,
+
+      gap:
+        8,
     },
 
     metric: {
-      flex: 1,
+      flex:
+        1,
+
+      minWidth:
+        0,
     },
 
     metricLabel: {
-      fontSize: 10,
-      fontWeight: "700",
+      fontSize:
+        10,
+
+      fontWeight:
+        "700",
+
       textTransform:
         "uppercase",
-      color: "#8B949E",
+
+      color:
+        "#8B949E",
     },
 
     metricValue: {
-      marginTop: 4,
-      fontSize: 14,
-      fontWeight: "800",
-      color: "#20252B",
+      marginTop:
+        4,
+
+      fontSize:
+        14,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#20252B",
     },
 
     metricPositive: {
-      color: "#15803D",
+      color:
+        "#15803D",
     },
 
     metricNegative: {
-      color: "#B42318",
+      color:
+        "#B42318",
     },
 
     noteContainer: {
-      marginTop: 13,
-      flexDirection: "row",
+      marginTop:
+        13,
+
+      flexDirection:
+        "row",
+
       alignItems:
         "flex-start",
-      gap: 7,
-      borderRadius: 10,
-      padding: 10,
+
+      gap:
+        7,
+
+      borderRadius:
+        10,
+
+      padding:
+        10,
+
       backgroundColor:
         "#F8FAFC",
     },
 
     noteText: {
-      flex: 1,
-      fontSize: 12,
-      lineHeight: 17,
-      color: "#52606D",
+      flex:
+        1,
+
+      fontSize:
+        12,
+
+      lineHeight:
+        17,
+
+      color:
+        "#52606D",
     },
 
     footerRow: {
-      marginTop: 13,
-      flexDirection: "row",
-      alignItems: "center",
+      marginTop:
+        13,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "flex-end",
+
       justifyContent:
         "space-between",
+
+      gap:
+        10,
     },
 
     sourceText: {
-      fontSize: 11,
-      fontWeight: "600",
-      color: "#8B949E",
+      flex:
+        1,
+
+      minWidth:
+        0,
+
+      fontSize:
+        11,
+
+      fontWeight:
+        "600",
+
+      color:
+        "#8B949E",
     },
 
     dateText: {
-      marginLeft: 12,
-      fontSize: 11,
-      fontWeight: "600",
-      textAlign: "right",
-      color: "#8B949E",
+      flexShrink:
+        0,
+
+      maxWidth:
+        "52%",
+
+      fontSize:
+        11,
+
+      lineHeight:
+        15,
+
+      fontWeight:
+        "600",
+
+      textAlign:
+        "right",
+
+      color:
+        "#8B949E",
     },
 
     emptyContainer: {
-      marginTop: 30,
-      alignItems: "center",
-      borderWidth: 1,
+      marginTop:
+        30,
+
+      alignItems:
+        "center",
+
+      borderWidth:
+        1,
+
       borderColor:
         "#E5E7EB",
-      borderRadius: 18,
-      paddingHorizontal: 24,
-      paddingVertical: 45,
+
+      borderRadius:
+        18,
+
+      paddingHorizontal:
+        24,
+
+      paddingVertical:
+        45,
+
       backgroundColor:
         "#FFFFFF",
     },
 
     emptyTitle: {
-      marginTop: 12,
-      fontSize: 18,
-      fontWeight: "800",
-      color: "#111827",
+      marginTop:
+        12,
+
+      fontSize:
+        17,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     emptyText: {
-      marginTop: 6,
-      maxWidth: 280,
-      fontSize: 13,
-      lineHeight: 19,
-      textAlign: "center",
-      color: "#6B7280",
+      marginTop:
+        6,
+
+      maxWidth:
+        280,
+
+      fontSize:
+        12,
+
+      lineHeight:
+        18,
+
+      textAlign:
+        "center",
+
+      color:
+        "#6B7280",
     },
 
     emptyResetButton: {
-      marginTop: 16,
-      minHeight: 40,
-      alignItems: "center",
+      marginTop:
+        16,
+
+      minHeight:
+        40,
+
+      alignItems:
+        "center",
+
       justifyContent:
         "center",
-      borderRadius: 10,
-      paddingHorizontal: 15,
+
+      borderRadius:
+        10,
+
+      paddingHorizontal:
+        15,
+
       backgroundColor:
         "#20252B",
     },
 
     emptyResetButtonText: {
-      fontSize: 13,
-      fontWeight: "800",
-      color: "#FFFFFF",
+      fontSize:
+        13,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#FFFFFF",
     },
   });
