@@ -3,16 +3,11 @@ import {
 } from "@expo/vector-icons";
 
 import {
-  FlatList,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-
-import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
 
 import type {
   Product,
@@ -27,159 +22,122 @@ interface ArchivedProductsProps {
       Product,
   ) => void;
 
-  onClose:
-    () => void;
+  onDelete: (
+    product:
+      Product,
+  ) => void;
 }
 
 export function ArchivedProducts({
   products,
   onRestore,
-  onClose,
+  onDelete,
 }: ArchivedProductsProps) {
+  if (
+    products.length ===
+    0
+  ) {
+    return (
+      <View
+        style={
+          styles.emptyContainer
+        }
+      >
+        <Ionicons
+          name="archive-outline"
+          size={
+            42
+          }
+          color="#9CA3AF"
+        />
+
+        <Text
+          style={
+            styles.emptyTitle
+          }
+        >
+          No archived products
+        </Text>
+
+        <Text
+          style={
+            styles.emptyText
+          }
+        >
+          Products you archive will appear here.
+        </Text>
+      </View>
+    );
+  }
+
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-        "bottom",
-      ]}
-      style={
-        styles.screen
-      }
-    >
-      <FlatList
-        data={
-          products
+    <View>
+      <View
+        style={
+          styles.sectionHeader
         }
-        keyExtractor={(
+      >
+        <Text
+          style={
+            styles.sectionTitle
+          }
+        >
+          Archived Products
+        </Text>
+
+        <Text
+          style={
+            styles.sectionSubtitle
+          }
+        >
+          {products.length} archived product
+          {products.length ===
+          1
+            ? ""
+            : "s"}
+        </Text>
+      </View>
+
+      {products.map(
+        (
           product,
-        ) =>
-          product.id.toString()
-        }
-        contentContainerStyle={
-          styles.content
-        }
-        showsVerticalScrollIndicator={
-          false
-        }
-        ListHeaderComponent={
-          <View
-            style={
-              styles.header
-            }
-          >
-            <View
-              style={
-                styles.headerTextContainer
-              }
-            >
-              <Text
-                style={
-                  styles.title
-                }
-              >
-                Archived
-              </Text>
-
-              <Text
-                style={
-                  styles.subtitle
-                }
-              >
-                {products.length} archived product
-                {products.length ===
-                1
-                  ? ""
-                  : "s"}
-              </Text>
-            </View>
-
-            <Pressable
-              accessibilityRole="button"
-              hitSlop={
-                8
-              }
-              onPress={
-                onClose
-              }
-              style={({
-                pressed,
-              }) => [
-                styles.closeButton,
-
-                pressed &&
-                  styles.buttonPressed,
-              ]}
-            >
-              <Text
-                style={
-                  styles.closeButtonText
-                }
-              >
-                Close
-              </Text>
-            </Pressable>
-          </View>
-        }
-        renderItem={({
-          item,
-        }) => (
+        ) => (
           <ArchivedProductCard
+            key={
+              product.id
+            }
             product={
-              item
+              product
             }
             onRestore={() =>
               onRestore(
-                item,
+                product,
+              )
+            }
+            onDelete={() =>
+              onDelete(
+                product,
               )
             }
           />
-        )}
-        ListEmptyComponent={
-          <View
-            style={
-              styles.emptyContainer
-            }
-          >
-            <Ionicons
-              name="archive-outline"
-              size={
-                42
-              }
-              color="#9CA3AF"
-            />
-
-            <Text
-              style={
-                styles.emptyTitle
-              }
-            >
-              No archived products
-            </Text>
-
-            <Text
-              style={
-                styles.emptyText
-              }
-            >
-              Products you archive will appear here.
-            </Text>
-          </View>
-        }
-      />
-    </SafeAreaView>
+        ),
+      )}
+    </View>
   );
 }
 
 function ArchivedProductCard({
   product,
   onRestore,
+  onDelete,
 }: {
   product:
     Product;
 
   onRestore:
+    () => void;
+
+  onDelete:
     () => void;
 }) {
   const productDetails = [
@@ -248,9 +206,6 @@ function ArchivedProductCard({
             style={
               styles.archivedBadgeText
             }
-            numberOfLines={
-              1
-            }
           >
             Archived
           </Text>
@@ -275,7 +230,16 @@ function ArchivedProductCard({
         />
 
         <DetailRow
-          label="Selling price"
+          label="Unit Cost"
+          value={
+            formatCurrency(
+              product.unitCost,
+            )
+          }
+        />
+
+        <DetailRow
+          label="Selling Price"
           value={
             formatCurrency(
               product.unitPrice,
@@ -284,37 +248,75 @@ function ArchivedProductCard({
         />
       </View>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Restore ${product.name}`}
-        onPress={
-          onRestore
+      <View
+        style={
+          styles.actionsRow
         }
-        style={({
-          pressed,
-        }) => [
-          styles.restoreButton,
-
-          pressed &&
-            styles.restoreButtonPressed,
-        ]}
       >
-        <Ionicons
-          name="arrow-undo-outline"
-          size={
-            19
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Restore ${product.name}`}
+          onPress={
+            onRestore
           }
-          color="#15803D"
-        />
+          style={({
+            pressed,
+          }) => [
+            styles.restoreButton,
 
-        <Text
-          style={
-            styles.restoreButtonText
-          }
+            pressed &&
+              styles.restoreButtonPressed,
+          ]}
         >
-          Restore
-        </Text>
-      </Pressable>
+          <Ionicons
+            name="arrow-undo-outline"
+            size={
+              18
+            }
+            color="#15803D"
+          />
+
+          <Text
+            style={
+              styles.restoreButtonText
+            }
+          >
+            Restore
+          </Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Delete ${product.name} permanently`}
+          onPress={
+            onDelete
+          }
+          style={({
+            pressed,
+          }) => [
+            styles.deleteButton,
+
+            pressed &&
+              styles.deleteButtonPressed,
+          ]}
+        >
+          <Ionicons
+            name="trash-outline"
+            size={
+              18
+            }
+            color="#B42318"
+          />
+
+          <Text
+            style={
+              styles.deleteButtonText
+            }
+          >
+            Delete
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -391,53 +393,17 @@ function formatCurrency(
 
 const styles =
   StyleSheet.create({
-    screen: {
-      flex:
-        1,
-
-      backgroundColor:
-        "#F4F6F8",
-    },
-
-    content: {
-      paddingHorizontal:
-        18,
-
-      paddingTop:
-        12,
-
-      paddingBottom:
-        50,
-    },
-
-    header: {
-      flexDirection:
-        "row",
-
-      alignItems:
-        "flex-start",
-
-      justifyContent:
-        "space-between",
+    sectionHeader: {
+      marginTop:
+        22,
 
       marginBottom:
-        18,
+        12,
     },
 
-    headerTextContainer: {
-      flex:
-        1,
-
-      minWidth:
-        0,
-
-      marginRight:
-        16,
-    },
-
-    title: {
+    sectionTitle: {
       fontSize:
-        28,
+        18,
 
       fontWeight:
         "800",
@@ -446,57 +412,15 @@ const styles =
         "#111827",
     },
 
-    subtitle: {
+    sectionSubtitle: {
       marginTop:
-        6,
+        4,
 
       fontSize:
-        13,
-
-      lineHeight:
-        19,
+        12,
 
       color:
         "#6B7280",
-    },
-
-    closeButton: {
-      minHeight:
-        42,
-
-      justifyContent:
-        "center",
-
-      borderWidth:
-        1,
-
-      borderColor:
-        "#CBD2DA",
-
-      borderRadius:
-        10,
-
-      paddingHorizontal:
-        14,
-
-      backgroundColor:
-        "#FFFFFF",
-    },
-
-    closeButtonText: {
-      fontSize:
-        14,
-
-      fontWeight:
-        "700",
-
-      color:
-        "#20252B",
-    },
-
-    buttonPressed: {
-      opacity:
-        0.72,
     },
 
     card: {
@@ -546,10 +470,10 @@ const styles =
         1,
 
       fontSize:
-        18,
+        17,
 
       lineHeight:
-        23,
+        22,
 
       fontWeight:
         "800",
@@ -594,10 +518,10 @@ const styles =
 
     archivedBadgeText: {
       fontSize:
-        11,
+        10,
 
       fontWeight:
-        "700",
+        "800",
 
       color:
         "#6B7280",
@@ -639,7 +563,7 @@ const styles =
         0,
 
       fontSize:
-        13,
+        12,
 
       color:
         "#6B7280",
@@ -653,7 +577,7 @@ const styles =
         0,
 
       fontSize:
-        13,
+        12,
 
       fontWeight:
         "700",
@@ -665,12 +589,23 @@ const styles =
         "#20252B",
     },
 
-    restoreButton: {
+    actionsRow: {
       marginTop:
         14,
 
+      flexDirection:
+        "row",
+
+      gap:
+        10,
+    },
+
+    restoreButton: {
+      flex:
+        1,
+
       minHeight:
-        46,
+        44,
 
       flexDirection:
         "row",
@@ -685,7 +620,7 @@ const styles =
         7,
 
       borderRadius:
-        12,
+        11,
 
       backgroundColor:
         "#ECFDF3",
@@ -698,7 +633,7 @@ const styles =
 
     restoreButtonText: {
       fontSize:
-        14,
+        13,
 
       fontWeight:
         "800",
@@ -707,12 +642,78 @@ const styles =
         "#15803D",
     },
 
-    emptyContainer: {
-      paddingVertical:
-        80,
+    deleteButton: {
+      flex:
+        1,
+
+      minHeight:
+        44,
+
+      flexDirection:
+        "row",
 
       alignItems:
         "center",
+
+      justifyContent:
+        "center",
+
+      gap:
+        7,
+
+      borderWidth:
+        1,
+
+      borderColor:
+        "#FECACA",
+
+      borderRadius:
+        11,
+
+      backgroundColor:
+        "#FFF8F7",
+    },
+
+    deleteButtonPressed: {
+      backgroundColor:
+        "#FEF2F2",
+    },
+
+    deleteButtonText: {
+      fontSize:
+        13,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#B42318",
+    },
+
+    emptyContainer: {
+      marginTop:
+        30,
+
+      alignItems:
+        "center",
+
+      borderWidth:
+        1,
+
+      borderColor:
+        "#E5E7EB",
+
+      borderRadius:
+        18,
+
+      paddingHorizontal:
+        24,
+
+      paddingVertical:
+        55,
+
+      backgroundColor:
+        "#FFFFFF",
     },
 
     emptyTitle: {
@@ -720,7 +721,7 @@ const styles =
         12,
 
       fontSize:
-        19,
+        18,
 
       fontWeight:
         "800",
@@ -731,7 +732,7 @@ const styles =
 
     emptyText: {
       marginTop:
-        5,
+        6,
 
       maxWidth:
         280,

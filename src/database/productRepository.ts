@@ -17,11 +17,14 @@ import {
 } from "./database";
 
 interface ProductRow {
-  id: number;
+  id:
+    number;
 
-  barcode: string;
+  barcode:
+    string;
 
-  name: string;
+  name:
+    string;
 
   department:
     Product["department"];
@@ -29,25 +32,34 @@ interface ProductRow {
   category:
     Product["category"];
 
-  brand: string;
+  brand:
+    string;
 
-  unit_cost: number;
+  unit_cost:
+    number;
 
-  unit_price: number;
+  unit_price:
+    number;
 
-  current_stock: number;
+  current_stock:
+    number;
 
-  reorder_level: number;
+  reorder_level:
+    number;
 
-  is_active: number;
+  is_active:
+    number;
 
-  created_at: string;
+  created_at:
+    string;
 
-  updated_at: string;
+  updated_at:
+    string;
 }
 
 function mapProductRow(
-  row: ProductRow,
+  row:
+    ProductRow,
 ): Product {
   return {
     id:
@@ -81,7 +93,8 @@ function mapProductRow(
       row.reorder_level,
 
     isActive:
-      row.is_active === 1,
+      row.is_active ===
+      1,
 
     createdAt:
       row.created_at,
@@ -92,7 +105,8 @@ function mapProductRow(
 }
 
 function normalizeBarcode(
-  barcode: string,
+  barcode:
+    string,
 ): string {
   return barcode.trim();
 }
@@ -162,11 +176,6 @@ export async function createProduct(
   const name =
     input.name.trim();
 
-  /*
-   * Brand is optional.
-   *
-   * Empty brand is stored as "".
-   */
   const brand =
     input.brand.trim();
 
@@ -217,7 +226,8 @@ export async function createProduct(
     !Number.isFinite(
       input.unitCost,
     ) ||
-    input.unitCost < 0
+    input.unitCost <
+      0
   ) {
     throw new Error(
       "Unit cost cannot be negative.",
@@ -228,7 +238,8 @@ export async function createProduct(
     !Number.isFinite(
       input.unitPrice,
     ) ||
-    input.unitPrice < 0
+    input.unitPrice <
+      0
   ) {
     throw new Error(
       "Unit price cannot be negative.",
@@ -239,7 +250,8 @@ export async function createProduct(
     !Number.isInteger(
       currentStock,
     ) ||
-    currentStock < 0
+    currentStock <
+      0
   ) {
     throw new Error(
       "Current stock must be a non-negative whole number.",
@@ -250,7 +262,8 @@ export async function createProduct(
     !Number.isInteger(
       reorderLevel,
     ) ||
-    reorderLevel < 0
+    reorderLevel <
+      0
   ) {
     throw new Error(
       "Reorder level must be a non-negative whole number.",
@@ -259,7 +272,8 @@ export async function createProduct(
 
   const duplicateBarcode =
     await database.getFirstAsync<{
-      id: number;
+      id:
+        number;
     }>(
       `
         SELECT
@@ -363,15 +377,6 @@ export async function getAllProducts(): Promise<
   );
 }
 
-/*
- * Database-backed inventory filtering.
- *
- * Search, department filtering,
- * low-stock filtering and sorting
- * now happen inside SQLite instead
- * of repeatedly filtering thousands
- * of products in JavaScript.
- */
 export async function getFilteredProducts(
   filters:
     InventoryFilterState,
@@ -391,29 +396,11 @@ export async function getFilteredProducts(
     )[] = [];
 
   const normalizedSearch =
-    filters.searchQuery
-      .trim();
+    filters.searchQuery.trim();
 
   if (
     normalizedSearch
   ) {
-    /*
-     * Preserve the existing UX where
-     * the search can match anywhere
-     * inside:
-     *
-     * - product name
-     * - brand
-     * - barcode
-     *
-     * For ~5,000 products this remains
-     * lightweight.
-     *
-     * If the inventory becomes much
-     * larger later, this can be moved
-     * to SQLite FTS without changing
-     * the UI API.
-     */
     const searchPattern =
       `%${normalizedSearch}%`;
 
@@ -463,15 +450,6 @@ export async function getFilteredProducts(
     );
   }
 
-  /*
-   * IMPORTANT:
-   *
-   * The ORDER BY string does not
-   * contain user input.
-   *
-   * It is selected only from our
-   * fixed InventorySortOption union.
-   */
   const orderBy =
     getInventoryOrderByClause(
       filters.sortBy,
@@ -519,7 +497,8 @@ export async function getProductCount(): Promise<number> {
 
   const result =
     await database.getFirstAsync<{
-      total: number;
+      total:
+        number;
     }>(
       `
         SELECT
@@ -647,7 +626,8 @@ export async function updateProduct(
     !Number.isFinite(
       input.unitCost,
     ) ||
-    input.unitCost < 0
+    input.unitCost <
+      0
   ) {
     throw new Error(
       "Unit cost must be zero or greater.",
@@ -658,7 +638,8 @@ export async function updateProduct(
     !Number.isFinite(
       input.unitPrice,
     ) ||
-    input.unitPrice < 0
+    input.unitPrice <
+      0
   ) {
     throw new Error(
       "Selling price must be zero or greater.",
@@ -669,7 +650,8 @@ export async function updateProduct(
     !Number.isInteger(
       input.reorderLevel,
     ) ||
-    input.reorderLevel < 0
+    input.reorderLevel <
+      0
   ) {
     throw new Error(
       "Reorder level must be a whole number of zero or greater.",
@@ -678,7 +660,8 @@ export async function updateProduct(
 
   const duplicateBarcode =
     await database.getFirstAsync<{
-      id: number;
+      id:
+        number;
     }>(
       `
         SELECT
@@ -854,4 +837,78 @@ export async function getArchivedProducts(): Promise<
   return rows.map(
     mapProductRow,
   );
+}
+
+export async function canPermanentlyDeleteProduct(
+  productId:
+    number,
+): Promise<boolean> {
+  const database =
+    await getDatabase();
+
+  const result =
+    await database.getFirstAsync<{
+      total:
+        number;
+    }>(
+      `
+        SELECT
+          COUNT(*) AS total
+
+        FROM inventory_transactions
+
+        WHERE
+          product_id = ?;
+      `,
+      productId,
+    );
+
+  return (
+    result?.total ??
+    0
+  ) ===
+    0;
+}
+
+export async function permanentlyDeleteProduct(
+  productId:
+    number,
+): Promise<void> {
+  const database =
+    await getDatabase();
+
+  const canDelete =
+    await canPermanentlyDeleteProduct(
+      productId,
+    );
+
+  if (
+    !canDelete
+  ) {
+    throw new Error(
+      "This product has stock history and cannot be permanently deleted.",
+    );
+  }
+
+  const result =
+    await database.runAsync(
+      `
+        DELETE FROM products
+
+        WHERE
+          id = ?
+
+          AND is_active = 0;
+      `,
+      productId,
+    );
+
+  if (
+    result.changes ===
+    0
+  ) {
+    throw new Error(
+      "The archived product could not be found.",
+    );
+  }
 }
