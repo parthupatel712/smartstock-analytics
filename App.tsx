@@ -14,7 +14,6 @@ import {
   Alert,
   FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -48,6 +47,14 @@ import {
 import {
   GlobalTransactions,
 } from "./src/components/GlobalTransactions";
+
+import {
+  ImportInventory,
+} from "./src/components/ImportInventory";
+
+import {
+  InventoryActionBar,
+} from "./src/components/InventoryActionBar";
 
 import {
   InventoryAnalytics,
@@ -249,7 +256,8 @@ type AppView =
   | "export-reports"
   | "archived-products"
   | "product-details"
-  | "reorder-management";
+  | "reorder-management"
+  | "import-inventory";
 
 type TransactionReturnView =
   | "inventory"
@@ -1207,6 +1215,7 @@ function SmartStockApp() {
           );
         }
       },
+
       [
         beginCloudSync,
         cloudSyncStatus.state,
@@ -1538,6 +1547,7 @@ function SmartStockApp() {
           );
         }
       },
+
       [
         loadInventoryData,
         pushToCloud,
@@ -1580,53 +1590,11 @@ function SmartStockApp() {
           ],
         );
       },
+
       [
         handleArchiveProduct,
       ],
     );
-
-  async function openArchivedProducts():
-    Promise<void> {
-    try {
-      setIsArchivedProductsLoading(
-        true,
-      );
-
-      setCurrentView(
-        "archived-products",
-      );
-
-      const archived =
-        await getArchivedProducts();
-
-      setArchivedProducts(
-        archived,
-      );
-    } catch (
-      error
-    ) {
-      console.error(
-        "Could not load archived products:",
-        error,
-      );
-
-      setCurrentView(
-        "inventory",
-      );
-
-      Alert.alert(
-        "Could not load archived products",
-
-        error instanceof Error
-          ? error.message
-          : "Archived products could not be loaded.",
-      );
-    } finally {
-      setIsArchivedProductsLoading(
-        false,
-      );
-    }
-  }
 
   function confirmRestoreProduct(
     product:
@@ -1853,6 +1821,7 @@ function SmartStockApp() {
           returnView,
         );
       },
+
       [
         transactionReturnView,
       ],
@@ -2391,6 +2360,36 @@ function SmartStockApp() {
       [],
     );
 
+  const closeImportInventory =
+    useCallback(
+      (): void => {
+        setCurrentView(
+          "inventory",
+        );
+      },
+      [],
+    );
+
+  const openImportInventory =
+    useCallback(
+      (): void => {
+        setCurrentView(
+          "import-inventory",
+        );
+      },
+      [],
+    );
+
+  const openExportReports =
+    useCallback(
+      (): void => {
+        setCurrentView(
+          "export-reports",
+        );
+      },
+      [],
+    );
+
   const renderProduct =
     useCallback(
       ({
@@ -2422,6 +2421,7 @@ function SmartStockApp() {
           }
         />
       ),
+
       [
         latestDeliveries,
         openTransactionForm,
@@ -2978,6 +2978,19 @@ function SmartStockApp() {
     );
   }
 
+  if (
+    currentView ===
+    "import-inventory"
+  ) {
+    return (
+      <ImportInventory
+        onClose={
+          closeImportInventory
+        }
+      />
+    );
+  }
+
   return (
     <SafeAreaView
       edges={[
@@ -3060,81 +3073,32 @@ function SmartStockApp() {
                 }
               />
 
-              <View
-                style={
-                  styles.actionMenuWrapper
+              <InventoryActionBar
+                onDashboard={() =>
+                  void openDashboard()
                 }
-              >
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={
-                    false
-                  }
-                  contentContainerStyle={
-                    styles.actionMenu
-                  }
-                >
-                  <ActionMenuItem
-                    label="Dashboard"
-                    onPress={() =>
-                      void openDashboard()
-                    }
-                  />
-
-                  <ActionMenuItem
-                    label="Reorder"
-                    onPress={() =>
-                      void openReorderManagement()
-                    }
-                  />
-
-                  <ActionMenuItem
-                    label="History"
-                    onPress={() =>
-                      void openGlobalTransactions()
-                    }
-                  />
-
-                  <ActionMenuItem
-                    label="Analytics"
-                    onPress={() =>
-                      void openAnalytics()
-                    }
-                  />
-
-                  <ActionMenuItem
-                    label="Scan"
-                    onPress={
-                      openScanner
-                    }
-                    emphasized
-                  />
-
-                  <ActionMenuItem
-                    label="Add Product"
-                    onPress={
-                      openManualProductForm
-                    }
-                    emphasized
-                  />
-
-                  <ActionMenuItem
-                    label="Archived"
-                    onPress={() =>
-                      void openArchivedProducts()
-                    }
-                  />
-
-                  <ActionMenuItem
-                    label="Export"
-                    onPress={() =>
-                      setCurrentView(
-                        "export-reports",
-                      )
-                    }
-                  />
-                </ScrollView>
-              </View>
+                onReorder={() =>
+                  void openReorderManagement()
+                }
+                onStockHistory={() =>
+                  void openGlobalTransactions()
+                }
+                onAnalytics={() =>
+                  void openAnalytics()
+                }
+                onScanBarcode={
+                  openScanner
+                }
+                onAddProductManually={
+                  openManualProductForm
+                }
+                onImport={
+                  openImportInventory
+                }
+                onExport={
+                  openExportReports
+                }
+              />
             </View>
 
             <InventoryToolbar
@@ -3228,60 +3192,6 @@ function SmartStockApp() {
         style="auto"
       />
     </SafeAreaView>
-  );
-}
-
-interface ActionMenuItemProps {
-  label:
-    string;
-
-  onPress:
-    () => void;
-
-  emphasized?:
-    boolean;
-}
-
-function ActionMenuItem({
-  label,
-  onPress,
-  emphasized = false,
-}: ActionMenuItemProps) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={
-        onPress
-      }
-      style={({
-        pressed,
-      }) => [
-        styles.actionMenuItem,
-
-        emphasized &&
-          styles.actionMenuItemEmphasized,
-
-        pressed &&
-          styles.actionMenuItemPressed,
-
-        pressed &&
-          emphasized &&
-          styles.actionMenuItemEmphasizedPressed,
-      ]}
-    >
-      <Text
-        style={[
-          styles.actionMenuText,
-
-          emphasized &&
-            styles.actionMenuTextEmphasized,
-        ]}
-      >
-        {
-          label
-        }
-      </Text>
-    </Pressable>
   );
 }
 
@@ -3437,97 +3347,6 @@ const styles =
 
       color:
         "#5D6673",
-    },
-
-    actionMenuWrapper: {
-      marginTop:
-        18,
-
-      marginHorizontal:
-        -16,
-
-      borderTopWidth:
-        1,
-
-      borderBottomWidth:
-        1,
-
-      borderColor:
-        "#EEF0F2",
-
-      backgroundColor:
-        "#FFFFFF",
-    },
-
-    actionMenu: {
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      paddingHorizontal:
-        8,
-
-      paddingVertical:
-        5,
-
-      gap:
-        2,
-    },
-
-    actionMenuItem: {
-      minHeight:
-        46,
-
-      alignItems:
-        "center",
-
-      justifyContent:
-        "center",
-
-      borderRadius:
-        10,
-
-      paddingHorizontal:
-        16,
-
-      backgroundColor:
-        "#FFFFFF",
-    },
-
-    actionMenuItemEmphasized: {
-      backgroundColor:
-        "#F1F5F9",
-    },
-
-    actionMenuItemPressed: {
-      backgroundColor:
-        "#EEF1F3",
-    },
-
-    actionMenuItemEmphasizedPressed: {
-      backgroundColor:
-        "#E2E8F0",
-    },
-
-    actionMenuText: {
-      fontSize:
-        12,
-
-      fontWeight:
-        "800",
-
-      letterSpacing:
-        0.2,
-
-      color:
-        "#69747C",
-    },
-
-    actionMenuTextEmphasized: {
-      color:
-        "#20252B",
     },
 
     topBar: {
