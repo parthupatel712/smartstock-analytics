@@ -1,4 +1,8 @@
-import { useMemo, useState } from "react";
+import {
+  useMemo,
+  useState,
+} from "react";
+
 import {
   KeyboardAvoidingView,
   Modal,
@@ -12,6 +16,10 @@ import {
 } from "react-native";
 
 import {
+  SafeAreaView,
+} from "react-native-safe-area-context";
+
+import {
   getCategoriesForDepartment,
   PRODUCT_DEPARTMENTS,
   type ProductDepartment,
@@ -22,16 +30,21 @@ import type {
   ProductFormValues,
 } from "../types/productForm";
 
-import { validateProductForm } from "../utils/validateProductForm";
+import {
+  validateProductForm,
+} from "../utils/validateProductForm";
 
 interface ProductFormProps {
   onSubmit: (
-    values: ProductFormValues,
+    values:
+      ProductFormValues,
   ) => Promise<void>;
 
-  isSubmitting?: boolean;
+  isSubmitting?:
+    boolean;
 
-  initialBarcode?: string;
+  initialBarcode?:
+    string;
 }
 
 type PickerType =
@@ -39,17 +52,35 @@ type PickerType =
   | "category"
   | null;
 
-const INITIAL_VALUES: ProductFormValues = {
-  barcode: "",
-  name: "",
-  department: "",
-  category: "",
-  brand: "",
-  unitCost: "",
-  unitPrice: "",
-  currentStock: "0",
-  reorderLevel: "5",
-};
+const INITIAL_VALUES:
+  ProductFormValues = {
+    barcode:
+      "",
+
+    name:
+      "",
+
+    department:
+      "",
+
+    category:
+      "",
+
+    brand:
+      "",
+
+    unitCost:
+      "",
+
+    unitPrice:
+      "",
+
+    currentStock:
+      "0",
+
+    reorderLevel:
+      "5",
+  };
 
 export function ProductForm({
   onSubmit,
@@ -59,117 +90,161 @@ export function ProductForm({
   const [
     values,
     setValues,
-  ] = useState<ProductFormValues>({
-    ...INITIAL_VALUES,
-    barcode: initialBarcode,
-  });
+  ] =
+    useState<ProductFormValues>({
+      ...INITIAL_VALUES,
+
+      barcode:
+        initialBarcode,
+    });
 
   const [
     errors,
     setErrors,
-  ] = useState<ProductFormErrors>(
-    {},
-  );
+  ] =
+    useState<ProductFormErrors>(
+      {},
+    );
 
   const [
     activePicker,
     setActivePicker,
-  ] = useState<PickerType>(
-    null,
-  );
+  ] =
+    useState<PickerType>(
+      null,
+    );
+
+  const wasBarcodeScanned =
+    initialBarcode.trim() !==
+    "";
 
   const availableCategories =
-    useMemo(() => {
-      if (!values.department) {
-        return [];
-      }
+    useMemo(
+      () => {
+        if (
+          !values.department
+        ) {
+          return [];
+        }
 
-      return getCategoriesForDepartment(
-        values.department as ProductDepartment,
-      );
-    }, [values.department]);
+        return getCategoriesForDepartment(
+          values.department as ProductDepartment,
+        );
+      },
+      [
+        values.department,
+      ],
+    );
 
   function updateField(
-    field: keyof ProductFormValues,
-    value: string,
+    field:
+      keyof ProductFormValues,
+    value:
+      string,
   ): void {
     setValues(
-      (currentValues) => ({
+      (
+        currentValues,
+      ) => ({
         ...currentValues,
-        [field]: value,
+
+        [field]:
+          value,
       }),
     );
 
     setErrors(
-      (currentErrors) => ({
+      (
+        currentErrors,
+      ) => ({
         ...currentErrors,
-        [field]: undefined,
+
+        [field]:
+          undefined,
       }),
     );
   }
 
   function selectDepartment(
-    department: ProductDepartment,
+    department:
+      ProductDepartment,
   ): void {
     setValues(
-      (currentValues) => ({
+      (
+        currentValues,
+      ) => ({
         ...currentValues,
+
         department,
-        category: "",
+
+        category:
+          "",
       }),
     );
 
     setErrors(
-      (currentErrors) => ({
+      (
+        currentErrors,
+      ) => ({
         ...currentErrors,
-        department: undefined,
-        category: undefined,
+
+        department:
+          undefined,
+
+        category:
+          undefined,
       }),
     );
 
-    setActivePicker(null);
+    setActivePicker(
+      null,
+    );
   }
 
   function selectCategory(
-    category: string,
+    category:
+      string,
   ): void {
     updateField(
       "category",
       category,
     );
 
-    setActivePicker(null);
+    setActivePicker(
+      null,
+    );
   }
 
-  async function handleSubmit(): Promise<void> {
-    if (isSubmitting) {
+  async function handleSubmit():
+    Promise<void> {
+    if (
+      isSubmitting
+    ) {
       return;
     }
 
-    const normalizedValues: ProductFormValues = {
-      ...values,
+    const normalizedValues:
+      ProductFormValues = {
+        ...values,
 
-      barcode:
-        values.barcode.trim(),
+        barcode:
+          values.barcode.trim(),
 
-      name:
-        values.name.trim(),
+        name:
+          values.name.trim(),
 
-      /*
-       * Brand is optional.
-       * If nothing is entered,
-       * we simply keep an empty string.
-       */
-      brand:
-        values.brand.trim(),
-    };
+        brand:
+          values.brand.trim(),
+      };
 
     const validation =
       validateProductForm(
         normalizedValues,
       );
 
-    if (!validation.isValid) {
+    if (
+      !validation.isValid
+    ) {
       setErrors(
         validation.errors,
       );
@@ -185,7 +260,8 @@ export function ProductForm({
   return (
     <KeyboardAvoidingView
       behavior={
-        Platform.OS === "ios"
+        Platform.OS ===
+        "ios"
           ? "padding"
           : undefined
       }
@@ -202,7 +278,11 @@ export function ProductForm({
           false
         }
       >
-        <Text style={styles.title}>
+        <Text
+          style={
+            styles.title
+          }
+        >
           Add Product
         </Text>
 
@@ -211,13 +291,86 @@ export function ProductForm({
             styles.description
           }
         >
-          Enter the remaining product details below.
+          Add the basic product details and starting inventory information.
+        </Text>
+
+        {wasBarcodeScanned ? (
+          <View
+            style={
+              styles.scannedBarcodeCard
+            }
+          >
+            <View
+              style={
+                styles.scannedBarcodeHeader
+              }
+            >
+              <Text
+                style={
+                  styles.scannedBarcodeLabel
+                }
+              >
+                Barcode scanned
+              </Text>
+
+              <View
+                style={
+                  styles.scannedBadge
+                }
+              >
+                <Text
+                  style={
+                    styles.scannedBadgeText
+                  }
+                >
+                  Camera
+                </Text>
+              </View>
+            </View>
+
+            <Text
+              style={
+                styles.scannedBarcodeValue
+              }
+              numberOfLines={
+                1
+              }
+              adjustsFontSizeToFit
+              minimumFontScale={
+                0.8
+              }
+            >
+              {
+                values.barcode
+              }
+            </Text>
+
+            <Text
+              style={
+                styles.scannedBarcodeHint
+              }
+            >
+              Confirm the barcode below before saving the product.
+            </Text>
+          </View>
+        ) : null}
+
+        <Text
+          style={
+            styles.sectionLabel
+          }
+        >
+          Product Details
         </Text>
 
         <FormField
           label="Barcode"
-          value={values.barcode}
-          onChangeText={(value) =>
+          value={
+            values.barcode
+          }
+          onChangeText={(
+            value,
+          ) =>
             updateField(
               "barcode",
               value,
@@ -225,20 +378,49 @@ export function ProductForm({
           }
           placeholder="Example: 012345678905"
           keyboardType="number-pad"
-          error={errors.barcode}
+          error={
+            errors.barcode
+          }
         />
 
         <FormField
-          label="Product name"
-          value={values.name}
-          onChangeText={(value) =>
+          label="Product Name"
+          value={
+            values.name
+          }
+          onChangeText={(
+            value,
+          ) =>
             updateField(
               "name",
               value,
             )
           }
           placeholder="Example: Coca-Cola Zero 355 mL"
-          error={errors.name}
+          error={
+            errors.name
+          }
+          autoCapitalize="words"
+        />
+
+        <FormField
+          label="Brand"
+          optional
+          value={
+            values.brand
+          }
+          onChangeText={(
+            value,
+          ) =>
+            updateField(
+              "brand",
+              value,
+            )
+          }
+          placeholder="Example: Coca-Cola"
+          error={
+            errors.brand
+          }
           autoCapitalize="words"
         />
 
@@ -247,7 +429,7 @@ export function ProductForm({
           value={
             values.department
           }
-          placeholder="Select a department"
+          placeholder="Select department"
           error={
             errors.department
           }
@@ -265,7 +447,7 @@ export function ProductForm({
           }
           placeholder={
             values.department
-              ? "Select a category"
+              ? "Select category"
               : "Select department first"
           }
           error={
@@ -281,99 +463,163 @@ export function ProductForm({
           }
         />
 
-        <FormField
-          label="Brand (Optional)"
-          value={values.brand}
-          onChangeText={(value) =>
-            updateField(
-              "brand",
-              value,
-            )
+        <Text
+          style={
+            styles.sectionLabel
           }
-          placeholder="Example: Coca-Cola"
-          error={errors.brand}
-          autoCapitalize="words"
-        />
+        >
+          Pricing
+        </Text>
+
+        <View
+          style={
+            styles.doubleFieldRow
+          }
+        >
+          <View
+            style={
+              styles.doubleField
+            }
+          >
+            <FormField
+              label="Unit Cost"
+              value={
+                values.unitCost
+              }
+              onChangeText={(
+                value,
+              ) =>
+                updateField(
+                  "unitCost",
+                  value,
+                )
+              }
+              placeholder="0.00"
+              keyboardType="decimal-pad"
+              error={
+                errors.unitCost
+              }
+              compact
+            />
+          </View>
+
+          <View
+            style={
+              styles.doubleField
+            }
+          >
+            <FormField
+              label="Selling Price"
+              value={
+                values.unitPrice
+              }
+              onChangeText={(
+                value,
+              ) =>
+                updateField(
+                  "unitPrice",
+                  value,
+                )
+              }
+              placeholder="0.00"
+              keyboardType="decimal-pad"
+              error={
+                errors.unitPrice
+              }
+              compact
+            />
+          </View>
+        </View>
 
         <Text
           style={
-            styles.optionalHint
+            styles.sectionLabel
           }
         >
-          Leave this blank if the product does not have a brand.
+          Inventory Setup
         </Text>
 
-        <FormField
-          label="Unit cost"
-          value={
-            values.unitCost
+        <View
+          style={
+            styles.doubleFieldRow
           }
-          onChangeText={(value) =>
-            updateField(
-              "unitCost",
-              value,
-            )
-          }
-          placeholder="0.00"
-          keyboardType="decimal-pad"
-          error={
-            errors.unitCost
-          }
-        />
+        >
+          <View
+            style={
+              styles.doubleField
+            }
+          >
+            <FormField
+              label="Opening Stock"
+              value={
+                values.currentStock
+              }
+              onChangeText={(
+                value,
+              ) =>
+                updateField(
+                  "currentStock",
+                  value,
+                )
+              }
+              placeholder="0"
+              keyboardType="number-pad"
+              error={
+                errors.currentStock
+              }
+              compact
+            />
+          </View>
 
-        <FormField
-          label="Unit price"
-          value={
-            values.unitPrice
-          }
-          onChangeText={(value) =>
-            updateField(
-              "unitPrice",
-              value,
-            )
-          }
-          placeholder="0.00"
-          keyboardType="decimal-pad"
-          error={
-            errors.unitPrice
-          }
-        />
+          <View
+            style={
+              styles.doubleField
+            }
+          >
+            <FormField
+              label="Reorder Level"
+              value={
+                values.reorderLevel
+              }
+              onChangeText={(
+                value,
+              ) =>
+                updateField(
+                  "reorderLevel",
+                  value,
+                )
+              }
+              placeholder="5"
+              keyboardType="number-pad"
+              error={
+                errors.reorderLevel
+              }
+              compact
+            />
+          </View>
+        </View>
 
-        <FormField
-          label="Opening stock"
-          value={
-            values.currentStock
+        <View
+          style={
+            styles.inventoryHintCard
           }
-          onChangeText={(value) =>
-            updateField(
-              "currentStock",
-              value,
-            )
-          }
-          placeholder="0"
-          keyboardType="number-pad"
-          error={
-            errors.currentStock
-          }
-        />
+        >
+          <Text
+            style={
+              styles.inventoryHintTitle
+            }
+          >
+            Opening stock
+          </Text>
 
-        <FormField
-          label="Reorder level"
-          value={
-            values.reorderLevel
-          }
-          onChangeText={(value) =>
-            updateField(
-              "reorderLevel",
-              value,
-            )
-          }
-          placeholder="5"
-          keyboardType="number-pad"
-          error={
-            errors.reorderLevel
-          }
-        />
+          <Text
+            style={
+              styles.inventoryHintText
+            }
+          >
+            If you enter opening stock, SmartStock records it as the product's first Stock In transaction so the inventory history remains complete.
+          </Text>
+        </View>
 
         <Pressable
           accessibilityRole="button"
@@ -402,8 +648,8 @@ export function ProductForm({
             }
           >
             {isSubmitting
-              ? "Saving product…"
-              : "Save product"}
+              ? "Saving…"
+              : "Save Product"}
           </Text>
         </Pressable>
       </ScrollView>
@@ -416,147 +662,182 @@ export function ProductForm({
           null
         }
         onRequestClose={() =>
-          setActivePicker(null)
+          setActivePicker(
+            null,
+          )
         }
       >
-        <View
+        <SafeAreaView
+          edges={[
+            "bottom",
+          ]}
           style={
-            styles.modalBackdrop
+            styles.modalSafeArea
           }
         >
           <View
             style={
-              styles.modalContent
+              styles.modalBackdrop
             }
           >
             <View
               style={
-                styles.modalHeader
+                styles.modalContent
               }
             >
-              <Text
+              <View
                 style={
-                  styles.modalTitle
-                }
-              >
-                {activePicker ===
-                "department"
-                  ? "Select department"
-                  : "Select category"}
-              </Text>
-
-              <Pressable
-                accessibilityRole="button"
-                onPress={() =>
-                  setActivePicker(
-                    null,
-                  )
-                }
-                style={
-                  styles.modalCloseButton
+                  styles.modalHeader
                 }
               >
                 <Text
                   style={
-                    styles.modalCloseText
+                    styles.modalTitle
+                  }
+                  numberOfLines={
+                    2
                   }
                 >
-                  Close
+                  {activePicker ===
+                  "department"
+                    ? "Select Department"
+                    : "Select Category"}
                 </Text>
-              </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  hitSlop={
+                    10
+                  }
+                  onPress={() =>
+                    setActivePicker(
+                      null,
+                    )
+                  }
+                  style={({
+                    pressed,
+                  }) => [
+                    styles.modalCloseButton,
+
+                    pressed &&
+                      styles.buttonPressed,
+                  ]}
+                >
+                  <Text
+                    style={
+                      styles.modalCloseText
+                    }
+                  >
+                    Close
+                  </Text>
+                </Pressable>
+              </View>
+
+              <ScrollView
+                showsVerticalScrollIndicator={
+                  false
+                }
+              >
+                {activePicker ===
+                "department"
+                  ? PRODUCT_DEPARTMENTS.map(
+                      (
+                        department,
+                      ) => {
+                        const isSelected =
+                          values.department ===
+                          department;
+
+                        return (
+                          <PickerOption
+                            key={
+                              department
+                            }
+                            label={
+                              department
+                            }
+                            selected={
+                              isSelected
+                            }
+                            onPress={() =>
+                              selectDepartment(
+                                department,
+                              )
+                            }
+                          />
+                        );
+                      },
+                    )
+                  : availableCategories.map(
+                      (
+                        category,
+                      ) => {
+                        const isSelected =
+                          values.category ===
+                          category;
+
+                        return (
+                          <PickerOption
+                            key={
+                              category
+                            }
+                            label={
+                              category
+                            }
+                            selected={
+                              isSelected
+                            }
+                            onPress={() =>
+                              selectCategory(
+                                category,
+                              )
+                            }
+                          />
+                        );
+                      },
+                    )}
+              </ScrollView>
             </View>
-
-            <ScrollView
-              showsVerticalScrollIndicator={
-                false
-              }
-            >
-              {activePicker ===
-              "department"
-                ? PRODUCT_DEPARTMENTS.map(
-                    (
-                      department,
-                    ) => {
-                      const isSelected =
-                        values.department ===
-                        department;
-
-                      return (
-                        <PickerOption
-                          key={
-                            department
-                          }
-                          label={
-                            department
-                          }
-                          selected={
-                            isSelected
-                          }
-                          onPress={() =>
-                            selectDepartment(
-                              department,
-                            )
-                          }
-                        />
-                      );
-                    },
-                  )
-                : availableCategories.map(
-                    (
-                      category,
-                    ) => {
-                      const isSelected =
-                        values.category ===
-                        category;
-
-                      return (
-                        <PickerOption
-                          key={
-                            category
-                          }
-                          label={
-                            category
-                          }
-                          selected={
-                            isSelected
-                          }
-                          onPress={() =>
-                            selectCategory(
-                              category,
-                            )
-                          }
-                        />
-                      );
-                    },
-                  )}
-            </ScrollView>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
     </KeyboardAvoidingView>
   );
 }
 
 interface FormFieldProps {
-  label: string;
+  label:
+    string;
 
-  value: string;
+  value:
+    string;
 
   onChangeText: (
-    value: string,
+    value:
+      string,
   ) => void;
 
-  placeholder: string;
+  placeholder:
+    string;
 
-  keyboardType?: React.ComponentProps<
-    typeof TextInput
-  >["keyboardType"];
+  keyboardType?:
+    React.ComponentProps<
+      typeof TextInput
+    >["keyboardType"];
 
-  autoCapitalize?: React.ComponentProps<
-    typeof TextInput
-  >["autoCapitalize"];
+  autoCapitalize?:
+    React.ComponentProps<
+      typeof TextInput
+    >["autoCapitalize"];
 
-  error?: string;
+  error?:
+    string;
+
+  optional?:
+    boolean;
+
+  compact?:
+    boolean;
 }
 
 function FormField({
@@ -567,34 +848,67 @@ function FormField({
   keyboardType = "default",
   autoCapitalize = "none",
   error,
+  optional = false,
+  compact = false,
 }: FormFieldProps) {
   return (
     <View
-      style={
-        styles.fieldContainer
-      }
+      style={[
+        styles.fieldContainer,
+
+        compact &&
+          styles.compactFieldContainer,
+      ]}
     >
-      <Text
-        style={styles.label}
+      <View
+        style={
+          styles.fieldLabelRow
+        }
       >
-        {label}
-      </Text>
+        <Text
+          style={
+            styles.label
+          }
+          numberOfLines={
+            2
+          }
+        >
+          {
+            label
+          }
+        </Text>
+
+        {optional ? (
+          <Text
+            style={
+              styles.optionalLabel
+            }
+          >
+            Optional
+          </Text>
+        ) : null}
+      </View>
 
       <TextInput
-        value={value}
+        value={
+          value
+        }
         onChangeText={
           onChangeText
         }
         placeholder={
           placeholder
         }
+        placeholderTextColor="#9CA3AF"
         keyboardType={
           keyboardType
         }
         autoCapitalize={
           autoCapitalize
         }
-        autoCorrect={false}
+        autoCorrect={
+          false
+        }
         style={[
           styles.input,
 
@@ -609,7 +923,9 @@ function FormField({
             styles.errorText
           }
         >
-          {error}
+          {
+            error
+          }
         </Text>
       ) : null}
     </View>
@@ -617,17 +933,23 @@ function FormField({
 }
 
 interface DropdownFieldProps {
-  label: string;
+  label:
+    string;
 
-  value: string;
+  value:
+    string;
 
-  placeholder: string;
+  placeholder:
+    string;
 
-  onPress: () => void;
+  onPress:
+    () => void;
 
-  error?: string;
+  error?:
+    string;
 
-  disabled?: boolean;
+  disabled?:
+    boolean;
 }
 
 function DropdownField({
@@ -645,16 +967,26 @@ function DropdownField({
       }
     >
       <Text
-        style={styles.label}
+        style={
+          styles.label
+        }
       >
-        {label}
+        {
+          label
+        }
       </Text>
 
       <Pressable
         accessibilityRole="button"
-        disabled={disabled}
-        onPress={onPress}
-        style={[
+        disabled={
+          disabled
+        }
+        onPress={
+          onPress
+        }
+        style={({
+          pressed,
+        }) => [
           styles.dropdownButton,
 
           disabled &&
@@ -662,6 +994,10 @@ function DropdownField({
 
           error &&
             styles.inputError,
+
+          pressed &&
+            !disabled &&
+            styles.buttonPressed,
         ]}
       >
         <Text
@@ -674,6 +1010,9 @@ function DropdownField({
             disabled &&
               styles.dropdownTextDisabled,
           ]}
+          numberOfLines={
+            2
+          }
         >
           {value ||
             placeholder}
@@ -684,7 +1023,7 @@ function DropdownField({
             styles.dropdownIcon
           }
         >
-          ⌄
+          ›
         </Text>
       </Pressable>
 
@@ -694,7 +1033,9 @@ function DropdownField({
             styles.errorText
           }
         >
-          {error}
+          {
+            error
+          }
         </Text>
       ) : null}
     </View>
@@ -702,11 +1043,14 @@ function DropdownField({
 }
 
 interface PickerOptionProps {
-  label: string;
+  label:
+    string;
 
-  selected: boolean;
+  selected:
+    boolean;
 
-  onPress: () => void;
+  onPress:
+    () => void;
 }
 
 function PickerOption({
@@ -717,7 +1061,12 @@ function PickerOption({
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={onPress}
+      accessibilityState={{
+        selected,
+      }}
+      onPress={
+        onPress
+      }
       style={({
         pressed,
       }) => [
@@ -738,7 +1087,9 @@ function PickerOption({
             styles.pickerOptionTextSelected,
         ]}
       >
-        {label}
+        {
+          label
+        }
       </Text>
 
       {selected ? (
@@ -757,47 +1108,268 @@ function PickerOption({
 const styles =
   StyleSheet.create({
     keyboardContainer: {
-      flex: 1,
+      flex:
+        1,
+
+      backgroundColor:
+        "#F4F6F8",
     },
 
     content: {
-      padding: 20,
-      paddingBottom: 48,
+      paddingHorizontal:
+        20,
+
+      paddingTop:
+        10,
+
+      paddingBottom:
+        50,
     },
 
     title: {
-      fontSize: 30,
-      fontWeight: "800",
-      color: "#111827",
+      fontSize:
+        28,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     description: {
-      marginTop: 8,
-      marginBottom: 24,
-      fontSize: 15,
-      lineHeight: 22,
-      color: "#5D6673",
+      marginTop:
+        6,
+
+      marginBottom:
+        8,
+
+      maxWidth:
+        340,
+
+      fontSize:
+        13,
+
+      lineHeight:
+        19,
+
+      color:
+        "#5D6673",
+    },
+
+    scannedBarcodeCard: {
+      marginTop:
+        18,
+
+      borderWidth:
+        1,
+
+      borderColor:
+        "#BFDBFE",
+
+      borderRadius:
+        14,
+
+      padding:
+        14,
+
+      backgroundColor:
+        "#EFF6FF",
+    },
+
+    scannedBarcodeHeader: {
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "space-between",
+
+      gap:
+        10,
+    },
+
+    scannedBarcodeLabel: {
+      flex:
+        1,
+
+      fontSize:
+        12,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#1D4ED8",
+    },
+
+    scannedBadge: {
+      flexShrink:
+        0,
+
+      borderRadius:
+        999,
+
+      paddingHorizontal:
+        8,
+
+      paddingVertical:
+        4,
+
+      backgroundColor:
+        "#DBEAFE",
+    },
+
+    scannedBadgeText: {
+      fontSize:
+        9,
+
+      fontWeight:
+        "800",
+
+      textTransform:
+        "uppercase",
+
+      color:
+        "#1D4ED8",
+    },
+
+    scannedBarcodeValue: {
+      marginTop:
+        7,
+
+      fontSize:
+        18,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
+    },
+
+    scannedBarcodeHint: {
+      marginTop:
+        4,
+
+      fontSize:
+        11,
+
+      lineHeight:
+        16,
+
+      color:
+        "#52698E",
+    },
+
+    sectionLabel: {
+      marginTop:
+        24,
+
+      marginBottom:
+        2,
+
+      fontSize:
+        12,
+
+      fontWeight:
+        "800",
+
+      textTransform:
+        "uppercase",
+
+      letterSpacing:
+        0.4,
+
+      color:
+        "#6B7280",
     },
 
     fieldContainer: {
-      marginBottom: 18,
+      marginTop:
+        16,
+    },
+
+    compactFieldContainer: {
+      flex:
+        1,
+    },
+
+    fieldLabelRow: {
+      minHeight:
+        20,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "flex-start",
+
+      justifyContent:
+        "space-between",
+
+      marginBottom:
+        7,
+
+      gap:
+        6,
     },
 
     label: {
-      marginBottom: 7,
-      fontSize: 15,
-      fontWeight: "600",
-      color: "#20252B",
+      flex:
+        1,
+
+      minWidth:
+        0,
+
+      fontSize:
+        13,
+
+      lineHeight:
+        18,
+
+      fontWeight:
+        "700",
+
+      color:
+        "#374151",
+    },
+
+    optionalLabel: {
+      flexShrink:
+        0,
+
+      fontSize:
+        10,
+
+      color:
+        "#8B949E",
     },
 
     input: {
-      minHeight: 48,
-      borderWidth: 1,
+      minHeight:
+        50,
+
+      borderWidth:
+        1,
+
       borderColor:
-        "#C8CED6",
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      fontSize: 16,
+        "#CBD2DA",
+
+      borderRadius:
+        12,
+
+      paddingHorizontal:
+        14,
+
+      fontSize:
+        16,
+
+      color:
+        "#111827",
+
       backgroundColor:
         "#FFFFFF",
     },
@@ -808,31 +1380,47 @@ const styles =
     },
 
     errorText: {
-      marginTop: 6,
-      fontSize: 13,
-      color: "#B42318",
-    },
+      marginTop:
+        6,
 
-    optionalHint: {
-      marginTop: -11,
-      marginBottom: 18,
-      paddingHorizontal: 2,
-      fontSize: 12,
-      lineHeight: 17,
-      color: "#7A838E",
+      fontSize:
+        12,
+
+      lineHeight:
+        17,
+
+      color:
+        "#B42318",
     },
 
     dropdownButton: {
-      minHeight: 48,
-      flexDirection: "row",
-      alignItems: "center",
+      minHeight:
+        50,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
       justifyContent:
         "space-between",
-      borderWidth: 1,
+
+      borderWidth:
+        1,
+
       borderColor:
-        "#C8CED6",
-      borderRadius: 10,
-      paddingHorizontal: 14,
+        "#CBD2DA",
+
+      borderRadius:
+        12,
+
+      paddingHorizontal:
+        14,
+
+      paddingVertical:
+        10,
+
       backgroundColor:
         "#FFFFFF",
     },
@@ -843,82 +1431,272 @@ const styles =
     },
 
     dropdownText: {
-      flex: 1,
-      fontSize: 16,
-      color: "#20252B",
+      flex:
+        1,
+
+      minWidth:
+        0,
+
+      fontSize:
+        16,
+
+      lineHeight:
+        21,
+
+      color:
+        "#20252B",
     },
 
     dropdownPlaceholder: {
-      color: "#8B949E",
+      color:
+        "#8B949E",
     },
 
     dropdownTextDisabled: {
-      color: "#9AA3AD",
+      color:
+        "#9AA3AD",
     },
 
     dropdownIcon: {
-      marginLeft: 12,
-      fontSize: 22,
-      color: "#5D6673",
+      flexShrink:
+        0,
+
+      marginLeft:
+        12,
+
+      fontSize:
+        24,
+
+      color:
+        "#5D6673",
+    },
+
+    doubleFieldRow: {
+      flexDirection:
+        "row",
+
+      gap:
+        12,
+    },
+
+    doubleField: {
+      flex:
+        1,
+
+      minWidth:
+        0,
+    },
+
+    inventoryHintCard: {
+      marginTop:
+        18,
+
+      borderRadius:
+        12,
+
+      padding:
+        13,
+
+      backgroundColor:
+        "#F1F5F9",
+    },
+
+    inventoryHintTitle: {
+      fontSize:
+        12,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#374151",
+    },
+
+    inventoryHintText: {
+      marginTop:
+        4,
+
+      fontSize:
+        11,
+
+      lineHeight:
+        17,
+
+      color:
+        "#64748B",
+    },
+
+    submitButton: {
+      marginTop:
+        24,
+
+      minHeight:
+        52,
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "center",
+
+      borderRadius:
+        14,
+
+      backgroundColor:
+        "#20252B",
+    },
+
+    submitButtonPressed: {
+      backgroundColor:
+        "#111827",
+    },
+
+    submitButtonDisabled: {
+      opacity:
+        0.55,
+    },
+
+    submitButtonText: {
+      fontSize:
+        16,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#FFFFFF",
+    },
+
+    buttonPressed: {
+      opacity:
+        0.72,
+    },
+
+    modalSafeArea: {
+      flex:
+        1,
+
+      backgroundColor:
+        "transparent",
     },
 
     modalBackdrop: {
-      flex: 1,
+      flex:
+        1,
+
       justifyContent:
         "flex-end",
+
       backgroundColor:
         "rgba(0, 0, 0, 0.35)",
     },
 
     modalContent: {
-      maxHeight: "70%",
+      maxHeight:
+        "72%",
+
       borderTopLeftRadius:
-        20,
+        22,
+
       borderTopRightRadius:
+        22,
+
+      paddingHorizontal:
         20,
-      paddingHorizontal: 20,
-      paddingTop: 18,
-      paddingBottom: 32,
+
+      paddingTop:
+        18,
+
+      paddingBottom:
+        18,
+
       backgroundColor:
         "#FFFFFF",
     },
 
     modalHeader: {
-      flexDirection: "row",
-      alignItems: "center",
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
       justifyContent:
         "space-between",
-      marginBottom: 12,
+
+      marginBottom:
+        10,
     },
 
     modalTitle: {
-      fontSize: 22,
-      fontWeight: "800",
-      color: "#111827",
+      flex:
+        1,
+
+      minWidth:
+        0,
+
+      marginRight:
+        12,
+
+      fontSize:
+        21,
+
+      lineHeight:
+        26,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     modalCloseButton: {
-      paddingHorizontal: 10,
-      paddingVertical: 8,
+      flexShrink:
+        0,
+
+      paddingHorizontal:
+        8,
+
+      paddingVertical:
+        8,
     },
 
     modalCloseText: {
-      fontSize: 15,
-      fontWeight: "700",
-      color: "#20252B",
+      fontSize:
+        14,
+
+      fontWeight:
+        "700",
+
+      color:
+        "#20252B",
     },
 
     pickerOption: {
-      minHeight: 54,
-      flexDirection: "row",
-      alignItems: "center",
+      minHeight:
+        54,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
       justifyContent:
         "space-between",
-      borderBottomWidth: 1,
+
+      borderBottomWidth:
+        1,
+
       borderBottomColor:
         "#E5E7EB",
-      paddingHorizontal: 8,
-      paddingVertical: 16,
+
+      paddingHorizontal:
+        8,
+
+      paddingVertical:
+        14,
     },
 
     pickerOptionSelected: {
@@ -927,48 +1705,46 @@ const styles =
     },
 
     pickerOptionPressed: {
-      opacity: 0.7,
+      opacity:
+        0.7,
     },
 
     pickerOptionText: {
-      flex: 1,
-      marginRight: 12,
-      fontSize: 16,
-      color: "#20252B",
-    },
+      flex:
+        1,
 
-    pickerOptionTextSelected: {
-      fontWeight: "800",
-    },
+      minWidth:
+        0,
 
-    selectedIndicator: {
-      fontSize: 17,
-      fontWeight: "800",
-      color: "#15803D",
-    },
+      marginRight:
+        12,
 
-    submitButton: {
-      marginTop: 8,
-      minHeight: 50,
-      alignItems: "center",
-      justifyContent:
-        "center",
-      borderRadius: 12,
-      backgroundColor:
+      fontSize:
+        16,
+
+      lineHeight:
+        21,
+
+      color:
         "#20252B",
     },
 
-    submitButtonPressed: {
-      opacity: 0.85,
+    pickerOptionTextSelected: {
+      fontWeight:
+        "800",
     },
 
-    submitButtonDisabled: {
-      opacity: 0.55,
-    },
+    selectedIndicator: {
+      flexShrink:
+        0,
 
-    submitButtonText: {
-      fontSize: 16,
-      fontWeight: "700",
-      color: "#FFFFFF",
+      fontSize:
+        17,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#15803D",
     },
   });

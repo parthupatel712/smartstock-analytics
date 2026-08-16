@@ -4,12 +4,15 @@ import {
 
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+
+import {
+  SafeAreaView,
+} from "react-native-safe-area-context";
 
 import type {
   ReorderItem,
@@ -36,27 +39,39 @@ export function ReorderManagement({
 }: ReorderManagementProps) {
   const outOfStockCount =
     items.filter(
-      (item) =>
+      (
+        item,
+      ) =>
         item.priority ===
         "out_of_stock",
     ).length;
 
   const criticalCount =
     items.filter(
-      (item) =>
+      (
+        item,
+      ) =>
         item.priority ===
         "critical",
     ).length;
 
   const lowStockCount =
     items.filter(
-      (item) =>
+      (
+        item,
+      ) =>
         item.priority ===
         "low_stock",
     ).length;
 
   return (
     <SafeAreaView
+      edges={[
+        "top",
+        "left",
+        "right",
+        "bottom",
+      ]}
       style={
         styles.screen
       }
@@ -84,7 +99,7 @@ export function ReorderManagement({
                 styles.title
               }
             >
-              Reorder Management
+              Reorder
             </Text>
 
             <Text
@@ -98,6 +113,9 @@ export function ReorderManagement({
 
           <Pressable
             accessibilityRole="button"
+            hitSlop={
+              8
+            }
             onPress={
               onClose
             }
@@ -139,6 +157,7 @@ export function ReorderManagement({
               outOfStockCount
             }
             icon="alert-circle-outline"
+            tone="danger"
           />
 
           <SummaryCard
@@ -147,6 +166,7 @@ export function ReorderManagement({
               criticalCount
             }
             icon="warning-outline"
+            tone="warning"
           />
 
           <SummaryCard
@@ -213,7 +233,9 @@ export function ReorderManagement({
           </View>
         ) : (
           items.map(
-            (item) => (
+            (
+              item,
+            ) => (
               <ReorderCard
                 key={
                   item.product.id
@@ -237,6 +259,8 @@ function SummaryCard({
   label,
   value,
   icon,
+  tone =
+    "normal",
 }: {
   label:
     string;
@@ -249,12 +273,34 @@ function SummaryCard({
     | "alert-circle-outline"
     | "warning-outline"
     | "trending-down-outline";
+
+  tone?:
+    | "normal"
+    | "warning"
+    | "danger";
 }) {
+  const color =
+    tone ===
+    "danger"
+      ? "#B42318"
+      : tone ===
+          "warning"
+        ? "#B45309"
+        : "#52606D";
+
   return (
     <View
-      style={
-        styles.summaryCard
-      }
+      style={[
+        styles.summaryCard,
+
+        tone ===
+          "warning" &&
+          styles.summaryCardWarning,
+
+        tone ===
+          "danger" &&
+          styles.summaryCardDanger,
+      ]}
     >
       <Ionicons
         name={
@@ -263,15 +309,27 @@ function SummaryCard({
         size={
           20
         }
-        color="#52606D"
+        color={
+          color
+        }
       />
 
       <Text
-        style={
-          styles.summaryValue
-        }
+        style={[
+          styles.summaryValue,
+
+          tone ===
+            "warning" &&
+            styles.summaryValueWarning,
+
+          tone ===
+            "danger" &&
+            styles.summaryValueDanger,
+        ]}
       >
-        {value}
+        {
+          value
+        }
       </Text>
 
       <Text
@@ -279,7 +337,9 @@ function SummaryCard({
           styles.summaryLabel
         }
       >
-        {label}
+        {
+          label
+        }
       </Text>
     </View>
   );
@@ -314,6 +374,10 @@ function ReorderCard({
       " · ",
     );
 
+  const estimatedReorderCost =
+    item.suggestedReorderQuantity *
+    item.product.unitCost;
+
   return (
     <View
       style={[
@@ -342,6 +406,9 @@ function ReorderCard({
             style={
               styles.productName
             }
+            numberOfLines={
+              2
+            }
           >
             {
               item.product.name
@@ -352,6 +419,9 @@ function ReorderCard({
             <Text
               style={
                 styles.productDetails
+              }
+              numberOfLines={
+                2
               }
             >
               {
@@ -380,6 +450,9 @@ function ReorderCard({
                   priority.color,
               },
             ]}
+            numberOfLines={
+              1
+            }
           >
             {
               priority.label
@@ -391,6 +464,9 @@ function ReorderCard({
       <Text
         style={
           styles.barcode
+        }
+        numberOfLines={
+          1
         }
       >
         Barcode:{" "}
@@ -426,7 +502,7 @@ function ReorderCard({
         />
 
         <Metric
-          label="Suggested Order"
+          label="Suggested"
           value={
             item.suggestedReorderQuantity
           }
@@ -439,7 +515,11 @@ function ReorderCard({
           styles.costRow
         }
       >
-        <View>
+        <View
+          style={
+            styles.costBlock
+          }
+        >
           <Text
             style={
               styles.costLabel
@@ -452,18 +532,27 @@ function ReorderCard({
             style={
               styles.costValue
             }
+            numberOfLines={
+              1
+            }
+            adjustsFontSizeToFit
+            minimumFontScale={
+              0.8
+            }
           >
-            {formatCurrency(
-              item.suggestedReorderQuantity *
-                item.product.unitCost,
-            )}
+            {
+              formatCurrency(
+                estimatedReorderCost,
+              )
+            }
           </Text>
         </View>
 
         <View
-          style={
-            styles.costRight
-          }
+          style={[
+            styles.costBlock,
+            styles.costRight,
+          ]}
         >
           <Text
             style={
@@ -477,16 +566,26 @@ function ReorderCard({
             style={
               styles.unitCostValue
             }
+            numberOfLines={
+              1
+            }
+            adjustsFontSizeToFit
+            minimumFontScale={
+              0.8
+            }
           >
-            {formatCurrency(
-              item.product.unitCost,
-            )}
+            {
+              formatCurrency(
+                item.product.unitCost,
+              )
+            }
           </Text>
         </View>
       </View>
 
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel={`Add stock for ${item.product.name}`}
         onPress={() =>
           onStockIn(
             item.product,
@@ -514,7 +613,7 @@ function ReorderCard({
             styles.stockInButtonText
           }
         >
-          Add Stock
+          Stock In
         </Text>
       </Pressable>
     </View>
@@ -524,7 +623,8 @@ function ReorderCard({
 function Metric({
   label,
   value,
-  emphasized = false,
+  emphasized =
+    false,
 }: {
   label:
     string;
@@ -549,7 +649,9 @@ function Metric({
           styles.metricLabel
         }
       >
-        {label}
+        {
+          label
+        }
       </Text>
 
       <Text
@@ -559,8 +661,17 @@ function Metric({
           emphasized &&
             styles.metricValueEmphasized,
         ]}
+        numberOfLines={
+          1
+        }
+        adjustsFontSizeToFit
+        minimumFontScale={
+          0.8
+        }
       >
-        {value}
+        {
+          value
+        }
       </Text>
     </View>
   );
@@ -621,11 +732,8 @@ function getPriorityDisplay(
   }
 }
 
-function formatCurrency(
-  value:
-    number,
-): string {
-  return new Intl.NumberFormat(
+const currencyFormatter =
+  new Intl.NumberFormat(
     "en-CA",
     {
       style:
@@ -637,7 +745,13 @@ function formatCurrency(
       maximumFractionDigits:
         2,
     },
-  ).format(
+  );
+
+function formatCurrency(
+  value:
+    number,
+): string {
+  return currencyFormatter.format(
     value,
   );
 }
@@ -653,8 +767,11 @@ const styles =
     },
 
     content: {
-      padding:
+      paddingHorizontal:
         18,
+
+      paddingTop:
+        12,
 
       paddingBottom:
         50,
@@ -675,13 +792,16 @@ const styles =
       flex:
         1,
 
+      minWidth:
+        0,
+
       marginRight:
         16,
     },
 
     title: {
       fontSize:
-        30,
+        28,
 
       fontWeight:
         "800",
@@ -692,19 +812,28 @@ const styles =
 
     subtitle: {
       marginTop:
-        5,
+        6,
+
+      maxWidth:
+        320,
 
       fontSize:
-        14,
+        13,
 
       lineHeight:
-        20,
+        19,
 
       color:
         "#6B7280",
     },
 
     closeButton: {
+      minHeight:
+        42,
+
+      justifyContent:
+        "center",
+
       borderWidth:
         1,
 
@@ -716,9 +845,6 @@ const styles =
 
       paddingHorizontal:
         14,
-
-      paddingVertical:
-        9,
 
       backgroundColor:
         "#FFFFFF",
@@ -777,6 +903,22 @@ const styles =
         "#FFFFFF",
     },
 
+    summaryCardWarning: {
+      borderColor:
+        "#FDE68A",
+
+      backgroundColor:
+        "#FFFBEB",
+    },
+
+    summaryCardDanger: {
+      borderColor:
+        "#FECACA",
+
+      backgroundColor:
+        "#FFF8F7",
+    },
+
     summaryValue: {
       marginTop:
         8,
@@ -789,6 +931,16 @@ const styles =
 
       color:
         "#111827",
+    },
+
+    summaryValueWarning: {
+      color:
+        "#B45309",
+    },
+
+    summaryValueDanger: {
+      color:
+        "#B42318",
     },
 
     summaryLabel: {
@@ -807,7 +959,7 @@ const styles =
 
     sectionHeader: {
       marginTop:
-        27,
+        28,
 
       marginBottom:
         12,
@@ -815,7 +967,7 @@ const styles =
 
     sectionTitle: {
       fontSize:
-        20,
+        18,
 
       fontWeight:
         "800",
@@ -826,13 +978,16 @@ const styles =
 
     sectionSubtitle: {
       marginTop:
-        3,
+        4,
 
       fontSize:
         12,
 
+      lineHeight:
+        17,
+
       color:
-        "#8B949E",
+        "#6B7280",
     },
 
     reorderCard: {
@@ -880,13 +1035,22 @@ const styles =
       flex:
         1,
 
+      minWidth:
+        0,
+
       marginRight:
         10,
     },
 
     productName: {
+      flexShrink:
+        1,
+
       fontSize:
         17,
+
+      lineHeight:
+        22,
 
       fontWeight:
         "800",
@@ -910,6 +1074,15 @@ const styles =
     },
 
     priorityBadge: {
+      flexShrink:
+        0,
+
+      alignSelf:
+        "flex-start",
+
+      maxWidth:
+        110,
+
       borderRadius:
         999,
 
@@ -926,6 +1099,9 @@ const styles =
 
       fontWeight:
         "800",
+
+      textAlign:
+        "center",
     },
 
     barcode: {
@@ -956,6 +1132,9 @@ const styles =
     metric: {
       width:
         "48%",
+
+      minWidth:
+        0,
 
       borderRadius:
         10,
@@ -1015,6 +1194,9 @@ const styles =
       justifyContent:
         "space-between",
 
+      gap:
+        12,
+
       borderTopWidth:
         1,
 
@@ -1023,6 +1205,14 @@ const styles =
 
       paddingTop:
         13,
+    },
+
+    costBlock: {
+      flex:
+        1,
+
+      minWidth:
+        0,
     },
 
     costRight: {
@@ -1071,7 +1261,7 @@ const styles =
         15,
 
       minHeight:
-        44,
+        46,
 
       flexDirection:
         "row",

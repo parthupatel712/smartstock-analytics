@@ -1,9 +1,12 @@
-import { useMemo, useState } from "react";
+import {
+  useMemo,
+  useState,
+} from "react";
+
 import {
   Alert,
   Modal,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,23 +15,37 @@ import {
 } from "react-native";
 
 import {
+  SafeAreaView,
+} from "react-native-safe-area-context";
+
+import {
   getCategoriesForDepartment,
   PRODUCT_DEPARTMENTS,
   type ProductCategory,
   type ProductDepartment,
 } from "../constants/productTaxonomy";
 
-import type { Product } from "../types/product";
-import type { UpdateProductInput } from "../types/productUpdate";
+import type {
+  Product,
+} from "../types/product";
+
+import type {
+  UpdateProductInput,
+} from "../types/productUpdate";
 
 interface EditProductFormProps {
-  product: Product;
-  isSubmitting?: boolean;
+  product:
+    Product;
 
-  onCancel: () => void;
+  isSubmitting?:
+    boolean;
+
+  onCancel:
+    () => void;
 
   onSubmit: (
-    input: UpdateProductInput,
+    input:
+      UpdateProductInput,
   ) => Promise<void> | void;
 }
 
@@ -43,56 +60,77 @@ export function EditProductForm({
   onCancel,
   onSubmit,
 }: EditProductFormProps) {
-  const [barcode, setBarcode] =
-    useState(product.barcode);
+  const [
+    barcode,
+    setBarcode,
+  ] =
+    useState(
+      product.barcode,
+    );
 
-  const [name, setName] =
-    useState(product.name);
+  const [
+    name,
+    setName,
+  ] =
+    useState(
+      product.name,
+    );
 
-  const [brand, setBrand] =
-    useState(product.brand ?? "");
+  const [
+    brand,
+    setBrand,
+  ] =
+    useState(
+      product.brand ?? "",
+    );
 
   const [
     department,
     setDepartment,
-  ] = useState<ProductDepartment>(
-    product.department,
-  );
+  ] =
+    useState<ProductDepartment>(
+      product.department,
+    );
 
   const [
     category,
     setCategory,
-  ] = useState<ProductCategory>(
-    product.category,
-  );
+  ] =
+    useState<ProductCategory>(
+      product.category,
+    );
 
   const [
     unitCost,
     setUnitCost,
-  ] = useState(
-    product.unitCost.toString(),
-  );
+  ] =
+    useState(
+      product.unitCost.toString(),
+    );
 
   const [
     unitPrice,
     setUnitPrice,
-  ] = useState(
-    product.unitPrice.toString(),
-  );
+  ] =
+    useState(
+      product.unitPrice.toString(),
+    );
 
   const [
     reorderLevel,
     setReorderLevel,
-  ] = useState(
-    product.reorderLevel.toString(),
-  );
+  ] =
+    useState(
+      product.reorderLevel.toString(),
+    );
 
   const [
     activePicker,
     setActivePicker,
-  ] = useState<PickerType>(
-    null,
-  );
+  ] =
+    useState<PickerType>(
+      null,
+    );
 
   const availableCategories =
     useMemo(
@@ -100,11 +138,15 @@ export function EditProductForm({
         getCategoriesForDepartment(
           department,
         ),
-      [department],
+
+      [
+        department,
+      ],
     );
 
   function selectDepartment(
-    nextDepartment: ProductDepartment,
+    nextDepartment:
+      ProductDepartment,
   ): void {
     const nextCategories =
       getCategoriesForDepartment(
@@ -117,31 +159,46 @@ export function EditProductForm({
 
     const categoryStillValid =
       nextCategories.some(
-        (nextCategory) =>
-          nextCategory === category,
+        (
+          nextCategory,
+        ) =>
+          nextCategory ===
+          category,
       );
 
     if (
       !categoryStillValid &&
-      nextCategories.length > 0
+      nextCategories.length >
+        0
     ) {
       setCategory(
         nextCategories[0],
       );
     }
 
-    setActivePicker(null);
+    setActivePicker(
+      null,
+    );
   }
 
   function selectCategory(
-    nextCategory: ProductCategory,
+    nextCategory:
+      ProductCategory,
   ): void {
-    setCategory(nextCategory);
-    setActivePicker(null);
+    setCategory(
+      nextCategory,
+    );
+
+    setActivePicker(
+      null,
+    );
   }
 
-  async function handleSubmit(): Promise<void> {
-    if (isSubmitting) {
+  async function handleSubmit():
+    Promise<void> {
+    if (
+      isSubmitting
+    ) {
       return;
     }
 
@@ -151,14 +208,12 @@ export function EditProductForm({
     const cleanName =
       name.trim();
 
-    /*
-     * Brand is intentionally optional.
-     * Empty brand values are stored as "".
-     */
     const cleanBrand =
       brand.trim();
 
-    if (!cleanName) {
+    if (
+      !cleanName
+    ) {
       Alert.alert(
         "Product name required",
         "Enter a product name before saving.",
@@ -167,7 +222,9 @@ export function EditProductForm({
       return;
     }
 
-    if (!cleanBarcode) {
+    if (
+      !cleanBarcode
+    ) {
       Alert.alert(
         "Barcode required",
         "Enter a barcode before saving.",
@@ -177,19 +234,26 @@ export function EditProductForm({
     }
 
     const parsedUnitCost =
-      Number(unitCost);
+      Number(
+        unitCost,
+      );
 
     const parsedUnitPrice =
-      Number(unitPrice);
+      Number(
+        unitPrice,
+      );
 
     const parsedReorderLevel =
-      Number(reorderLevel);
+      Number(
+        reorderLevel,
+      );
 
     if (
       !Number.isFinite(
         parsedUnitCost,
       ) ||
-      parsedUnitCost < 0
+      parsedUnitCost <
+        0
     ) {
       Alert.alert(
         "Invalid unit cost",
@@ -203,7 +267,8 @@ export function EditProductForm({
       !Number.isFinite(
         parsedUnitPrice,
       ) ||
-      parsedUnitPrice < 0
+      parsedUnitPrice <
+        0
     ) {
       Alert.alert(
         "Invalid selling price",
@@ -217,7 +282,8 @@ export function EditProductForm({
       !Number.isInteger(
         parsedReorderLevel,
       ) ||
-      parsedReorderLevel < 0
+      parsedReorderLevel <
+        0
     ) {
       Alert.alert(
         "Invalid reorder level",
@@ -257,7 +323,15 @@ export function EditProductForm({
 
   return (
     <SafeAreaView
-      style={styles.screen}
+      edges={[
+        "top",
+        "left",
+        "right",
+        "bottom",
+      ]}
+      style={
+        styles.screen
+      }
     >
       <ScrollView
         contentContainerStyle={
@@ -269,7 +343,9 @@ export function EditProductForm({
         }
       >
         <View
-          style={styles.headerRow}
+          style={
+            styles.headerRow
+          }
         >
           <View
             style={
@@ -277,7 +353,9 @@ export function EditProductForm({
             }
           >
             <Text
-              style={styles.title}
+              style={
+                styles.title
+              }
             >
               Edit Product
             </Text>
@@ -287,20 +365,33 @@ export function EditProductForm({
                 styles.subtitle
               }
             >
-              Update product details without changing inventory history.
+              Update product details without changing stock history.
             </Text>
           </View>
 
           <Pressable
             accessibilityRole="button"
-            onPress={onCancel}
+            accessibilityLabel="Cancel product editing"
+            hitSlop={
+              10
+            }
+            disabled={
+              isSubmitting
+            }
+            onPress={
+              onCancel
+            }
             style={({
               pressed,
             }) => [
               styles.closeButton,
 
               pressed &&
+                !isSubmitting &&
                 styles.buttonPressed,
+
+              isSubmitting &&
+                styles.closeButtonDisabled,
             ]}
           >
             <Text
@@ -318,44 +409,77 @@ export function EditProductForm({
             styles.stockSummaryCard
           }
         >
-          <Text
+          <View
             style={
-              styles.stockSummaryLabel
+              styles.stockSummaryHeader
             }
           >
-            Current Stock
-          </Text>
+            <View>
+              <Text
+                style={
+                  styles.stockSummaryLabel
+                }
+              >
+                Current Stock
+              </Text>
 
-          <Text
-            style={
-              styles.stockSummaryValue
-            }
-          >
-            {product.currentStock}{" "}
-            units
-          </Text>
+              <Text
+                style={
+                  styles.stockSummaryValue
+                }
+              >
+                {
+                  product.currentStock
+                }{" "}
+                units
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.lockBadge
+              }
+            >
+              <Text
+                style={
+                  styles.lockBadgeText
+                }
+              >
+                Stock locked
+              </Text>
+            </View>
+          </View>
 
           <Text
             style={
               styles.stockSummaryMessage
             }
           >
-            Stock cannot be changed from Edit Product. Use an inventory transaction so every stock change remains recorded.
+            Stock is not edited here. Use Update Inventory so every stock change stays in history and analytics.
           </Text>
         </View>
 
         <FormField
           label="Product Name"
-          value={name}
-          onChangeText={setName}
+          value={
+            name
+          }
+          onChangeText={
+            setName
+          }
           placeholder="Product name"
           autoCapitalize="words"
         />
 
         <FormField
-          label="Brand (Optional)"
-          value={brand}
-          onChangeText={setBrand}
+          label="Brand"
+          optional
+          value={
+            brand
+          }
+          onChangeText={
+            setBrand
+          }
           placeholder="e.g. Coca-Cola"
           autoCapitalize="words"
         />
@@ -375,6 +499,7 @@ export function EditProductForm({
 
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Select product department"
             onPress={() =>
               setActivePicker(
                 "department",
@@ -393,8 +518,13 @@ export function EditProductForm({
               style={
                 styles.selectorText
               }
+              numberOfLines={
+                2
+              }
             >
-              {department}
+              {
+                department
+              }
             </Text>
 
             <Text
@@ -422,6 +552,7 @@ export function EditProductForm({
 
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Select product category"
             onPress={() =>
               setActivePicker(
                 "category",
@@ -440,8 +571,13 @@ export function EditProductForm({
               style={
                 styles.selectorText
               }
+              numberOfLines={
+                2
+              }
             >
-              {category}
+              {
+                category
+              }
             </Text>
 
             <Text
@@ -456,7 +592,9 @@ export function EditProductForm({
 
         <FormField
           label="Barcode"
-          value={barcode}
+          value={
+            barcode
+          }
           onChangeText={
             setBarcode
           }
@@ -470,7 +608,7 @@ export function EditProductForm({
             styles.barcodeHint
           }
         >
-          Change the barcode only if the product barcode itself has changed.
+          Change this only if the barcode assigned to the product has actually changed.
         </Text>
 
         <View
@@ -485,7 +623,9 @@ export function EditProductForm({
           >
             <FormField
               label="Unit Cost"
-              value={unitCost}
+              value={
+                unitCost
+              }
               onChangeText={
                 setUnitCost
               }
@@ -501,7 +641,9 @@ export function EditProductForm({
           >
             <FormField
               label="Selling Price"
-              value={unitPrice}
+              value={
+                unitPrice
+              }
               onChangeText={
                 setUnitPrice
               }
@@ -513,7 +655,9 @@ export function EditProductForm({
 
         <FormField
           label="Reorder Level"
-          value={reorderLevel}
+          value={
+            reorderLevel
+          }
           onChangeText={
             setReorderLevel
           }
@@ -548,7 +692,7 @@ export function EditProductForm({
             }
           >
             {isSubmitting
-              ? "Saving Changes…"
+              ? "Saving…"
               : "Save Changes"}
           </Text>
         </Pressable>
@@ -562,123 +706,151 @@ export function EditProductForm({
           null
         }
         onRequestClose={() =>
-          setActivePicker(null)
+          setActivePicker(
+            null,
+          )
         }
       >
-        <View
+        <SafeAreaView
+          edges={[
+            "bottom",
+          ]}
           style={
-            styles.modalBackdrop
+            styles.modalSafeArea
           }
         >
           <View
             style={
-              styles.modalContent
+              styles.modalBackdrop
             }
           >
             <View
               style={
-                styles.modalHeader
+                styles.modalContent
               }
             >
-              <Text
+              <View
                 style={
-                  styles.modalTitle
-                }
-              >
-                {activePicker ===
-                "department"
-                  ? "Select Department"
-                  : "Select Category"}
-              </Text>
-
-              <Pressable
-                accessibilityRole="button"
-                onPress={() =>
-                  setActivePicker(
-                    null,
-                  )
-                }
-                style={
-                  styles.modalCloseButton
+                  styles.modalHeader
                 }
               >
                 <Text
                   style={
-                    styles.modalCloseText
+                    styles.modalTitle
+                  }
+                  numberOfLines={
+                    2
                   }
                 >
-                  Close
+                  {activePicker ===
+                  "department"
+                    ? "Select Department"
+                    : "Select Category"}
                 </Text>
-              </Pressable>
-            </View>
 
-            <ScrollView
-              showsVerticalScrollIndicator={
-                false
-              }
-            >
-              {activePicker ===
-              "department"
-                ? PRODUCT_DEPARTMENTS.map(
-                    (
-                      option,
-                    ) => (
-                      <PickerOption
-                        key={
-                          option
-                        }
-                        label={
-                          option
-                        }
-                        selected={
-                          option ===
-                          department
-                        }
-                        onPress={() =>
-                          selectDepartment(
-                            option,
-                          )
-                        }
-                      />
-                    ),
-                  )
-                : availableCategories.map(
-                    (
-                      option,
-                    ) => (
-                      <PickerOption
-                        key={
-                          option
-                        }
-                        label={
-                          option
-                        }
-                        selected={
-                          option ===
-                          category
-                        }
-                        onPress={() =>
-                          selectCategory(
-                            option,
-                          )
-                        }
-                      />
-                    ),
-                  )}
-            </ScrollView>
+                <Pressable
+                  accessibilityRole="button"
+                  hitSlop={
+                    10
+                  }
+                  onPress={() =>
+                    setActivePicker(
+                      null,
+                    )
+                  }
+                  style={({
+                    pressed,
+                  }) => [
+                    styles.modalCloseButton,
+
+                    pressed &&
+                      styles.buttonPressed,
+                  ]}
+                >
+                  <Text
+                    style={
+                      styles.modalCloseText
+                    }
+                  >
+                    Close
+                  </Text>
+                </Pressable>
+              </View>
+
+              <ScrollView
+                showsVerticalScrollIndicator={
+                  false
+                }
+              >
+                {activePicker ===
+                "department"
+                  ? PRODUCT_DEPARTMENTS.map(
+                      (
+                        option,
+                      ) => (
+                        <PickerOption
+                          key={
+                            option
+                          }
+                          label={
+                            option
+                          }
+                          selected={
+                            option ===
+                            department
+                          }
+                          onPress={() =>
+                            selectDepartment(
+                              option,
+                            )
+                          }
+                        />
+                      ),
+                    )
+                  : availableCategories.map(
+                      (
+                        option,
+                      ) => (
+                        <PickerOption
+                          key={
+                            option
+                          }
+                          label={
+                            option
+                          }
+                          selected={
+                            option ===
+                            category
+                          }
+                          onPress={() =>
+                            selectCategory(
+                              option,
+                            )
+                          }
+                        />
+                      ),
+                    )}
+              </ScrollView>
+            </View>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
 }
 
 interface FormFieldProps {
-  label: string;
+  label:
+    string;
 
-  value: string;
+  value:
+    string;
 
-  placeholder?: string;
+  placeholder?:
+    string;
+
+  optional?:
+    boolean;
 
   keyboardType?:
     | "default"
@@ -692,7 +864,8 @@ interface FormFieldProps {
     | "characters";
 
   onChangeText: (
-    value: string,
+    value:
+      string,
   ) => void;
 }
 
@@ -700,6 +873,7 @@ function FormField({
   label,
   value,
   placeholder,
+  optional = false,
   keyboardType = "default",
   autoCapitalize = "none",
   onChangeText,
@@ -710,16 +884,36 @@ function FormField({
         styles.fieldContainer
       }
     >
-      <Text
+      <View
         style={
-          styles.fieldLabel
+          styles.fieldLabelRow
         }
       >
-        {label}
-      </Text>
+        <Text
+          style={
+            styles.fieldLabel
+          }
+        >
+          {
+            label
+          }
+        </Text>
+
+        {optional ? (
+          <Text
+            style={
+              styles.optionalText
+            }
+          >
+            Optional
+          </Text>
+        ) : null}
+      </View>
 
       <TextInput
-        value={value}
+        value={
+          value
+        }
         onChangeText={
           onChangeText
         }
@@ -732,19 +926,26 @@ function FormField({
         autoCapitalize={
           autoCapitalize
         }
-        autoCorrect={false}
-        style={styles.input}
+        autoCorrect={
+          false
+        }
+        style={
+          styles.input
+        }
       />
     </View>
   );
 }
 
 interface PickerOptionProps {
-  label: string;
+  label:
+    string;
 
-  selected: boolean;
+  selected:
+    boolean;
 
-  onPress: () => void;
+  onPress:
+    () => void;
 }
 
 function PickerOption({
@@ -755,7 +956,12 @@ function PickerOption({
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={onPress}
+      accessibilityState={{
+        selected,
+      }}
+      onPress={
+        onPress
+      }
       style={({
         pressed,
       }) => [
@@ -776,7 +982,9 @@ function PickerOption({
             styles.pickerOptionTextSelected,
         ]}
       >
-        {label}
+        {
+          label
+        }
       </Text>
 
       {selected ? (
@@ -795,170 +1003,392 @@ function PickerOption({
 const styles =
   StyleSheet.create({
     screen: {
-      flex: 1,
+      flex:
+        1,
+
       backgroundColor:
         "#F4F6F8",
     },
 
     content: {
-      padding: 18,
-      paddingBottom: 50,
+      paddingHorizontal:
+        18,
+
+      paddingTop:
+        12,
+
+      paddingBottom:
+        50,
     },
 
     headerRow: {
-      flexDirection: "row",
+      flexDirection:
+        "row",
+
       alignItems:
         "flex-start",
+
       justifyContent:
         "space-between",
     },
 
     headerTextContainer: {
-      flex: 1,
-      marginRight: 16,
+      flex:
+        1,
+
+      minWidth:
+        0,
+
+      marginRight:
+        16,
     },
 
     title: {
-      fontSize: 30,
-      fontWeight: "800",
-      color: "#111827",
+      fontSize:
+        28,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     subtitle: {
-      marginTop: 6,
-      fontSize: 14,
-      lineHeight: 20,
-      color: "#6B7280",
+      marginTop:
+        6,
+
+      fontSize:
+        13,
+
+      lineHeight:
+        19,
+
+      color:
+        "#6B7280",
     },
 
     closeButton: {
-      borderWidth: 1,
+      minHeight:
+        42,
+
+      justifyContent:
+        "center",
+
+      borderWidth:
+        1,
+
       borderColor:
         "#CBD2DA",
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 9,
+
+      borderRadius:
+        10,
+
+      paddingHorizontal:
+        14,
+
       backgroundColor:
         "#FFFFFF",
     },
 
+    closeButtonDisabled: {
+      opacity:
+        0.5,
+    },
+
     closeButtonText: {
-      fontSize: 14,
-      fontWeight: "700",
-      color: "#20252B",
+      fontSize:
+        14,
+
+      fontWeight:
+        "700",
+
+      color:
+        "#20252B",
     },
 
     buttonPressed: {
-      opacity: 0.7,
+      opacity:
+        0.7,
     },
 
     stockSummaryCard: {
-      marginTop: 22,
-      borderWidth: 1,
+      marginTop:
+        22,
+
+      borderWidth:
+        1,
+
       borderColor:
         "#D9E4F5",
-      borderRadius: 16,
-      padding: 16,
+
+      borderRadius:
+        16,
+
+      padding:
+        16,
+
       backgroundColor:
         "#EFF6FF",
     },
 
+    stockSummaryHeader: {
+      flexDirection:
+        "row",
+
+      alignItems:
+        "flex-start",
+
+      justifyContent:
+        "space-between",
+
+      gap:
+        12,
+    },
+
     stockSummaryLabel: {
-      fontSize: 12,
-      fontWeight: "700",
+      fontSize:
+        11,
+
+      fontWeight:
+        "700",
+
       textTransform:
         "uppercase",
-      color: "#4B67A1",
+
+      color:
+        "#4B67A1",
     },
 
     stockSummaryValue: {
-      marginTop: 5,
-      fontSize: 25,
-      fontWeight: "800",
-      color: "#1D4ED8",
+      marginTop:
+        5,
+
+      fontSize:
+        25,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#1D4ED8",
     },
 
     stockSummaryMessage: {
-      marginTop: 8,
-      fontSize: 12,
-      lineHeight: 18,
-      color: "#52698E",
+      marginTop:
+        9,
+
+      fontSize:
+        12,
+
+      lineHeight:
+        18,
+
+      color:
+        "#52698E",
+    },
+
+    lockBadge: {
+      flexShrink:
+        0,
+
+      borderRadius:
+        999,
+
+      paddingHorizontal:
+        9,
+
+      paddingVertical:
+        5,
+
+      backgroundColor:
+        "#DBEAFE",
+    },
+
+    lockBadgeText: {
+      fontSize:
+        10,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#1D4ED8",
     },
 
     fieldContainer: {
-      marginTop: 18,
+      marginTop:
+        18,
+    },
+
+    fieldLabelRow: {
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "space-between",
+
+      marginBottom:
+        7,
     },
 
     fieldLabel: {
-      marginBottom: 7,
-      fontSize: 13,
-      fontWeight: "700",
-      color: "#374151",
+      fontSize:
+        13,
+
+      fontWeight:
+        "700",
+
+      color:
+        "#374151",
+    },
+
+    optionalText: {
+      fontSize:
+        10,
+
+      color:
+        "#8B949E",
     },
 
     input: {
-      minHeight: 50,
-      borderWidth: 1,
+      minHeight:
+        50,
+
+      borderWidth:
+        1,
+
       borderColor:
         "#CBD2DA",
-      borderRadius: 12,
-      paddingHorizontal: 14,
-      fontSize: 16,
-      color: "#111827",
+
+      borderRadius:
+        12,
+
+      paddingHorizontal:
+        14,
+
+      fontSize:
+        16,
+
+      color:
+        "#111827",
+
       backgroundColor:
         "#FFFFFF",
     },
 
     selector: {
-      minHeight: 50,
-      flexDirection: "row",
-      alignItems: "center",
+      minHeight:
+        50,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
       justifyContent:
         "space-between",
-      borderWidth: 1,
+
+      borderWidth:
+        1,
+
       borderColor:
         "#CBD2DA",
-      borderRadius: 12,
-      paddingHorizontal: 14,
+
+      borderRadius:
+        12,
+
+      paddingHorizontal:
+        14,
+
+      paddingVertical:
+        10,
+
       backgroundColor:
         "#FFFFFF",
     },
 
     selectorText: {
-      flex: 1,
-      fontSize: 16,
-      color: "#111827",
+      flex:
+        1,
+
+      minWidth:
+        0,
+
+      fontSize:
+        16,
+
+      lineHeight:
+        21,
+
+      color:
+        "#111827",
     },
 
     selectorChevron: {
-      marginLeft: 12,
-      fontSize: 24,
-      color: "#7A838E",
+      flexShrink:
+        0,
+
+      marginLeft:
+        12,
+
+      fontSize:
+        24,
+
+      color:
+        "#7A838E",
     },
 
     barcodeHint: {
-      marginTop: 7,
-      fontSize: 12,
-      lineHeight: 17,
-      color: "#6B7280",
+      marginTop:
+        7,
+
+      fontSize:
+        11,
+
+      lineHeight:
+        17,
+
+      color:
+        "#6B7280",
     },
 
     doubleFieldRow: {
-      flexDirection: "row",
-      gap: 12,
+      flexDirection:
+        "row",
+
+      gap:
+        12,
     },
 
     doubleField: {
-      flex: 1,
+      flex:
+        1,
+
+      minWidth:
+        0,
     },
 
     saveButton: {
-      marginTop: 28,
-      minHeight: 52,
-      alignItems: "center",
+      marginTop:
+        28,
+
+      minHeight:
+        52,
+
+      alignItems:
+        "center",
+
       justifyContent:
         "center",
-      borderRadius: 14,
+
+      borderRadius:
+        14,
+
       backgroundColor:
         "#20252B",
     },
@@ -969,74 +1399,143 @@ const styles =
     },
 
     saveButtonDisabled: {
-      opacity: 0.5,
+      opacity:
+        0.5,
     },
 
     saveButtonText: {
-      fontSize: 16,
-      fontWeight: "800",
-      color: "#FFFFFF",
+      fontSize:
+        16,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#FFFFFF",
+    },
+
+    modalSafeArea: {
+      flex:
+        1,
+
+      backgroundColor:
+        "transparent",
     },
 
     modalBackdrop: {
-      flex: 1,
+      flex:
+        1,
+
       justifyContent:
         "flex-end",
+
       backgroundColor:
         "rgba(0, 0, 0, 0.35)",
     },
 
     modalContent: {
-      maxHeight: "72%",
+      maxHeight:
+        "72%",
+
       borderTopLeftRadius:
         22,
+
       borderTopRightRadius:
         22,
-      paddingHorizontal: 20,
-      paddingTop: 18,
-      paddingBottom: 34,
+
+      paddingHorizontal:
+        20,
+
+      paddingTop:
+        18,
+
+      paddingBottom:
+        18,
+
       backgroundColor:
         "#FFFFFF",
     },
 
     modalHeader: {
-      flexDirection: "row",
-      alignItems: "center",
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
       justifyContent:
         "space-between",
-      marginBottom: 10,
+
+      marginBottom:
+        10,
     },
 
     modalTitle: {
-      flex: 1,
-      marginRight: 12,
-      fontSize: 21,
-      fontWeight: "800",
-      color: "#111827",
+      flex:
+        1,
+
+      minWidth:
+        0,
+
+      marginRight:
+        12,
+
+      fontSize:
+        21,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
     },
 
     modalCloseButton: {
-      paddingHorizontal: 8,
-      paddingVertical: 8,
+      flexShrink:
+        0,
+
+      paddingHorizontal:
+        8,
+
+      paddingVertical:
+        8,
     },
 
     modalCloseText: {
-      fontSize: 14,
-      fontWeight: "700",
-      color: "#20252B",
+      fontSize:
+        14,
+
+      fontWeight:
+        "700",
+
+      color:
+        "#20252B",
     },
 
     pickerOption: {
-      minHeight: 54,
-      flexDirection: "row",
-      alignItems: "center",
+      minHeight:
+        54,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
       justifyContent:
         "space-between",
-      borderBottomWidth: 1,
+
+      borderBottomWidth:
+        1,
+
       borderBottomColor:
         "#E5E7EB",
-      paddingHorizontal: 8,
-      paddingVertical: 14,
+
+      paddingHorizontal:
+        8,
+
+      paddingVertical:
+        14,
     },
 
     pickerOptionSelected: {
@@ -1045,23 +1544,46 @@ const styles =
     },
 
     pickerOptionPressed: {
-      opacity: 0.7,
+      opacity:
+        0.7,
     },
 
     pickerOptionText: {
-      flex: 1,
-      marginRight: 12,
-      fontSize: 16,
-      color: "#20252B",
+      flex:
+        1,
+
+      minWidth:
+        0,
+
+      marginRight:
+        12,
+
+      fontSize:
+        16,
+
+      lineHeight:
+        21,
+
+      color:
+        "#20252B",
     },
 
     pickerOptionTextSelected: {
-      fontWeight: "800",
+      fontWeight:
+        "800",
     },
 
     selectedIndicator: {
-      fontSize: 17,
-      fontWeight: "800",
-      color: "#15803D",
+      flexShrink:
+        0,
+
+      fontSize:
+        17,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#15803D",
     },
   });

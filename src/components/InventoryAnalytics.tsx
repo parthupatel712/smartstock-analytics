@@ -1,14 +1,18 @@
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
+import {
+  SafeAreaView,
+} from "react-native-safe-area-context";
+
 import { SalesLineChart } from "./SalesLineChart";
 import { StoreInsightCards } from "./StoreInsightCards";
+
 import {
   ANALYTICS_PERIOD_OPTIONS,
   type AnalyticsPeriodDays,
@@ -69,7 +73,9 @@ export function InventoryAnalytics({
 
   const fasterProducts =
     summary.productTrends.filter(
-      (trend) =>
+      (
+        trend,
+      ) =>
         (
           trend.trendType ===
             "selling_faster" ||
@@ -81,7 +87,9 @@ export function InventoryAnalytics({
 
   const lowStockFastProducts =
     summary.productTrends.filter(
-      (trend) =>
+      (
+        trend,
+      ) =>
         (
           trend.trendType ===
             "selling_faster" ||
@@ -93,7 +101,9 @@ export function InventoryAnalytics({
 
   const droppedProducts =
     summary.productTrends.filter(
-      (trend) =>
+      (
+        trend,
+      ) =>
         trend.trendType ===
         "sales_dropped",
     );
@@ -108,7 +118,15 @@ export function InventoryAnalytics({
 
   return (
     <SafeAreaView
-      style={styles.screen}
+      edges={[
+        "top",
+        "left",
+        "right",
+        "bottom",
+      ]}
+      style={
+        styles.screen
+      }
     >
       <ScrollView
         contentContainerStyle={
@@ -133,7 +151,7 @@ export function InventoryAnalytics({
                 styles.title
               }
             >
-              Store Trends
+              Analytics
             </Text>
 
             <Text
@@ -141,12 +159,15 @@ export function InventoryAnalytics({
                 styles.subtitle
               }
             >
-              See what is selling, what is making money, and which products need attention.
+              Track sales, profit, trends, and products that need attention.
             </Text>
           </View>
 
           <Pressable
             accessibilityRole="button"
+            hitSlop={
+              8
+            }
             onPress={
               onClose
             }
@@ -169,96 +190,101 @@ export function InventoryAnalytics({
           </Pressable>
         </View>
 
-        <Text
-          style={
-            styles.periodLabel
-          }
-        >
-          Time Period
-        </Text>
-
         <View
           style={
-            styles.periodContainer
+            styles.periodSection
           }
         >
-          {ANALYTICS_PERIOD_OPTIONS.map(
-            (option) => {
-              const isSelected =
-                option.days ===
-                selectedPeriod;
+          <Text
+            style={
+              styles.periodLabel
+            }
+          >
+            Time Period
+          </Text>
 
-              return (
-                <Pressable
-                  accessibilityRole="button"
-                  key={
-                    option.days
-                  }
-                  onPress={() =>
-                    onPeriodChange(
-                      option.days,
-                    )
-                  }
-                  style={({
-                    pressed,
-                  }) => [
-                    styles.periodButton,
+          <View
+            style={
+              styles.periodContainer
+            }
+          >
+            {ANALYTICS_PERIOD_OPTIONS.map(
+              (
+                option,
+              ) => {
+                const isSelected =
+                  option.days ===
+                  selectedPeriod;
 
-                    isSelected &&
-                      styles.periodButtonSelected,
-
-                    pressed &&
-                      styles.buttonPressed,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.periodButtonText,
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{
+                      selected:
+                        isSelected,
+                    }}
+                    key={
+                      option.days
+                    }
+                    onPress={() =>
+                      onPeriodChange(
+                        option.days,
+                      )
+                    }
+                    style={({
+                      pressed,
+                    }) => [
+                      styles.periodButton,
 
                       isSelected &&
-                        styles.periodButtonTextSelected,
+                        styles.periodButtonSelected,
+
+                      pressed &&
+                        styles.buttonPressed,
                     ]}
                   >
-                    {
-                      option.label
-                    }
-                  </Text>
-                </Pressable>
-              );
-            },
-          )}
+                    <Text
+                      style={[
+                        styles.periodButtonText,
+
+                        isSelected &&
+                          styles.periodButtonTextSelected,
+                      ]}
+                    >
+                      {
+                        option.label
+                      }
+                    </Text>
+                  </Pressable>
+                );
+              },
+            )}
+          </View>
+
+          <Text
+            style={
+              styles.periodDescription
+            }
+          >
+            Comparing the last{" "}
+            {
+              formatPeriodLabel(
+                selectedPeriod,
+              )
+            }{" "}
+            with the previous{" "}
+            {
+              formatPeriodLabel(
+                selectedPeriod,
+              )
+            }.
+          </Text>
         </View>
 
-        <Text
-          style={
-            styles.periodDescription
-          }
-        >
-          Comparing the last{" "}
-          {formatPeriodLabel(
-            selectedPeriod,
-          )}{" "}
-          with the previous{" "}
-          {formatPeriodLabel(
-            selectedPeriod,
-          )}.
-        </Text>
-
-        <Text
-          style={
-            styles.sectionTitle
-          }
-        >
-          Compared With Before
-        </Text>
-
-        <Text
-          style={
-            styles.sectionDescription
-          }
-        >
-          See whether sales, items sold, and estimated profit improved or dropped.
-        </Text>
+        <SectionHeader
+          title="Performance"
+          description="Compare current sales, items sold, and estimated profit with the previous period."
+        />
 
         <View
           style={
@@ -317,7 +343,7 @@ export function InventoryAnalytics({
           />
 
           <ComparisonCard
-            label="Average Sale per Item"
+            label="Average Sale / Item"
             value={
               formatCurrency(
                 currentAverageSale,
@@ -332,50 +358,30 @@ export function InventoryAnalytics({
             positiveIsGood
           />
         </View>
-        <Text
-  style={
-    styles.sectionTitle
-  }
->
-  Business Insights
-</Text>
 
-<Text
-  style={
-    styles.sectionDescription
-  }
->
-  Important changes and opportunities detected from your store activity.
-</Text>
+        <SectionHeader
+          title="Business Insights"
+          description="Important changes and opportunities detected from your store activity."
+        />
 
-<StoreInsightCards
-  summary={
-    summary
-  }
-/>
-        <Text
-          style={
-            styles.sectionTitle
+        <StoreInsightCards
+          summary={
+            summary
           }
-        >
-          Sales Trend
-        </Text>
+        />
 
-        <Text
-          style={
-            styles.sectionDescription
-          }
-        >
-          Explore store, category, or individual product performance over time.
-        </Text>
+        <SectionHeader
+          title="Sales Trend"
+          description="Explore store, category, or individual product performance over time."
+        />
 
         <View
           style={
             styles.chartCard
           }
         >
-          {summary.dailyMetrics
-            .length === 0 ? (
+          {summary.dailyMetrics.length ===
+          0 ? (
             <EmptyMessage
               text="No sales activity is available for this time period."
             />
@@ -395,30 +401,44 @@ export function InventoryAnalytics({
                   styles.chartFooter
                 }
               >
-                <View>
+                <View
+                  style={
+                    styles.chartMetricBlock
+                  }
+                >
                   <Text
                     style={
                       styles.chartFooterText
                     }
                   >
-                    Total store sales
+                    Total sales
                   </Text>
 
                   <Text
                     style={
                       styles.chartFooterValue
                     }
+                    numberOfLines={
+                      1
+                    }
+                    adjustsFontSizeToFit
+                    minimumFontScale={
+                      0.8
+                    }
                   >
-                    {formatCurrency(
-                      current.salesValue,
-                    )}
+                    {
+                      formatCurrency(
+                        current.salesValue,
+                      )
+                    }
                   </Text>
                 </View>
 
                 <View
-                  style={
-                    styles.chartFooterRight
-                  }
+                  style={[
+                    styles.chartMetricBlock,
+                    styles.chartFooterRight,
+                  ]}
                 >
                   <Text
                     style={
@@ -432,10 +452,19 @@ export function InventoryAnalytics({
                     style={
                       styles.chartProfitValue
                     }
+                    numberOfLines={
+                      1
+                    }
+                    adjustsFontSizeToFit
+                    minimumFontScale={
+                      0.8
+                    }
                   >
-                    {formatCurrency(
-                      current.estimatedProfit,
-                    )}
+                    {
+                      formatCurrency(
+                        current.estimatedProfit,
+                      )
+                    }
                   </Text>
                 </View>
               </View>
@@ -443,21 +472,10 @@ export function InventoryAnalytics({
           )}
         </View>
 
-        <Text
-          style={
-            styles.sectionTitle
-          }
-        >
-          Products to Notice
-        </Text>
-
-        <Text
-          style={
-            styles.sectionDescription
-          }
-        >
-          See products growing quickly, running low, or selling much slower than before.
-        </Text>
+        <SectionHeader
+          title="Products to Notice"
+          description="Products growing quickly, running low, or selling much slower than before."
+        />
 
         {!hasProductNotices ? (
           <View
@@ -507,7 +525,9 @@ export function InventoryAnalytics({
                 </Text>
 
                 {lowStockFastProducts.map(
-                  (trend) => (
+                  (
+                    trend,
+                  ) => (
                     <ProductTrendCard
                       key={`restock-${trend.productId}`}
                       trend={
@@ -536,7 +556,9 @@ export function InventoryAnalytics({
                 </Text>
 
                 {fasterProducts.map(
-                  (trend) => (
+                  (
+                    trend,
+                  ) => (
                     <ProductTrendCard
                       key={`up-${trend.productId}`}
                       trend={
@@ -572,7 +594,9 @@ export function InventoryAnalytics({
                 </Text>
 
                 {droppedProducts.map(
-                  (trend) => (
+                  (
+                    trend,
+                  ) => (
                     <ProductTrendCard
                       key={`down-${trend.productId}`}
                       trend={
@@ -586,29 +610,18 @@ export function InventoryAnalytics({
           </>
         )}
 
-        <Text
-          style={
-            styles.sectionTitle
-          }
-        >
-          Best Selling Products
-        </Text>
-
-        <Text
-          style={
-            styles.sectionDescription
-          }
-        >
-          Products bringing in the most sales during this time period.
-        </Text>
+        <SectionHeader
+          title="Best Selling Products"
+          description="Products bringing in the most sales during this time period."
+        />
 
         <View
           style={
             styles.rankingCard
           }
         >
-          {summary.topProducts
-            .length === 0 ? (
+          {summary.topProducts.length ===
+          0 ? (
             <EmptyMessage
               text="No product sales have been recorded for this time period."
             />
@@ -626,7 +639,8 @@ export function InventoryAnalytics({
                     product
                   }
                   rank={
-                    index + 1
+                    index +
+                    1
                   }
                 />
               ),
@@ -634,29 +648,18 @@ export function InventoryAnalytics({
           )}
         </View>
 
-        <Text
-          style={
-            styles.sectionTitle
-          }
-        >
-          Best Selling Categories
-        </Text>
-
-        <Text
-          style={
-            styles.sectionDescription
-          }
-        >
-          Categories bringing in the most sales during this time period.
-        </Text>
+        <SectionHeader
+          title="Best Selling Categories"
+          description="Categories bringing in the most sales during this time period."
+        />
 
         <View
           style={
             styles.rankingCard
           }
         >
-          {summary.topCategories
-            .length === 0 ? (
+          {summary.topCategories.length ===
+          0 ? (
             <EmptyMessage
               text="No category sales have been recorded for this time period."
             />
@@ -672,7 +675,8 @@ export function InventoryAnalytics({
                     category
                   }
                   rank={
-                    index + 1
+                    index +
+                    1
                   }
                 />
               ),
@@ -684,17 +688,60 @@ export function InventoryAnalytics({
   );
 }
 
+function SectionHeader({
+  title,
+  description,
+}: {
+  title:
+    string;
+
+  description:
+    string;
+}) {
+  return (
+    <View
+      style={
+        styles.sectionHeader
+      }
+    >
+      <Text
+        style={
+          styles.sectionTitle
+        }
+      >
+        {
+          title
+        }
+      </Text>
+
+      <Text
+        style={
+          styles.sectionDescription
+        }
+      >
+        {
+          description
+        }
+      </Text>
+    </View>
+  );
+}
+
 interface ComparisonCardProps {
-  label: string;
+  label:
+    string;
 
-  value: string;
+  value:
+    string;
 
-  previousValue: string;
+  previousValue:
+    string;
 
   change:
     number | null;
 
-  positiveIsGood?: boolean;
+  positiveIsGood?:
+    boolean;
 }
 
 function ComparisonCard({
@@ -705,22 +752,28 @@ function ComparisonCard({
   positiveIsGood,
 }: ComparisonCardProps) {
   const isUp =
-    change !== null &&
-    change > 0;
+    change !==
+      null &&
+    change >
+      0;
 
   const isDown =
-    change !== null &&
-    change < 0;
+    change !==
+      null &&
+    change <
+      0;
 
   const isGood =
-    positiveIsGood === undefined
+    positiveIsGood ===
+    undefined
       ? null
       : positiveIsGood
         ? isUp
         : isDown;
 
   const isBad =
-    positiveIsGood === undefined
+    positiveIsGood ===
+    undefined
       ? null
       : positiveIsGood
         ? isDown
@@ -743,23 +796,43 @@ function ComparisonCard({
           styles.summaryLabel
         }
       >
-        {label}
+        {
+          label
+        }
       </Text>
 
       <Text
         style={
           styles.summaryValue
         }
+        numberOfLines={
+          1
+        }
+        adjustsFontSizeToFit
+        minimumFontScale={
+          0.75
+        }
       >
-        {value}
+        {
+          value
+        }
       </Text>
 
       <Text
         style={
           styles.previousValue
         }
+        numberOfLines={
+          1
+        }
+        adjustsFontSizeToFit
+        minimumFontScale={
+          0.8
+        }
       >
-        {previousValue}
+        {
+          previousValue
+        }
       </Text>
 
       <View
@@ -778,9 +851,11 @@ function ComparisonCard({
               styles.changeDown,
           ]}
         >
-          {formatChange(
-            change,
-          )}
+          {
+            formatChange(
+              change,
+            )
+          }
         </Text>
 
         <Text
@@ -797,12 +872,14 @@ function ComparisonCard({
 
 function ProductTrendCard({
   trend,
-  showStockWarning = false,
+  showStockWarning =
+    false,
 }: {
   trend:
     ProductTrend;
 
-  showStockWarning?: boolean;
+  showStockWarning?:
+    boolean;
 }) {
   const isDrop =
     trend.trendType ===
@@ -816,8 +893,12 @@ function ProductTrendCard({
     trend.brand.trim(),
     trend.category,
   ]
-    .filter(Boolean)
-    .join(" · ");
+    .filter(
+      Boolean,
+    )
+    .join(
+      " · ",
+    );
 
   return (
     <View
@@ -845,6 +926,9 @@ function ProductTrendCard({
             style={
               styles.trendProductName
             }
+            numberOfLines={
+              2
+            }
           >
             {
               trend.productName
@@ -856,8 +940,13 @@ function ProductTrendCard({
               style={
                 styles.trendProductDetails
               }
+              numberOfLines={
+                2
+              }
             >
-              {productDetails}
+              {
+                productDetails
+              }
             </Text>
           ) : null}
         </View>
@@ -870,10 +959,15 @@ function ProductTrendCard({
               ? styles.trendPercentDown
               : styles.trendPercentUp,
           ]}
+          numberOfLines={
+            1
+          }
         >
-          {formatChange(
-            trend.changePercent,
-          )}
+          {
+            formatChange(
+              trend.changePercent,
+            )
+          }
         </Text>
       </View>
 
@@ -900,9 +994,11 @@ function ProductTrendCard({
               styles.trendNumberValue
             }
           >
-            {formatNumber(
-              trend.previousUnitsSold,
-            )}
+            {
+              formatNumber(
+                trend.previousUnitsSold,
+              )
+            }
           </Text>
         </View>
 
@@ -932,9 +1028,11 @@ function ProductTrendCard({
               styles.trendNumberValue
             }
           >
-            {formatNumber(
-              trend.currentUnitsSold,
-            )}
+            {
+              formatNumber(
+                trend.currentUnitsSold,
+              )
+            }
           </Text>
         </View>
       </View>
@@ -959,13 +1057,17 @@ function ProductTrendCard({
             }
           >
             Current stock:{" "}
-            {formatNumber(
-              trend.currentStock,
-            )}{" "}
+            {
+              formatNumber(
+                trend.currentStock,
+              )
+            }{" "}
             · Reorder level:{" "}
-            {formatNumber(
-              trend.reorderLevel,
-            )}
+            {
+              formatNumber(
+                trend.reorderLevel,
+              )
+            }
           </Text>
         </View>
       ) : null}
@@ -997,7 +1099,8 @@ interface ProductRankingRowProps {
   product:
     ProductSalesMetric;
 
-  rank: number;
+  rank:
+    number;
 }
 
 function ProductRankingRow({
@@ -1008,8 +1111,12 @@ function ProductRankingRow({
     product.brand.trim(),
     product.category,
   ]
-    .filter(Boolean)
-    .join(" · ");
+    .filter(
+      Boolean,
+    )
+    .join(
+      " · ",
+    );
 
   return (
     <View
@@ -1027,7 +1134,9 @@ function ProductRankingRow({
             styles.rankText
           }
         >
-          {rank}
+          {
+            rank
+          }
         </Text>
       </View>
 
@@ -1040,6 +1149,9 @@ function ProductRankingRow({
           style={
             styles.rankingTitle
           }
+          numberOfLines={
+            2
+          }
         >
           {
             product.productName
@@ -1051,8 +1163,13 @@ function ProductRankingRow({
             style={
               styles.rankingSubtitle
             }
+            numberOfLines={
+              2
+            }
           >
-            {productDetails}
+            {
+              productDetails
+            }
           </Text>
         ) : null}
 
@@ -1061,13 +1178,17 @@ function ProductRankingRow({
             styles.rankingMeta
           }
         >
-          {formatNumber(
-            product.unitsSold,
-          )}{" "}
+          {
+            formatNumber(
+              product.unitsSold,
+            )
+          }{" "}
           items sold ·{" "}
-          {formatCurrency(
-            product.estimatedProfit,
-          )}{" "}
+          {
+            formatCurrency(
+              product.estimatedProfit,
+            )
+          }{" "}
           est. profit
         </Text>
       </View>
@@ -1076,10 +1197,19 @@ function ProductRankingRow({
         style={
           styles.rankingValue
         }
+        numberOfLines={
+          1
+        }
+        adjustsFontSizeToFit
+        minimumFontScale={
+          0.75
+        }
       >
-        {formatCurrency(
-          product.salesValue,
-        )}
+        {
+          formatCurrency(
+            product.salesValue,
+          )
+        }
       </Text>
     </View>
   );
@@ -1089,7 +1219,8 @@ interface CategoryRankingRowProps {
   category:
     CategorySalesMetric;
 
-  rank: number;
+  rank:
+    number;
 }
 
 function CategoryRankingRow({
@@ -1112,7 +1243,9 @@ function CategoryRankingRow({
             styles.rankText
           }
         >
-          {rank}
+          {
+            rank
+          }
         </Text>
       </View>
 
@@ -1125,6 +1258,9 @@ function CategoryRankingRow({
           style={
             styles.rankingTitle
           }
+          numberOfLines={
+            2
+          }
         >
           {
             category.category
@@ -1134,6 +1270,9 @@ function CategoryRankingRow({
         <Text
           style={
             styles.rankingSubtitle
+          }
+          numberOfLines={
+            2
           }
         >
           {
@@ -1146,13 +1285,17 @@ function CategoryRankingRow({
             styles.rankingMeta
           }
         >
-          {formatNumber(
-            category.unitsSold,
-          )}{" "}
+          {
+            formatNumber(
+              category.unitsSold,
+            )
+          }{" "}
           items sold ·{" "}
-          {formatCurrency(
-            category.estimatedProfit,
-          )}{" "}
+          {
+            formatCurrency(
+              category.estimatedProfit,
+            )
+          }{" "}
           est. profit
         </Text>
       </View>
@@ -1161,10 +1304,19 @@ function CategoryRankingRow({
         style={
           styles.rankingValue
         }
+        numberOfLines={
+          1
+        }
+        adjustsFontSizeToFit
+        minimumFontScale={
+          0.75
+        }
       >
-        {formatCurrency(
-          category.salesValue,
-        )}
+        {
+          formatCurrency(
+            category.salesValue,
+          )
+        }
       </Text>
     </View>
   );
@@ -1173,7 +1325,8 @@ function CategoryRankingRow({
 function EmptyMessage({
   text,
 }: {
-  text: string;
+  text:
+    string;
 }) {
   return (
     <View
@@ -1186,18 +1339,24 @@ function EmptyMessage({
           styles.emptyText
         }
       >
-        {text}
+        {
+          text
+        }
       </Text>
     </View>
   );
 }
 
 function calculateAverageSale(
-  salesValue: number,
-  salesUnits: number,
+  salesValue:
+    number,
+
+  salesUnits:
+    number,
 ): number {
   if (
-    salesUnits <= 0
+    salesUnits <=
+    0
   ) {
     return 0;
   }
@@ -1209,13 +1368,18 @@ function calculateAverageSale(
 }
 
 function calculatePercentChange(
-  current: number,
-  previous: number,
+  current:
+    number,
+
+  previous:
+    number,
 ): number | null {
   if (
-    previous === 0
+    previous ===
+    0
   ) {
-    return current === 0
+    return current ===
+      0
       ? 0
       : null;
   }
@@ -1234,7 +1398,8 @@ function formatChange(
     number | null,
 ): string {
   if (
-    value === null
+    value ===
+    null
   ) {
     return "New";
   }
@@ -1242,24 +1407,29 @@ function formatChange(
   if (
     Math.abs(
       value,
-    ) < 0.05
+    ) <
+    0.05
   ) {
     return "No change";
   }
 
   const rounded =
     Math.round(
-      value * 10,
-    ) / 10;
+      value *
+        10,
+    ) /
+    10;
 
   if (
-    rounded > 0
+    rounded >
+    0
   ) {
     return `↑ ${rounded}%`;
   }
 
   if (
-    rounded < 0
+    rounded <
+    0
   ) {
     return `↓ ${Math.abs(
       rounded,
@@ -1269,10 +1439,8 @@ function formatChange(
   return "No change";
 }
 
-function formatCurrency(
-  value: number,
-): string {
-  return new Intl.NumberFormat(
+const currencyFormatter =
+  new Intl.NumberFormat(
     "en-CA",
     {
       style:
@@ -1284,17 +1452,27 @@ function formatCurrency(
       maximumFractionDigits:
         2,
     },
-  ).format(
+  );
+
+const numberFormatter =
+  new Intl.NumberFormat(
+    "en-CA",
+  );
+
+function formatCurrency(
+  value:
+    number,
+): string {
+  return currencyFormatter.format(
     value,
   );
 }
 
 function formatNumber(
-  value: number,
+  value:
+    number,
 ): string {
-  return new Intl.NumberFormat(
-    "en-CA",
-  ).format(
+  return numberFormatter.format(
     value,
   );
 }
@@ -1304,7 +1482,8 @@ function formatPeriodLabel(
     AnalyticsPeriodDays,
 ): string {
   if (
-    period === 365
+    period ===
+    365
   ) {
     return "1 year";
   }
@@ -1315,17 +1494,22 @@ function formatPeriodLabel(
 const styles =
   StyleSheet.create({
     screen: {
-      flex: 1,
+      flex:
+        1,
 
       backgroundColor:
         "#F4F6F8",
     },
 
     content: {
-      padding: 18,
+      paddingHorizontal:
+        18,
+
+      paddingTop:
+        12,
 
       paddingBottom:
-        48,
+        50,
     },
 
     headerRow: {
@@ -1340,7 +1524,11 @@ const styles =
     },
 
     headerTextContainer: {
-      flex: 1,
+      flex:
+        1,
+
+      minWidth:
+        0,
 
       marginRight:
         16,
@@ -1348,7 +1536,7 @@ const styles =
 
     title: {
       fontSize:
-        30,
+        28,
 
       fontWeight:
         "800",
@@ -1361,17 +1549,26 @@ const styles =
       marginTop:
         6,
 
+      maxWidth:
+        320,
+
       fontSize:
-        15,
+        13,
 
       lineHeight:
-        21,
+        19,
 
       color:
         "#6B7280",
     },
 
     closeButton: {
+      minHeight:
+        42,
+
+      justifyContent:
+        "center",
+
       borderWidth:
         1,
 
@@ -1383,9 +1580,6 @@ const styles =
 
       paddingHorizontal:
         14,
-
-      paddingVertical:
-        9,
 
       backgroundColor:
         "#FFFFFF",
@@ -1407,18 +1601,26 @@ const styles =
         0.72,
     },
 
-    periodLabel: {
+    periodSection: {
       marginTop:
         24,
+    },
 
+    periodLabel: {
       fontSize:
-        14,
+        12,
 
       fontWeight:
         "800",
 
+      textTransform:
+        "uppercase",
+
+      letterSpacing:
+        0.4,
+
       color:
-        "#374151",
+        "#6B7280",
     },
 
     periodContainer: {
@@ -1437,7 +1639,7 @@ const styles =
 
     periodButton: {
       minHeight:
-        42,
+        40,
 
       alignItems:
         "center",
@@ -1452,7 +1654,7 @@ const styles =
         "#CBD2DA",
 
       borderRadius:
-        12,
+        999,
 
       paddingHorizontal:
         14,
@@ -1463,15 +1665,15 @@ const styles =
 
     periodButtonSelected: {
       borderColor:
-        "#0F766E",
+        "#20252B",
 
       backgroundColor:
-        "#0F766E",
+        "#20252B",
     },
 
     periodButtonText: {
       fontSize:
-        13,
+        12,
 
       fontWeight:
         "700",
@@ -1499,12 +1701,14 @@ const styles =
         "#6B7280",
     },
 
-    sectionTitle: {
+    sectionHeader: {
       marginTop:
         28,
+    },
 
+    sectionTitle: {
       fontSize:
-        20,
+        18,
 
       fontWeight:
         "800",
@@ -1531,9 +1735,6 @@ const styles =
     },
 
     summaryGrid: {
-      marginTop:
-        2,
-
       flexDirection:
         "row",
 
@@ -1541,7 +1742,7 @@ const styles =
         "wrap",
 
       gap:
-        12,
+        10,
     },
 
     summaryCard: {
@@ -1549,7 +1750,7 @@ const styles =
         "48%",
 
       minHeight:
-        150,
+        145,
 
       borderWidth:
         1,
@@ -1558,10 +1759,10 @@ const styles =
         "#E0E4E8",
 
       borderRadius:
-        16,
+        15,
 
       padding:
-        15,
+        14,
 
       backgroundColor:
         "#FFFFFF",
@@ -1585,10 +1786,10 @@ const styles =
 
     summaryLabel: {
       fontSize:
-        13,
+        11,
 
       fontWeight:
-        "700",
+        "800",
 
       color:
         "#6B7280",
@@ -1599,7 +1800,7 @@ const styles =
         9,
 
       fontSize:
-        22,
+        21,
 
       fontWeight:
         "800",
@@ -1613,7 +1814,7 @@ const styles =
         5,
 
       fontSize:
-        11,
+        10,
 
       color:
         "#8B949E",
@@ -1626,7 +1827,7 @@ const styles =
 
     changeText: {
       fontSize:
-        13,
+        12,
 
       fontWeight:
         "800",
@@ -1650,7 +1851,7 @@ const styles =
         2,
 
       fontSize:
-        10,
+        9,
 
       color:
         "#9CA3AF",
@@ -1689,11 +1890,19 @@ const styles =
       flexDirection:
         "row",
 
-      alignItems:
-        "flex-start",
-
       justifyContent:
         "space-between",
+
+      gap:
+        12,
+    },
+
+    chartMetricBlock: {
+      flex:
+        1,
+
+      minWidth:
+        0,
     },
 
     chartFooterRight: {
@@ -1703,7 +1912,7 @@ const styles =
 
     chartFooterText: {
       fontSize:
-        12,
+        11,
 
       color:
         "#6B7280",
@@ -1865,6 +2074,9 @@ const styles =
       flex:
         1,
 
+      minWidth:
+        0,
+
       marginRight:
         12,
     },
@@ -1872,6 +2084,9 @@ const styles =
     trendProductName: {
       fontSize:
         15,
+
+      lineHeight:
+        20,
 
       fontWeight:
         "800",
@@ -1887,11 +2102,17 @@ const styles =
       fontSize:
         11,
 
+      lineHeight:
+        16,
+
       color:
         "#6B7280",
     },
 
     trendPercent: {
+      flexShrink:
+        0,
+
       fontSize:
         14,
 
@@ -1996,6 +2217,9 @@ const styles =
       fontSize:
         11,
 
+      lineHeight:
+        16,
+
       color:
         "#92400E",
     },
@@ -2006,6 +2230,9 @@ const styles =
 
       fontSize:
         12,
+
+      lineHeight:
+        17,
 
       fontWeight:
         "700",
@@ -2070,6 +2297,9 @@ const styles =
       height:
         34,
 
+      flexShrink:
+        0,
+
       alignItems:
         "center",
 
@@ -2098,6 +2328,9 @@ const styles =
       flex:
         1,
 
+      minWidth:
+        0,
+
       marginHorizontal:
         12,
     },
@@ -2105,6 +2338,9 @@ const styles =
     rankingTitle: {
       fontSize:
         15,
+
+      lineHeight:
+        20,
 
       fontWeight:
         "800",
@@ -2118,7 +2354,10 @@ const styles =
         3,
 
       fontSize:
-        13,
+        12,
+
+      lineHeight:
+        17,
 
       color:
         "#5D6673",
@@ -2129,21 +2368,30 @@ const styles =
         4,
 
       fontSize:
-        12,
+        11,
 
       lineHeight:
-        17,
+        16,
 
       color:
         "#7A838E",
     },
 
     rankingValue: {
+      flexShrink:
+        0,
+
+      maxWidth:
+        105,
+
       fontSize:
-        15,
+        14,
 
       fontWeight:
         "800",
+
+      textAlign:
+        "right",
 
       color:
         "#15803D",
@@ -2158,11 +2406,14 @@ const styles =
     },
 
     emptyText: {
+      maxWidth:
+        300,
+
       fontSize:
-        14,
+        13,
 
       lineHeight:
-        20,
+        19,
 
       textAlign:
         "center",

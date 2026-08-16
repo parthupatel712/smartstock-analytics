@@ -5,7 +5,6 @@ import {
 
 import {
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -15,7 +14,13 @@ import {
   View,
 } from "react-native";
 
-import type { Product } from "../types/product";
+import {
+  SafeAreaView,
+} from "react-native-safe-area-context";
+
+import type {
+  Product,
+} from "../types/product";
 
 import type {
   CreateInventoryTransactionInput,
@@ -23,33 +28,26 @@ import type {
 } from "../types/inventoryTransaction";
 
 interface InventoryTransactionFormProps {
-  product: Product;
+  product:
+    Product;
 
-  isSubmitting?: boolean;
+  isSubmitting?:
+    boolean;
 
-  /*
-   * Optional starting values.
-   *
-   * Normal inventory updates do not
-   * need to provide these.
-   *
-   * Reorder Management can provide:
-   *
-   * transaction type = stock_in
-   * quantity = suggested reorder amount
-   */
   initialTransactionType?:
     InventoryTransactionType;
 
   initialQuantity?:
     number;
 
-  onCancel: () => void;
+  onCancel:
+    () => void;
 
-  onSubmit: (
-    input:
-      CreateInventoryTransactionInput,
-  ) => Promise<void>;
+  onSubmit:
+    (
+      input:
+        CreateInventoryTransactionInput,
+    ) => Promise<void>;
 }
 
 interface TransactionOption {
@@ -59,7 +57,7 @@ interface TransactionOption {
   label:
     string;
 
-  description:
+  shortDescription:
     string;
 }
 
@@ -72,8 +70,8 @@ const TRANSACTION_OPTIONS:
       label:
         "Stock In",
 
-      description:
-        "Receive new inventory.",
+      shortDescription:
+        "Add delivered stock",
     },
 
     {
@@ -81,10 +79,10 @@ const TRANSACTION_OPTIONS:
         "sale",
 
       label:
-        "Sale / Stock Out",
+        "Sale",
 
-      description:
-        "Remove stock after a sale.",
+      shortDescription:
+        "Remove sold units",
     },
 
     {
@@ -92,10 +90,10 @@ const TRANSACTION_OPTIONS:
         "return",
 
       label:
-        "Customer Return",
+        "Return",
 
-      description:
-        "Add returned stock back.",
+      shortDescription:
+        "Add customer return",
     },
 
     {
@@ -105,8 +103,8 @@ const TRANSACTION_OPTIONS:
       label:
         "Damage",
 
-      description:
-        "Remove damaged or expired stock.",
+      shortDescription:
+        "Remove damaged stock",
     },
 
     {
@@ -116,15 +114,16 @@ const TRANSACTION_OPTIONS:
       label:
         "Physical Count",
 
-      description:
-        "Set stock to the counted quantity.",
+      shortDescription:
+        "Set actual stock",
     },
   ];
 
 export function InventoryTransactionForm({
   product,
 
-  isSubmitting = false,
+  isSubmitting =
+    false,
 
   initialTransactionType =
     "stock_in",
@@ -158,20 +157,16 @@ export function InventoryTransactionForm({
     notes,
     setNotes,
   ] =
-    useState("");
+    useState(
+      "",
+    );
 
   const [
     errorMessage,
     setErrorMessage,
   ] =
-    useState("");
-
-  const [
-    isPickerVisible,
-    setIsPickerVisible,
-  ] =
     useState(
-      false,
+      "",
     );
 
   const selectedOption =
@@ -200,7 +195,7 @@ export function InventoryTransactionForm({
   const quantityPlaceholder =
     transactionType ===
     "adjustment"
-      ? "Enter current physical count"
+      ? "Enter actual stock count"
       : "Enter quantity";
 
   const isReorderPrefill =
@@ -208,6 +203,46 @@ export function InventoryTransactionForm({
       undefined &&
     initialTransactionType ===
       "stock_in";
+
+  const stockImpact =
+    useMemo(
+      () =>
+        getStockImpact(
+          transactionType,
+          product.currentStock,
+          quantity,
+        ),
+
+      [
+        product.currentStock,
+        quantity,
+        transactionType,
+      ],
+    );
+
+  function changeTransactionType(
+    nextType:
+      InventoryTransactionType,
+  ): void {
+    if (
+      nextType ===
+      transactionType
+    ) {
+      return;
+    }
+
+    setTransactionType(
+      nextType,
+    );
+
+    setQuantity(
+      "",
+    );
+
+    setErrorMessage(
+      "",
+    );
+  }
 
   function validateQuantity():
     number | null {
@@ -231,7 +266,8 @@ export function InventoryTransactionForm({
       !Number.isInteger(
         parsedQuantity,
       ) ||
-      parsedQuantity < 0
+      parsedQuantity <
+        0
     ) {
       setErrorMessage(
         `${quantityLabel} must be a non-negative whole number.`,
@@ -273,7 +309,8 @@ export function InventoryTransactionForm({
     return parsedQuantity;
   }
 
-  async function handleSubmit(): Promise<void> {
+  async function handleSubmit():
+    Promise<void> {
     setErrorMessage(
       "",
     );
@@ -307,463 +344,266 @@ export function InventoryTransactionForm({
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={
-        Platform.OS ===
-        "ios"
-          ? "padding"
-          : undefined
-      }
+    <SafeAreaView
+      edges={[
+        "top",
+        "left",
+        "right",
+        "bottom",
+      ]}
       style={
-        styles.screen
+        styles.safeArea
       }
     >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
+      <KeyboardAvoidingView
+        behavior={
+          Platform.OS ===
+          "ios"
+            ? "padding"
+            : undefined
         }
-        keyboardShouldPersistTaps="handled"
+        keyboardVerticalOffset={
+          Platform.OS ===
+          "ios"
+            ? 0
+            : undefined
+        }
+        style={
+          styles.screen
+        }
       >
-        <View
-          style={
-            styles.headerRow
+        <ScrollView
+          contentContainerStyle={
+            styles.content
+          }
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          showsVerticalScrollIndicator={
+            false
           }
         >
           <View
             style={
-              styles.headerTextContainer
+              styles.headerRow
             }
           >
-            <Text
-              style={
-                styles.title
-              }
-            >
-              Update Inventory
-            </Text>
-
-            <Text
-              style={
-                styles.productName
-              }
-            >
-              {
-                product.name
-              }
-            </Text>
-
-            <Text
-              style={
-                styles.productDetails
-              }
-            >
-              {product.brand}
-              {" · "}
-              {
-                product.department
-              }
-              {" · "}
-              {
-                product.category
-              }
-            </Text>
-          </View>
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={
-              onCancel
-            }
-            style={
-              styles.cancelButton
-            }
-          >
-            <Text
-              style={
-                styles.cancelButtonText
-              }
-            >
-              Cancel
-            </Text>
-          </Pressable>
-        </View>
-
-        <View
-          style={
-            styles.stockCard
-          }
-        >
-          <Text
-            style={
-              styles.stockLabel
-            }
-          >
-            Current stock
-          </Text>
-
-          <Text
-            style={
-              styles.stockValue
-            }
-          >
-            {
-              product.currentStock
-            }{" "}
-            units
-          </Text>
-
-          <View
-            style={
-              styles.stockMetaRow
-            }
-          >
-            <View>
-              <Text
-                style={
-                  styles.stockMetaLabel
-                }
-              >
-                Reorder level
-              </Text>
-
-              <Text
-                style={
-                  styles.stockMetaValue
-                }
-              >
-                {
-                  product.reorderLevel
-                }
-              </Text>
-            </View>
-
             <View
               style={
-                styles.stockMetaRight
+                styles.headerTextContainer
               }
             >
               <Text
                 style={
-                  styles.stockMetaLabel
+                  styles.title
                 }
               >
-                Target stock
+                Update Inventory
               </Text>
 
               <Text
                 style={
-                  styles.stockMetaValue
+                  styles.productName
                 }
-              >
-                {
-                  product.reorderLevel *
+                numberOfLines={
                   2
                 }
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {isReorderPrefill ? (
-          <View
-            style={
-              styles.reorderSuggestionCard
-            }
-          >
-            <Text
-              style={
-                styles.reorderSuggestionTitle
-              }
-            >
-              Reorder suggestion applied
-            </Text>
-
-            <Text
-              style={
-                styles.reorderSuggestionText
-              }
-            >
-              SmartStock prefilled{" "}
-              {
-                initialQuantity
-              }{" "}
-              units to bring this product toward its target stock level.
-            </Text>
-
-            <Text
-              style={
-                styles.reorderSuggestionHint
-              }
-            >
-              You can change the quantity before saving.
-            </Text>
-          </View>
-        ) : null}
-
-        <View
-          style={
-            styles.fieldContainer
-          }
-        >
-          <Text
-            style={
-              styles.label
-            }
-          >
-            Transaction type
-          </Text>
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={() =>
-              setIsPickerVisible(
-                true,
-              )
-            }
-            style={
-              styles.dropdownButton
-            }
-          >
-            <View
-              style={
-                styles.dropdownTextContainer
-              }
-            >
-              <Text
-                style={
-                  styles.dropdownValue
-                }
               >
                 {
-                  selectedOption.label
+                  product.name
                 }
               </Text>
 
               <Text
                 style={
-                  styles.dropdownDescription
+                  styles.productDetails
                 }
               >
+                {product.brand.trim()
+                  ? `${product.brand} · `
+                  : ""}
                 {
-                  selectedOption.description
+                  product.department
+                }
+                {" · "}
+                {
+                  product.category
                 }
               </Text>
             </View>
 
-            <Text
-              style={
-                styles.dropdownIcon
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Cancel inventory update"
+              hitSlop={
+                14
               }
+              disabled={
+                isSubmitting
+              }
+              onPress={
+                onCancel
+              }
+              style={({
+                pressed,
+              }) => [
+                styles.cancelButton,
+
+                pressed &&
+                  styles.cancelButtonPressed,
+
+                isSubmitting &&
+                  styles.cancelButtonDisabled,
+              ]}
             >
-              ⌄
-            </Text>
-          </Pressable>
-        </View>
+              <Text
+                style={
+                  styles.cancelButtonText
+                }
+              >
+                Cancel
+              </Text>
+            </Pressable>
+          </View>
 
-        <View
-          style={
-            styles.fieldContainer
-          }
-        >
-          <Text
-            style={
-              styles.label
-            }
-          >
-            {
-              quantityLabel
-            }
-          </Text>
-
-          <TextInput
-            value={
-              quantity
-            }
-            onChangeText={(
-              value,
-            ) => {
-              setQuantity(
-                value,
-              );
-
-              setErrorMessage(
-                "",
-              );
-            }}
-            placeholder={
-              quantityPlaceholder
-            }
-            keyboardType="number-pad"
-            style={[
-              styles.input,
-
-              errorMessage
-                ? styles.inputError
-                : undefined,
-            ]}
-          />
-
-          {errorMessage ? (
-            <Text
-              style={
-                styles.errorText
-              }
-            >
-              {
-                errorMessage
-              }
-            </Text>
-          ) : null}
-        </View>
-
-        <View
-          style={
-            styles.fieldContainer
-          }
-        >
-          <Text
-            style={
-              styles.label
-            }
-          >
-            Notes (optional)
-          </Text>
-
-          <TextInput
-            value={
-              notes
-            }
-            onChangeText={
-              setNotes
-            }
-            placeholder="Example: Supplier delivery or damaged package"
-            multiline
-            numberOfLines={
-              4
-            }
-            textAlignVertical="top"
-            style={[
-              styles.input,
-              styles.notesInput,
-            ]}
-          />
-        </View>
-
-        <View
-          style={
-            styles.previewCard
-          }
-        >
-          <Text
-            style={
-              styles.previewTitle
-            }
-          >
-            Stock impact
-          </Text>
-
-          <Text
-            style={
-              styles.previewText
-            }
-          >
-            {getStockImpactMessage(
-              transactionType,
-              product.currentStock,
-              quantity,
-            )}
-          </Text>
-        </View>
-
-        <Pressable
-          accessibilityRole="button"
-          disabled={
-            isSubmitting
-          }
-          onPress={() =>
-            void handleSubmit()
-          }
-          style={({
-            pressed,
-          }) => [
-            styles.submitButton,
-
-            pressed &&
-              styles.submitButtonPressed,
-
-            isSubmitting &&
-              styles.submitButtonDisabled,
-          ]}
-        >
-          <Text
-            style={
-              styles.submitButtonText
-            }
-          >
-            {isSubmitting
-              ? "Saving transaction…"
-              : "Save transaction"}
-          </Text>
-        </Pressable>
-      </ScrollView>
-
-      <Modal
-        animationType="slide"
-        transparent
-        visible={
-          isPickerVisible
-        }
-        onRequestClose={() =>
-          setIsPickerVisible(
-            false,
-          )
-        }
-      >
-        <View
-          style={
-            styles.modalBackdrop
-          }
-        >
           <View
             style={
-              styles.modalContent
+              styles.stockCard
             }
           >
             <View
               style={
-                styles.modalHeader
+                styles.stockPrimaryRow
               }
             >
-              <Text
-                style={
-                  styles.modalTitle
-                }
-              >
-                Select transaction type
-              </Text>
+              <View>
+                <Text
+                  style={
+                    styles.stockLabel
+                  }
+                >
+                  Current stock
+                </Text>
 
-              <Pressable
-                accessibilityRole="button"
-                onPress={() =>
-                  setIsPickerVisible(
-                    false,
-                  )
-                }
+                <Text
+                  style={
+                    styles.stockValue
+                  }
+                >
+                  {
+                    product.currentStock
+                  }
+                </Text>
+
+                <Text
+                  style={
+                    styles.stockUnit
+                  }
+                >
+                  units
+                </Text>
+              </View>
+
+              <View
                 style={
-                  styles.modalCloseButton
+                  styles.stockRightColumn
                 }
               >
                 <Text
                   style={
-                    styles.modalCloseText
+                    styles.stockMetaLabel
                   }
                 >
-                  Close
+                  Reorder level
                 </Text>
-              </Pressable>
-            </View>
 
-            <ScrollView>
+                <Text
+                  style={
+                    styles.stockMetaValue
+                  }
+                >
+                  {
+                    product.reorderLevel
+                  }
+                </Text>
+
+                <Text
+                  style={[
+                    styles.stockMetaLabel,
+                    styles.targetStockLabel,
+                  ]}
+                >
+                  Target stock
+                </Text>
+
+                <Text
+                  style={
+                    styles.stockMetaValue
+                  }
+                >
+                  {
+                    product.reorderLevel *
+                    2
+                  }
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {isReorderPrefill &&
+          transactionType ===
+            "stock_in" ? (
+            <View
+              style={
+                styles.reorderSuggestionCard
+              }
+            >
+              <Text
+                style={
+                  styles.reorderSuggestionTitle
+                }
+              >
+                Suggested quantity applied
+              </Text>
+
+              <Text
+                style={
+                  styles.reorderSuggestionText
+                }
+              >
+                {
+                  initialQuantity
+                }{" "}
+                units were prefilled to move this product toward its target stock.
+              </Text>
+            </View>
+          ) : null}
+
+          <View
+            style={
+              styles.section
+            }
+          >
+            <Text
+              style={
+                styles.sectionTitle
+              }
+            >
+              What happened?
+            </Text>
+
+            <Text
+              style={
+                styles.sectionDescription
+              }
+            >
+              Choose one inventory action.
+            </Text>
+
+            <View
+              style={
+                styles.transactionGrid
+              }
+            >
               {TRANSACTION_OPTIONS.map(
                 (
                   option,
@@ -775,45 +615,37 @@ export function InventoryTransactionForm({
                   return (
                     <Pressable
                       accessibilityRole="button"
+                      accessibilityState={{
+                        selected:
+                          isSelected,
+                      }}
                       key={
                         option.type
                       }
-                      onPress={() => {
-                        setTransactionType(
+                      onPress={() =>
+                        changeTransactionType(
                           option.type,
-                        );
-
-                        /*
-                         * Clear the prefilled
-                         * reorder quantity if
-                         * the user intentionally
-                         * changes transaction type.
-                         */
-                        setQuantity(
-                          "",
-                        );
-
-                        setErrorMessage(
-                          "",
-                        );
-
-                        setIsPickerVisible(
-                          false,
-                        );
-                      }}
-                      style={[
-                        styles.option,
+                        )
+                      }
+                      style={({
+                        pressed,
+                      }) => [
+                        styles.transactionOption,
 
                         isSelected &&
-                          styles.optionSelected,
+                          styles.transactionOptionSelected,
+
+                        pressed &&
+                          !isSelected &&
+                          styles.transactionOptionPressed,
                       ]}
                     >
                       <Text
                         style={[
-                          styles.optionLabel,
+                          styles.transactionOptionLabel,
 
                           isSelected &&
-                            styles.optionLabelSelected,
+                            styles.transactionOptionLabelSelected,
                         ]}
                       >
                         {
@@ -822,27 +654,327 @@ export function InventoryTransactionForm({
                       </Text>
 
                       <Text
-                        style={
-                          styles.optionDescription
-                        }
+                        style={[
+                          styles.transactionOptionDescription,
+
+                          isSelected &&
+                            styles.transactionOptionDescriptionSelected,
+                        ]}
                       >
                         {
-                          option.description
+                          option.shortDescription
                         }
                       </Text>
                     </Pressable>
                   );
                 },
               )}
-            </ScrollView>
+            </View>
           </View>
-        </View>
-      </Modal>
-    </KeyboardAvoidingView>
+
+          <View
+            style={
+              styles.selectedActionCard
+            }
+          >
+            <Text
+              style={
+                styles.selectedActionLabel
+              }
+            >
+              Selected
+            </Text>
+
+            <Text
+              style={
+                styles.selectedActionValue
+              }
+            >
+              {
+                selectedOption.label
+              }
+            </Text>
+
+            <Text
+              style={
+                styles.selectedActionDescription
+              }
+            >
+              {
+                getTransactionExplanation(
+                  transactionType,
+                )
+              }
+            </Text>
+          </View>
+
+          <View
+            style={
+              styles.fieldContainer
+            }
+          >
+            <Text
+              style={
+                styles.label
+              }
+            >
+              {
+                quantityLabel
+              }
+            </Text>
+
+            <TextInput
+              value={
+                quantity
+              }
+              onChangeText={(
+                value,
+              ) => {
+                setQuantity(
+                  value,
+                );
+
+                setErrorMessage(
+                  "",
+                );
+              }}
+              placeholder={
+                quantityPlaceholder
+              }
+              keyboardType="number-pad"
+              returnKeyType="done"
+              selectTextOnFocus
+              style={[
+                styles.input,
+
+                errorMessage
+                  ? styles.inputError
+                  : undefined,
+              ]}
+            />
+
+            {errorMessage ? (
+              <Text
+                style={
+                  styles.errorText
+                }
+              >
+                {
+                  errorMessage
+                }
+              </Text>
+            ) : null}
+          </View>
+
+          <View
+            style={[
+              styles.previewCard,
+
+              stockImpact.isInvalid &&
+                styles.previewCardWarning,
+            ]}
+          >
+            <Text
+              style={
+                styles.previewLabel
+              }
+            >
+              Stock after this update
+            </Text>
+
+            <Text
+              style={[
+                styles.previewValue,
+
+                stockImpact.isInvalid &&
+                  styles.previewValueWarning,
+              ]}
+            >
+              {
+                stockImpact.message
+              }
+            </Text>
+          </View>
+
+          <View
+            style={
+              styles.fieldContainer
+            }
+          >
+            <Text
+              style={
+                styles.label
+              }
+            >
+              Notes
+            </Text>
+
+            <Text
+              style={
+                styles.optionalLabel
+              }
+            >
+              Optional
+            </Text>
+
+            <TextInput
+              value={
+                notes
+              }
+              onChangeText={
+                setNotes
+              }
+              placeholder={
+                getNotesPlaceholder(
+                  transactionType,
+                )
+              }
+              multiline
+              numberOfLines={
+                3
+              }
+              textAlignVertical="top"
+              style={[
+                styles.input,
+                styles.notesInput,
+              ]}
+            />
+          </View>
+
+          <Pressable
+            accessibilityRole="button"
+            disabled={
+              isSubmitting ||
+              stockImpact.isInvalid
+            }
+            onPress={() =>
+              void handleSubmit()
+            }
+            style={({
+              pressed,
+            }) => [
+              styles.submitButton,
+
+              pressed &&
+                !isSubmitting &&
+                !stockImpact.isInvalid &&
+                styles.submitButtonPressed,
+
+              (
+                isSubmitting ||
+                stockImpact.isInvalid
+              ) &&
+                styles.submitButtonDisabled,
+            ]}
+          >
+            <Text
+              style={
+                styles.submitButtonText
+              }
+            >
+              {isSubmitting
+                ? "Saving…"
+                : getSubmitButtonLabel(
+                    transactionType,
+                  )}
+            </Text>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
-function getStockImpactMessage(
+function getTransactionExplanation(
+  transactionType:
+    InventoryTransactionType,
+): string {
+  switch (
+    transactionType
+  ) {
+    case "stock_in":
+      return "Adds received inventory to the current stock.";
+
+    case "sale":
+      return "Removes units that were sold.";
+
+    case "return":
+      return "Adds sellable customer-returned units back into stock.";
+
+    case "damage":
+      return "Removes damaged, broken, or expired units.";
+
+    case "adjustment":
+      return "Replaces the current stock with the actual physical count.";
+
+    default:
+      return "";
+  }
+}
+
+function getNotesPlaceholder(
+  transactionType:
+    InventoryTransactionType,
+): string {
+  switch (
+    transactionType
+  ) {
+    case "stock_in":
+      return "Example: Supplier delivery";
+
+    case "sale":
+      return "Example: Manual sale adjustment";
+
+    case "return":
+      return "Example: Unopened customer return";
+
+    case "damage":
+      return "Example: Expired or damaged package";
+
+    case "adjustment":
+      return "Example: Shelf count completed";
+
+    default:
+      return "Add a note";
+  }
+}
+
+function getSubmitButtonLabel(
+  transactionType:
+    InventoryTransactionType,
+): string {
+  switch (
+    transactionType
+  ) {
+    case "stock_in":
+      return "Add Stock";
+
+    case "sale":
+      return "Record Sale";
+
+    case "return":
+      return "Record Return";
+
+    case "damage":
+      return "Record Damage";
+
+    case "adjustment":
+      return "Save Physical Count";
+
+    default:
+      return "Save";
+  }
+}
+
+interface StockImpactResult {
+  message:
+    string;
+
+  isInvalid:
+    boolean;
+}
+
+function getStockImpact(
   transactionType:
     InventoryTransactionType,
 
@@ -851,21 +983,54 @@ function getStockImpactMessage(
 
   quantityValue:
     string,
-): string {
+): StockImpactResult {
+  if (
+    quantityValue.trim() ===
+    ""
+  ) {
+    return {
+      message:
+        "Enter a quantity",
+
+      isInvalid:
+        false,
+    };
+  }
+
   const quantity =
     Number(
       quantityValue,
     );
 
   if (
-    quantityValue.trim() ===
-      "" ||
     !Number.isInteger(
       quantity,
     ) ||
-    quantity < 0
+    quantity <
+      0
   ) {
-    return "Enter a valid quantity to preview the new stock.";
+    return {
+      message:
+        "Enter a valid whole number",
+
+      isInvalid:
+        true,
+    };
+  }
+
+  if (
+    transactionType !==
+      "adjustment" &&
+    quantity ===
+      0
+  ) {
+    return {
+      message:
+        "Quantity must be greater than zero",
+
+      isInvalid:
+        true,
+    };
   }
 
   switch (
@@ -873,28 +1038,75 @@ function getStockImpactMessage(
   ) {
     case "stock_in":
     case "return":
-      return `${currentStock} → ${
-        currentStock +
-        quantity
-      } units`;
+      return {
+        message:
+          `${currentStock} → ${
+            currentStock +
+            quantity
+          } units`,
+
+        isInvalid:
+          false,
+      };
 
     case "sale":
-    case "damage":
-      return `${currentStock} → ${
+    case "damage": {
+      const stockAfter =
         currentStock -
-        quantity
-      } units`;
+        quantity;
+
+      if (
+        stockAfter <
+        0
+      ) {
+        return {
+          message:
+            `Only ${currentStock} units available`,
+
+          isInvalid:
+            true,
+        };
+      }
+
+      return {
+        message:
+          `${currentStock} → ${stockAfter} units`,
+
+        isInvalid:
+          false,
+      };
+    }
 
     case "adjustment":
-      return `${currentStock} → ${quantity} units`;
+      return {
+        message:
+          `${currentStock} → ${quantity} units`,
+
+        isInvalid:
+          false,
+      };
 
     default:
-      return "Stock impact unavailable.";
+      return {
+        message:
+          "Stock impact unavailable",
+
+        isInvalid:
+          true,
+      };
   }
 }
 
 const styles =
   StyleSheet.create({
+    safeArea: {
+      flex:
+        1,
+
+      backgroundColor:
+        "#F4F6F8",
+    },
+
     screen: {
       flex:
         1,
@@ -904,8 +1116,11 @@ const styles =
     },
 
     content: {
-      padding:
+      paddingHorizontal:
         20,
+
+      paddingTop:
+        10,
 
       paddingBottom:
         48,
@@ -926,27 +1141,39 @@ const styles =
       flex:
         1,
 
+      minWidth:
+        0,
+
       marginRight:
         14,
     },
 
     title: {
       fontSize:
-        30,
+        28,
 
       fontWeight:
         "800",
+
+      color:
+        "#111827",
     },
 
     productName: {
       marginTop:
-        8,
+        7,
 
       fontSize:
-        18,
+        17,
+
+      lineHeight:
+        22,
 
       fontWeight:
         "700",
+
+      color:
+        "#20252B",
     },
 
     productDetails: {
@@ -954,16 +1181,31 @@ const styles =
         4,
 
       fontSize:
-        14,
+        13,
 
       lineHeight:
-        20,
+        19,
 
       color:
-        "#5D6673",
+        "#6B7280",
     },
 
     cancelButton: {
+      minWidth:
+        78,
+
+      minHeight:
+        44,
+
+      flexShrink:
+        0,
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "center",
+
       borderWidth:
         1,
 
@@ -976,14 +1218,24 @@ const styles =
       paddingHorizontal:
         14,
 
-      paddingVertical:
-        9,
-
       backgroundColor:
         "#FFFFFF",
     },
 
+    cancelButtonPressed: {
+      backgroundColor:
+        "#F3F4F6",
+    },
+
+    cancelButtonDisabled: {
+      opacity:
+        0.55,
+    },
+
     cancelButtonText: {
+      fontSize:
+        14,
+
       fontWeight:
         "700",
 
@@ -993,61 +1245,75 @@ const styles =
 
     stockCard: {
       marginTop:
-        24,
+        22,
 
-      marginBottom:
-        18,
+      borderWidth:
+        1,
+
+      borderColor:
+        "#E0E4E8",
 
       borderRadius:
-        14,
+        16,
 
       padding:
-        18,
+        17,
 
       backgroundColor:
         "#FFFFFF",
     },
 
-    stockLabel: {
-      fontSize:
-        14,
-
-      color:
-        "#5D6673",
-    },
-
-    stockValue: {
-      marginTop:
-        6,
-
-      fontSize:
-        28,
-
-      fontWeight:
-        "800",
-    },
-
-    stockMetaRow: {
-      marginTop:
-        16,
-
-      paddingTop:
-        13,
-
-      borderTopWidth:
-        1,
-
-      borderTopColor:
-        "#EEF0F2",
-
+    stockPrimaryRow: {
       flexDirection:
         "row",
+
+      alignItems:
+        "flex-start",
 
       justifyContent:
         "space-between",
     },
 
-    stockMetaRight: {
+    stockLabel: {
+      fontSize:
+        12,
+
+      fontWeight:
+        "700",
+
+      textTransform:
+        "uppercase",
+
+      color:
+        "#6B7280",
+    },
+
+    stockValue: {
+      marginTop:
+        4,
+
+      fontSize:
+        34,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
+    },
+
+    stockUnit: {
+      marginTop:
+        -2,
+
+      fontSize:
+        12,
+
+      color:
+        "#6B7280",
+    },
+
+    stockRightColumn: {
       alignItems:
         "flex-end",
     },
@@ -1071,7 +1337,7 @@ const styles =
         3,
 
       fontSize:
-        15,
+        16,
 
       fontWeight:
         "800",
@@ -1080,9 +1346,14 @@ const styles =
         "#374151",
     },
 
+    targetStockLabel: {
+      marginTop:
+        12,
+    },
+
     reorderSuggestionCard: {
-      marginBottom:
-        20,
+      marginTop:
+        12,
 
       borderWidth:
         1,
@@ -1091,10 +1362,10 @@ const styles =
         "#BFDBFE",
 
       borderRadius:
-        13,
+        12,
 
       padding:
-        14,
+        13,
 
       backgroundColor:
         "#EFF6FF",
@@ -1102,7 +1373,7 @@ const styles =
 
     reorderSuggestionTitle: {
       fontSize:
-        13,
+        12,
 
       fontWeight:
         "800",
@@ -1113,32 +1384,195 @@ const styles =
 
     reorderSuggestionText: {
       marginTop:
-        5,
+        4,
+
+      fontSize:
+        11,
+
+      lineHeight:
+        17,
+
+      color:
+        "#52606D",
+    },
+
+    section: {
+      marginTop:
+        22,
+    },
+
+    sectionTitle: {
+      fontSize:
+        17,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
+    },
+
+    sectionDescription: {
+      marginTop:
+        4,
 
       fontSize:
         12,
 
-      lineHeight:
-        18,
-
       color:
-        "#374151",
+        "#6B7280",
     },
 
-    reorderSuggestionHint: {
+    transactionGrid: {
       marginTop:
-        5,
+        12,
+
+      flexDirection:
+        "row",
+
+      flexWrap:
+        "wrap",
+
+      gap:
+        9,
+    },
+
+    transactionOption: {
+      width:
+        "48%",
+
+      minHeight:
+        70,
+
+      justifyContent:
+        "center",
+
+      borderWidth:
+        1,
+
+      borderColor:
+        "#D9DEE5",
+
+      borderRadius:
+        13,
+
+      paddingHorizontal:
+        12,
+
+      paddingVertical:
+        10,
+
+      backgroundColor:
+        "#FFFFFF",
+    },
+
+    transactionOptionSelected: {
+      borderColor:
+        "#20252B",
+
+      backgroundColor:
+        "#20252B",
+    },
+
+    transactionOptionPressed: {
+      backgroundColor:
+        "#F3F4F6",
+    },
+
+    transactionOptionLabel: {
+      fontSize:
+        14,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
+    },
+
+    transactionOptionLabelSelected: {
+      color:
+        "#FFFFFF",
+    },
+
+    transactionOptionDescription: {
+      marginTop:
+        4,
 
       fontSize:
         10,
+
+      lineHeight:
+        14,
+
+      color:
+        "#6B7280",
+    },
+
+    transactionOptionDescriptionSelected: {
+      color:
+        "#D1D5DB",
+    },
+
+    selectedActionCard: {
+      marginTop:
+        12,
+
+      borderRadius:
+        12,
+
+      padding:
+        13,
+
+      backgroundColor:
+        "#ECEFF3",
+    },
+
+    selectedActionLabel: {
+      fontSize:
+        9,
+
+      fontWeight:
+        "800",
+
+      textTransform:
+        "uppercase",
 
       color:
         "#7A838E",
     },
 
+    selectedActionValue: {
+      marginTop:
+        3,
+
+      fontSize:
+        14,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
+    },
+
+    selectedActionDescription: {
+      marginTop:
+        4,
+
+      fontSize:
+        11,
+
+      lineHeight:
+        16,
+
+      color:
+        "#5D6673",
+    },
+
     fieldContainer: {
-      marginBottom:
-        18,
+      marginTop:
+        20,
     },
 
     label: {
@@ -1146,15 +1580,32 @@ const styles =
         7,
 
       fontSize:
-        15,
+        14,
 
       fontWeight:
-        "600",
+        "700",
+
+      color:
+        "#111827",
+    },
+
+    optionalLabel: {
+      marginTop:
+        -5,
+
+      marginBottom:
+        7,
+
+      fontSize:
+        10,
+
+      color:
+        "#8B949E",
     },
 
     input: {
       minHeight:
-        48,
+        50,
 
       borderWidth:
         1,
@@ -1163,16 +1614,19 @@ const styles =
         "#C8CED6",
 
       borderRadius:
-        10,
+        11,
 
       paddingHorizontal:
         14,
 
       fontSize:
-        16,
+        17,
 
       backgroundColor:
         "#FFFFFF",
+
+      color:
+        "#111827",
     },
 
     inputError: {
@@ -1182,10 +1636,13 @@ const styles =
 
     notesInput: {
       minHeight:
-        110,
+        92,
 
       paddingTop:
         12,
+
+      fontSize:
+        15,
     },
 
     errorText: {
@@ -1193,115 +1650,73 @@ const styles =
         6,
 
       fontSize:
-        13,
+        12,
+
+      fontWeight:
+        "600",
 
       color:
         "#B42318",
     },
 
-    dropdownButton: {
-      minHeight:
-        62,
-
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      justifyContent:
-        "space-between",
-
-      borderWidth:
-        1,
-
-      borderColor:
-        "#C8CED6",
-
-      borderRadius:
-        10,
-
-      paddingHorizontal:
-        14,
-
-      paddingVertical:
-        10,
-
-      backgroundColor:
-        "#FFFFFF",
-    },
-
-    dropdownTextContainer: {
-      flex:
-        1,
-    },
-
-    dropdownValue: {
-      fontSize:
-        16,
-
-      fontWeight:
-        "700",
-    },
-
-    dropdownDescription: {
-      marginTop:
-        3,
-
-      fontSize:
-        13,
-
-      color:
-        "#5D6673",
-    },
-
-    dropdownIcon: {
-      marginLeft:
-        12,
-
-      fontSize:
-        22,
-
-      color:
-        "#5D6673",
-    },
-
     previewCard: {
-      marginBottom:
-        18,
+      marginTop:
+        14,
 
       borderRadius:
         12,
 
       padding:
-        16,
+        14,
 
       backgroundColor:
         "#EAF2FF",
     },
 
-    previewTitle: {
-      fontSize:
-        14,
-
-      fontWeight:
-        "700",
+    previewCardWarning: {
+      backgroundColor:
+        "#FFF1F0",
     },
 
-    previewText: {
-      marginTop:
-        6,
-
+    previewLabel: {
       fontSize:
-        16,
+        10,
 
       fontWeight:
-        "700",
+        "800",
+
+      textTransform:
+        "uppercase",
+
+      color:
+        "#52698E",
+    },
+
+    previewValue: {
+      marginTop:
+        5,
+
+      fontSize:
+        18,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
+    },
+
+    previewValueWarning: {
+      color:
+        "#B42318",
     },
 
     submitButton: {
+      marginTop:
+        24,
+
       minHeight:
-        50,
+        52,
 
       alignItems:
         "center",
@@ -1310,7 +1725,10 @@ const styles =
         "center",
 
       borderRadius:
-        12,
+        13,
+
+      paddingHorizontal:
+        18,
 
       backgroundColor:
         "#20252B",
@@ -1318,140 +1736,22 @@ const styles =
 
     submitButtonPressed: {
       opacity:
-        0.85,
+        0.86,
     },
 
     submitButtonDisabled: {
       opacity:
-        0.55,
+        0.45,
     },
 
     submitButtonText: {
       fontSize:
-        16,
-
-      fontWeight:
-        "700",
-
-      color:
-        "#FFFFFF",
-    },
-
-    modalBackdrop: {
-      flex:
-        1,
-
-      justifyContent:
-        "flex-end",
-
-      backgroundColor:
-        "rgba(0, 0, 0, 0.35)",
-    },
-
-    modalContent: {
-      maxHeight:
-        "72%",
-
-      borderTopLeftRadius:
-        20,
-
-      borderTopRightRadius:
-        20,
-
-      paddingHorizontal:
-        20,
-
-      paddingTop:
-        18,
-
-      paddingBottom:
-        32,
-
-      backgroundColor:
-        "#FFFFFF",
-    },
-
-    modalHeader: {
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      justifyContent:
-        "space-between",
-
-      marginBottom:
-        12,
-    },
-
-    modalTitle: {
-      fontSize:
-        22,
-
-      fontWeight:
-        "800",
-    },
-
-    modalCloseButton: {
-      paddingHorizontal:
-        10,
-
-      paddingVertical:
-        8,
-    },
-
-    modalCloseText: {
-      fontSize:
         15,
 
       fontWeight:
-        "700",
-
-      color:
-        "#20252B",
-    },
-
-    option: {
-      borderBottomWidth:
-        1,
-
-      borderBottomColor:
-        "#E5E7EB",
-
-      paddingHorizontal:
-        8,
-
-      paddingVertical:
-        16,
-    },
-
-    optionSelected: {
-      backgroundColor:
-        "#F1F5F9",
-    },
-
-    optionLabel: {
-      fontSize:
-        16,
-
-      fontWeight:
-        "700",
-    },
-
-    optionLabelSelected: {
-      fontWeight:
         "800",
-    },
-
-    optionDescription: {
-      marginTop:
-        4,
-
-      fontSize:
-        13,
 
       color:
-        "#5D6673",
+        "#FFFFFF",
     },
   });
