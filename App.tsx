@@ -25,10 +25,6 @@ import {
 } from "react-native-safe-area-context";
 
 import {
-  ArchivedProducts,
-} from "./src/components/ArchivedProducts";
-
-import {
   BarcodeScanner,
 } from "./src/components/BarcodeScanner";
 
@@ -110,11 +106,13 @@ import {
 
 import {
   archiveProduct,
+  canPermanentlyDeleteProduct,
   createProduct,
   getAllProducts,
   getArchivedProducts,
   getFilteredProducts,
   getProductByBarcode,
+  permanentlyDeleteProduct,
   restoreProduct,
   updateProduct,
 } from "./src/database/productRepository";
@@ -254,7 +252,6 @@ type AppView =
   | "dashboard"
   | "analytics"
   | "export-reports"
-  | "archived-products"
   | "product-details"
   | "reorder-management"
   | "import-inventory";
@@ -677,14 +674,6 @@ function SmartStockApp() {
   const [
     isAnalyticsLoading,
     setIsAnalyticsLoading,
-  ] =
-    useState(
-      false,
-    );
-
-  const [
-    isArchivedProductsLoading,
-    setIsArchivedProductsLoading,
   ] =
     useState(
       false,
@@ -1596,38 +1585,6 @@ function SmartStockApp() {
       ],
     );
 
-  function confirmRestoreProduct(
-    product:
-      Product,
-  ): void {
-    Alert.alert(
-      "Restore product?",
-
-      `${product.name} will be returned to active inventory.`,
-
-      [
-        {
-          text:
-            "Cancel",
-
-          style:
-            "cancel",
-        },
-
-        {
-          text:
-            "Restore",
-
-          onPress:
-            () =>
-              void handleRestoreProduct(
-                product,
-              ),
-        },
-      ],
-    );
-  }
-
   async function handleRestoreProduct(
     product:
       Product,
@@ -1673,6 +1630,148 @@ function SmartStockApp() {
     }
   }
 
+  function confirmRestoreProduct(
+    product:
+      Product,
+  ): void {
+    Alert.alert(
+      "Restore product?",
+
+      `${product.name} will be returned to active inventory.`,
+
+      [
+        {
+          text:
+            "Cancel",
+
+          style:
+            "cancel",
+        },
+
+        {
+          text:
+            "Restore",
+
+          onPress:
+            () =>
+              void handleRestoreProduct(
+                product,
+              ),
+        },
+      ],
+    );
+  }
+
+  async function handlePermanentDeleteProduct(
+    product:
+      Product,
+  ): Promise<void> {
+    try {
+      const canDelete =
+        await canPermanentlyDeleteProduct(
+          product.id,
+        );
+
+      if (
+        !canDelete
+      ) {
+        Alert.alert(
+          "Cannot permanently delete",
+
+          "This product has stock history and must remain archived so inventory records and analytics stay accurate.",
+        );
+
+        return;
+      }
+
+      Alert.alert(
+        "Delete permanently?",
+
+        `${product.name} has no stock history. This action cannot be undone.`,
+
+        [
+          {
+            text:
+              "Cancel",
+
+            style:
+              "cancel",
+          },
+
+          {
+            text:
+              "Delete",
+
+            style:
+              "destructive",
+
+            onPress:
+              () =>
+                void confirmPermanentDeleteProduct(
+                  product,
+                ),
+          },
+        ],
+      );
+    } catch (
+      error
+    ) {
+      console.error(
+        "Could not check product deletion:",
+        error,
+      );
+
+      Alert.alert(
+        "Could not check product",
+
+        error instanceof Error
+          ? error.message
+          : "The product could not be checked for deletion.",
+      );
+    }
+  }
+
+  async function confirmPermanentDeleteProduct(
+    product:
+      Product,
+  ): Promise<void> {
+    try {
+      await permanentlyDeleteProduct(
+        product.id,
+      );
+
+      await loadInventoryData();
+
+      const refreshedArchivedProducts =
+        await getArchivedProducts();
+
+      setArchivedProducts(
+        refreshedArchivedProducts,
+      );
+
+      Alert.alert(
+        "Product deleted",
+
+        `${product.name} was permanently deleted.`,
+      );
+    } catch (
+      error
+    ) {
+      console.error(
+        "Could not permanently delete product:",
+        error,
+      );
+
+      Alert.alert(
+        "Could not delete product",
+
+        error instanceof Error
+          ? error.message
+          : "The product could not be permanently deleted.",
+      );
+    }
+  }
+
   async function openGlobalTransactions():
     Promise<void> {
     try {
@@ -1684,13 +1783,24 @@ function SmartStockApp() {
         "global-transactions",
       );
 
-      const transactions =
-        await getGlobalTransactions(
-          500,
-        );
+      const [
+        transactions,
+        archived,
+      ] =
+        await Promise.all([
+          getGlobalTransactions(
+            500,
+          ),
+
+          getArchivedProducts(),
+        ]);
 
       setGlobalTransactions(
         transactions,
+      );
+
+      setArchivedProducts(
+        archived,
       );
     } catch (
       error
@@ -2630,6 +2740,15 @@ function SmartStockApp() {
         transactions={
           globalTransactions
         }
+        archivedProducts={
+          archivedProducts
+        }
+        onRestoreArchivedProduct={
+          confirmRestoreProduct
+        }
+        onDeleteArchivedProduct={
+          handlePermanentDeleteProduct
+        }
         onClose={() =>
           setCurrentView(
             "inventory",
@@ -2731,37 +2850,6 @@ function SmartStockApp() {
         }
         onExport={() =>
           void handleExport()
-        }
-        onClose={() =>
-          setCurrentView(
-            "inventory",
-          )
-        }
-      />
-    );
-  }
-
-  if (
-    currentView ===
-    "archived-products"
-  ) {
-    if (
-      isArchivedProductsLoading
-    ) {
-      return (
-        <LoadingScreen
-          message="Loading archived products…"
-        />
-      );
-    }
-
-    return (
-      <ArchivedProducts
-        products={
-          archivedProducts
-        }
-        onRestore={
-          confirmRestoreProduct
         }
         onClose={() =>
           setCurrentView(

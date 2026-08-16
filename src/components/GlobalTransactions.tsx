@@ -1,5 +1,11 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useMemo, useState } from "react";
+import {
+  Ionicons,
+} from "@expo/vector-icons";
+
+import {
+  useMemo,
+  useState,
+} from "react";
 
 import {
   Pressable,
@@ -14,14 +20,35 @@ import {
   SafeAreaView,
 } from "react-native-safe-area-context";
 
+import {
+  ArchivedProducts,
+} from "./ArchivedProducts";
+
 import type {
   GlobalTransaction,
   GlobalTransactionType,
 } from "../types/globalTransaction";
 
+import type {
+  Product,
+} from "../types/product";
+
 interface GlobalTransactionsProps {
   transactions:
     GlobalTransaction[];
+
+  archivedProducts:
+    Product[];
+
+  onRestoreArchivedProduct: (
+    product:
+      Product,
+  ) => void;
+
+  onDeleteArchivedProduct: (
+    product:
+      Product,
+  ) => void;
 
   onClose:
     () => void;
@@ -36,6 +63,10 @@ type DateFilter =
   | "7-days"
   | "30-days"
   | "all-time";
+
+type HistoryView =
+  | "transactions"
+  | "archived";
 
 const TRANSACTION_FILTERS: {
   label:
@@ -135,8 +166,19 @@ const DATE_FILTERS: {
 
 export function GlobalTransactions({
   transactions,
+  archivedProducts,
+  onRestoreArchivedProduct,
+  onDeleteArchivedProduct,
   onClose,
 }: GlobalTransactionsProps) {
+  const [
+    historyView,
+    setHistoryView,
+  ] =
+    useState<HistoryView>(
+      "transactions",
+    );
+
   const [
     searchQuery,
     setSearchQuery,
@@ -226,6 +268,7 @@ export function GlobalTransactions({
           },
         );
       },
+
       [
         transactions,
         searchQuery,
@@ -284,6 +327,7 @@ export function GlobalTransactions({
             stockRemoved,
         };
       },
+
       [
         filteredTransactions,
       ],
@@ -356,7 +400,7 @@ export function GlobalTransactions({
                 styles.subtitle
               }
             >
-              Review inventory changes across all products.
+              Review stock changes and manage archived products.
             </Text>
           </View>
 
@@ -389,454 +433,556 @@ export function GlobalTransactions({
 
         <View
           style={
-            styles.searchContainer
+            styles.historyTabs
           }
         >
-          <Ionicons
-            name="search-outline"
-            size={
-              20
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{
+              selected:
+                historyView ===
+                "transactions",
+            }}
+            onPress={() =>
+              setHistoryView(
+                "transactions",
+              )
             }
-            color="#7A838E"
-          />
+            style={({
+              pressed,
+            }) => [
+              styles.historyTab,
 
-          <TextInput
-            value={
-              searchQuery
+              historyView ===
+                "transactions" &&
+                styles.historyTabSelected,
+
+              pressed &&
+                styles.buttonPressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.historyTabText,
+
+                historyView ===
+                  "transactions" &&
+                  styles.historyTabTextSelected,
+              ]}
+            >
+              Stock Changes
+            </Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{
+              selected:
+                historyView ===
+                "archived",
+            }}
+            onPress={() =>
+              setHistoryView(
+                "archived",
+              )
             }
-            onChangeText={
-              setSearchQuery
+            style={({
+              pressed,
+            }) => [
+              styles.historyTab,
+
+              historyView ===
+                "archived" &&
+                styles.historyTabSelected,
+
+              pressed &&
+                styles.buttonPressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.historyTabText,
+
+                historyView ===
+                  "archived" &&
+                  styles.historyTabTextSelected,
+              ]}
+              numberOfLines={
+                2
+              }
+            >
+              Archived ({archivedProducts.length})
+            </Text>
+          </Pressable>
+        </View>
+
+        {historyView ===
+        "archived" ? (
+          <ArchivedProducts
+            products={
+              archivedProducts
             }
-            placeholder="Search product, brand, barcode or category"
-            placeholderTextColor="#9CA3AF"
-            autoCapitalize="none"
-            autoCorrect={
-              false
+            onRestore={
+              onRestoreArchivedProduct
             }
-            style={
-              styles.searchInput
+            onDelete={
+              onDeleteArchivedProduct
             }
           />
-
-          {searchQuery ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Clear search"
-              hitSlop={
-                6
-              }
-              onPress={() =>
-                setSearchQuery(
-                  "",
-                )
-              }
+        ) : (
+          <>
+            <View
               style={
-                styles.clearSearchButton
+                styles.searchContainer
               }
             >
               <Ionicons
-                name="close-circle"
+                name="search-outline"
                 size={
-                  19
+                  20
                 }
-                color="#8B949E"
+                color="#7A838E"
               />
-            </Pressable>
-          ) : null}
-        </View>
 
-        <View
-          style={
-            styles.filterSection
-          }
-        >
-          <Text
-            style={
-              styles.filterSectionLabel
-            }
-          >
-            Transaction Type
-          </Text>
+              <TextInput
+                value={
+                  searchQuery
+                }
+                onChangeText={
+                  setSearchQuery
+                }
+                placeholder="Search product, brand, barcode or category"
+                placeholderTextColor="#9CA3AF"
+                autoCapitalize="none"
+                autoCorrect={
+                  false
+                }
+                style={
+                  styles.searchInput
+                }
+              />
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={
-              false
-            }
-            contentContainerStyle={
-              styles.filtersRow
-            }
-          >
-            {TRANSACTION_FILTERS.map(
-              (
-                filter,
-              ) => {
-                const isSelected =
-                  selectedFilter ===
-                  filter.value;
-
-                return (
-                  <Pressable
-                    key={
-                      filter.value
+              {searchQuery ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear search"
+                  hitSlop={
+                    6
+                  }
+                  onPress={() =>
+                    setSearchQuery(
+                      "",
+                    )
+                  }
+                  style={
+                    styles.clearSearchButton
+                  }
+                >
+                  <Ionicons
+                    name="close-circle"
+                    size={
+                      19
                     }
-                    accessibilityRole="button"
-                    accessibilityState={{
-                      selected:
-                        isSelected,
-                    }}
-                    onPress={() =>
-                      setSelectedFilter(
-                        filter.value,
-                      )
-                    }
-                    style={({
-                      pressed,
-                    }) => [
-                      styles.filterChip,
+                    color="#8B949E"
+                  />
+                </Pressable>
+              ) : null}
+            </View>
 
-                      isSelected &&
-                        styles.filterChipSelected,
-
-                      pressed &&
-                        styles.buttonPressed,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.filterChipText,
-
-                        isSelected &&
-                          styles.filterChipTextSelected,
-                      ]}
-                    >
-                      {
-                        filter.label
-                      }
-                    </Text>
-                  </Pressable>
-                );
-              },
-            )}
-          </ScrollView>
-        </View>
-
-        <View
-          style={
-            styles.filterSection
-          }
-        >
-          <View
-            style={
-              styles.dateFilterHeader
-            }
-          >
-            <Text
+            <View
               style={
-                styles.filterSectionLabel
+                styles.filterSection
               }
             >
-              Time Period
-            </Text>
-
-            {hasActiveFilters ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={
-                  clearAllFilters
+              <Text
+                style={
+                  styles.filterSectionLabel
                 }
-                style={({
-                  pressed,
-                }) => [
-                  styles.clearFiltersButton,
+              >
+                Transaction Type
+              </Text>
 
-                  pressed &&
-                    styles.buttonPressed,
-                ]}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={
+                  false
+                }
+                contentContainerStyle={
+                  styles.filtersRow
+                }
+              >
+                {TRANSACTION_FILTERS.map(
+                  (
+                    filter,
+                  ) => {
+                    const isSelected =
+                      selectedFilter ===
+                      filter.value;
+
+                    return (
+                      <Pressable
+                        key={
+                          filter.value
+                        }
+                        accessibilityRole="button"
+                        accessibilityState={{
+                          selected:
+                            isSelected,
+                        }}
+                        onPress={() =>
+                          setSelectedFilter(
+                            filter.value,
+                          )
+                        }
+                        style={({
+                          pressed,
+                        }) => [
+                          styles.filterChip,
+
+                          isSelected &&
+                            styles.filterChipSelected,
+
+                          pressed &&
+                            styles.buttonPressed,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.filterChipText,
+
+                            isSelected &&
+                              styles.filterChipTextSelected,
+                          ]}
+                        >
+                          {
+                            filter.label
+                          }
+                        </Text>
+                      </Pressable>
+                    );
+                  },
+                )}
+              </ScrollView>
+            </View>
+
+            <View
+              style={
+                styles.filterSection
+              }
+            >
+              <View
+                style={
+                  styles.dateFilterHeader
+                }
               >
                 <Text
                   style={
-                    styles.clearFiltersText
+                    styles.filterSectionLabel
                   }
                 >
-                  Reset
+                  Time Period
                 </Text>
-              </Pressable>
-            ) : null}
-          </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={
-              false
-            }
-            contentContainerStyle={
-              styles.filtersRow
-            }
-          >
-            {DATE_FILTERS.map(
-              (
-                filter,
-              ) => {
-                const isSelected =
-                  selectedDateFilter ===
-                  filter.value;
-
-                return (
+                {hasActiveFilters ? (
                   <Pressable
-                    key={
-                      filter.value
-                    }
                     accessibilityRole="button"
-                    accessibilityState={{
-                      selected:
-                        isSelected,
-                    }}
-                    onPress={() =>
-                      setSelectedDateFilter(
-                        filter.value,
-                      )
+                    onPress={
+                      clearAllFilters
                     }
                     style={({
                       pressed,
                     }) => [
-                      styles.dateChip,
-
-                      isSelected &&
-                        styles.dateChipSelected,
+                      styles.clearFiltersButton,
 
                       pressed &&
                         styles.buttonPressed,
                     ]}
                   >
-                    <Ionicons
-                      name={
-                        filter.value ===
-                        "today"
-                          ? "today-outline"
-                          : filter.value ===
-                              "all-time"
-                            ? "infinite-outline"
-                            : "calendar-outline"
-                      }
-                      size={
-                        15
-                      }
-                      color={
-                        isSelected
-                          ? "#FFFFFF"
-                          : "#52606D"
-                      }
-                    />
-
                     <Text
-                      style={[
-                        styles.dateChipText,
-
-                        isSelected &&
-                          styles.dateChipTextSelected,
-                      ]}
-                    >
-                      {
-                        filter.label
+                      style={
+                        styles.clearFiltersText
                       }
+                    >
+                      Reset
                     </Text>
                   </Pressable>
-                );
-              },
-            )}
-          </ScrollView>
-        </View>
+                ) : null}
+              </View>
 
-        <View
-          style={
-            styles.summarySection
-          }
-        >
-          <Text
-            style={
-              styles.sectionTitle
-            }
-          >
-            Stock Summary
-          </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={
+                  false
+                }
+                contentContainerStyle={
+                  styles.filtersRow
+                }
+              >
+                {DATE_FILTERS.map(
+                  (
+                    filter,
+                  ) => {
+                    const isSelected =
+                      selectedDateFilter ===
+                      filter.value;
 
-          <Text
-            style={
-              styles.sectionSubtitle
-            }
-          >
-            Based on the current search and filters.
-          </Text>
+                    return (
+                      <Pressable
+                        key={
+                          filter.value
+                        }
+                        accessibilityRole="button"
+                        accessibilityState={{
+                          selected:
+                            isSelected,
+                        }}
+                        onPress={() =>
+                          setSelectedDateFilter(
+                            filter.value,
+                          )
+                        }
+                        style={({
+                          pressed,
+                        }) => [
+                          styles.dateChip,
 
-          <View
-            style={
-              styles.summaryGrid
-            }
-          >
-            <SummaryCard
-              label="Transactions"
-              value={
-                transactionSummary.updateCount.toString()
-              }
-              icon="receipt-outline"
-            />
+                          isSelected &&
+                            styles.dateChipSelected,
 
-            <SummaryCard
-              label="Stock Added"
-              value={`+${transactionSummary.stockAdded}`}
-              icon="add-circle-outline"
-              tone="positive"
-            />
+                          pressed &&
+                            styles.buttonPressed,
+                        ]}
+                      >
+                        <Ionicons
+                          name={
+                            filter.value ===
+                            "today"
+                              ? "today-outline"
+                              : filter.value ===
+                                  "all-time"
+                                ? "infinite-outline"
+                                : "calendar-outline"
+                          }
+                          size={
+                            15
+                          }
+                          color={
+                            isSelected
+                              ? "#FFFFFF"
+                              : "#52606D"
+                          }
+                        />
 
-            <SummaryCard
-              label="Stock Removed"
-              value={`-${transactionSummary.stockRemoved}`}
-              icon="remove-circle-outline"
-              tone="negative"
-            />
+                        <Text
+                          style={[
+                            styles.dateChipText,
 
-            <SummaryCard
-              label="Net Change"
-              value={
-                formatSignedNumber(
-                  transactionSummary.netStockChange,
-                )
-              }
-              icon="swap-vertical-outline"
-              tone={
-                transactionSummary.netStockChange >
-                0
-                  ? "positive"
-                  : transactionSummary.netStockChange <
-                      0
-                    ? "negative"
-                    : "normal"
-              }
-            />
-          </View>
-        </View>
+                            isSelected &&
+                              styles.dateChipTextSelected,
+                          ]}
+                        >
+                          {
+                            filter.label
+                          }
+                        </Text>
+                      </Pressable>
+                    );
+                  },
+                )}
+              </ScrollView>
+            </View>
 
-        <View
-          style={
-            styles.resultsHeader
-          }
-        >
-          <View
-            style={
-              styles.resultsHeaderText
-            }
-          >
-            <Text
+            <View
               style={
-                styles.sectionTitle
+                styles.summarySection
               }
             >
-              Transactions
-            </Text>
+              <Text
+                style={
+                  styles.sectionTitle
+                }
+              >
+                Stock Summary
+              </Text>
 
-            <Text
-              style={
-                styles.sectionSubtitle
-              }
-            >
-              {
-                getDateFilterDescription(
-                  selectedDateFilter,
-                )
-              }
-            </Text>
-          </View>
+              <Text
+                style={
+                  styles.sectionSubtitle
+                }
+              >
+                Based on the current search and filters.
+              </Text>
 
-          <Text
-            style={
-              styles.resultsCount
-            }
-          >
-            {
-              filteredTransactions.length
-            }{" "}
-            result
-            {filteredTransactions.length ===
-            1
-              ? ""
-              : "s"}
-          </Text>
-        </View>
-
-        {filteredTransactions.length >
-        0 ? (
-          <View>
-            {filteredTransactions.map(
-              (
-                transaction,
-              ) => (
-                <TransactionCard
-                  key={
-                    transaction.transactionId
+              <View
+                style={
+                  styles.summaryGrid
+                }
+              >
+                <SummaryCard
+                  label="Transactions"
+                  value={
+                    transactionSummary.updateCount.toString()
                   }
-                  transaction={
-                    transaction
+                  icon="receipt-outline"
+                />
+
+                <SummaryCard
+                  label="Stock Added"
+                  value={`+${transactionSummary.stockAdded}`}
+                  icon="add-circle-outline"
+                  tone="positive"
+                />
+
+                <SummaryCard
+                  label="Stock Removed"
+                  value={`-${transactionSummary.stockRemoved}`}
+                  icon="remove-circle-outline"
+                  tone="negative"
+                />
+
+                <SummaryCard
+                  label="Net Change"
+                  value={
+                    formatSignedNumber(
+                      transactionSummary.netStockChange,
+                    )
+                  }
+                  icon="swap-vertical-outline"
+                  tone={
+                    transactionSummary.netStockChange >
+                    0
+                      ? "positive"
+                      : transactionSummary.netStockChange <
+                          0
+                        ? "negative"
+                        : "normal"
                   }
                 />
-              ),
-            )}
-          </View>
-        ) : (
-          <View
-            style={
-              styles.emptyContainer
-            }
-          >
-            <Ionicons
-              name="receipt-outline"
-              size={
-                42
-              }
-              color="#9CA3AF"
-            />
+              </View>
+            </View>
 
-            <Text
+            <View
               style={
-                styles.emptyTitle
+                styles.resultsHeader
               }
             >
-              No transactions found
-            </Text>
-
-            <Text
-              style={
-                styles.emptyText
-              }
-            >
-              Try changing your search, transaction type, or time period.
-            </Text>
-
-            {hasActiveFilters ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={
-                  clearAllFilters
+              <View
+                style={
+                  styles.resultsHeaderText
                 }
-                style={({
-                  pressed,
-                }) => [
-                  styles.emptyResetButton,
-
-                  pressed &&
-                    styles.buttonPressed,
-                ]}
               >
                 <Text
                   style={
-                    styles.emptyResetButtonText
+                    styles.sectionTitle
                   }
                 >
-                  Reset filters
+                  Transactions
                 </Text>
-              </Pressable>
-            ) : null}
-          </View>
+
+                <Text
+                  style={
+                    styles.sectionSubtitle
+                  }
+                >
+                  {
+                    getDateFilterDescription(
+                      selectedDateFilter,
+                    )
+                  }
+                </Text>
+              </View>
+
+              <Text
+                style={
+                  styles.resultsCount
+                }
+              >
+                {
+                  filteredTransactions.length
+                }{" "}
+                result
+                {filteredTransactions.length ===
+                1
+                  ? ""
+                  : "s"}
+              </Text>
+            </View>
+
+            {filteredTransactions.length >
+            0 ? (
+              <View>
+                {filteredTransactions.map(
+                  (
+                    transaction,
+                  ) => (
+                    <TransactionCard
+                      key={
+                        transaction.transactionId
+                      }
+                      transaction={
+                        transaction
+                      }
+                    />
+                  ),
+                )}
+              </View>
+            ) : (
+              <View
+                style={
+                  styles.emptyContainer
+                }
+              >
+                <Ionicons
+                  name="receipt-outline"
+                  size={
+                    42
+                  }
+                  color="#9CA3AF"
+                />
+
+                <Text
+                  style={
+                    styles.emptyTitle
+                  }
+                >
+                  No transactions found
+                </Text>
+
+                <Text
+                  style={
+                    styles.emptyText
+                  }
+                >
+                  Try changing your search, transaction type, or time period.
+                </Text>
+
+                {hasActiveFilters ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={
+                      clearAllFilters
+                    }
+                    style={({
+                      pressed,
+                    }) => [
+                      styles.emptyResetButton,
+
+                      pressed &&
+                        styles.buttonPressed,
+                    ]}
+                  >
+                    <Text
+                      style={
+                        styles.emptyResetButtonText
+                      }
+                    >
+                      Reset filters
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -1704,6 +1850,70 @@ const styles =
     buttonPressed: {
       opacity:
         0.72,
+    },
+
+    historyTabs: {
+      marginTop:
+        20,
+
+      flexDirection:
+        "row",
+
+      gap:
+        8,
+
+      borderRadius:
+        12,
+
+      padding:
+        4,
+
+      backgroundColor:
+        "#E9EDF2",
+    },
+
+    historyTab: {
+      flex:
+        1,
+
+      minHeight:
+        42,
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "center",
+
+      borderRadius:
+        9,
+
+      paddingHorizontal:
+        10,
+    },
+
+    historyTabSelected: {
+      backgroundColor:
+        "#FFFFFF",
+    },
+
+    historyTabText: {
+      fontSize:
+        12,
+
+      fontWeight:
+        "700",
+
+      textAlign:
+        "center",
+
+      color:
+        "#64748B",
+    },
+
+    historyTabTextSelected: {
+      color:
+        "#111827",
     },
 
     searchContainer: {
