@@ -67,6 +67,12 @@ function ProductCardComponent({
     product.currentStock <=
       product.reorderLevel;
 
+  const isZeroReceipt =
+    latestDelivery !==
+      undefined &&
+    latestDelivery.quantityReceived ===
+      0;
+
   return (
     <View
       style={
@@ -273,9 +279,12 @@ function ProductCardComponent({
       ) : null}
 
       <View
-        style={
-          styles.deliveryCard
-        }
+        style={[
+          styles.deliveryCard,
+
+          isZeroReceipt &&
+            styles.zeroDeliveryCard,
+        ]}
       >
         <View
           style={
@@ -288,19 +297,32 @@ function ProductCardComponent({
             }
           >
             <Ionicons
-              name="cube-outline"
+              name={
+                isZeroReceipt
+                  ? "alert-circle-outline"
+                  : "cube-outline"
+              }
               size={
                 18
               }
-              color="#1D4ED8"
+              color={
+                isZeroReceipt
+                  ? "#B45309"
+                  : "#1D4ED8"
+              }
             />
 
             <Text
-              style={
-                styles.deliveryTitle
-              }
+              style={[
+                styles.deliveryTitle,
+
+                isZeroReceipt &&
+                  styles.zeroDeliveryTitle,
+              ]}
             >
-              Latest Delivery
+              {isZeroReceipt
+                ? "Latest Receiving"
+                : "Latest Delivery"}
             </Text>
           </View>
 
@@ -319,6 +341,44 @@ function ProductCardComponent({
 
         {latestDelivery ? (
           <>
+            {isZeroReceipt ? (
+              <View
+                style={
+                  styles.zeroReceiptMessage
+                }
+              >
+                <Ionicons
+                  name="information-circle-outline"
+                  size={
+                    17
+                  }
+                  color="#B45309"
+                />
+
+                <View
+                  style={
+                    styles.zeroReceiptTextContainer
+                  }
+                >
+                  <Text
+                    style={
+                      styles.zeroReceiptTitle
+                    }
+                  >
+                    Stock received · 0 items
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.zeroReceiptText
+                    }
+                  >
+                    This delivery was reviewed, but no units of this product were received. Stock remained unchanged.
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+
             <View
               style={
                 styles.deliveryMetricsRow
@@ -326,7 +386,16 @@ function ProductCardComponent({
             >
               <DeliveryMetric
                 label="Received"
-                value={`+${latestDelivery.quantityReceived}`}
+                value={
+                  isZeroReceipt
+                    ? "0"
+                    : `+${latestDelivery.quantityReceived}`
+                }
+                tone={
+                  isZeroReceipt
+                    ? "warning"
+                    : "normal"
+                }
               />
 
               <DeliveryMetric
@@ -341,27 +410,42 @@ function ProductCardComponent({
                     latestDelivery.deliveryValue,
                   )
                 }
+                tone={
+                  isZeroReceipt
+                    ? "warning"
+                    : "normal"
+                }
               />
             </View>
 
             {latestDelivery.notes ? (
               <View
-                style={
-                  styles.deliveryNote
-                }
+                style={[
+                  styles.deliveryNote,
+
+                  isZeroReceipt &&
+                    styles.zeroDeliveryNote,
+                ]}
               >
                 <Ionicons
                   name="document-text-outline"
                   size={
                     15
                   }
-                  color="#52698E"
+                  color={
+                    isZeroReceipt
+                      ? "#B45309"
+                      : "#52698E"
+                  }
                 />
 
                 <Text
-                  style={
-                    styles.deliveryNoteText
-                  }
+                  style={[
+                    styles.deliveryNoteText,
+
+                    isZeroReceipt &&
+                      styles.zeroDeliveryNoteText,
+                  ]}
                 >
                   {
                     latestDelivery.notes
@@ -669,6 +753,10 @@ interface DeliveryMetricProps {
 
   value:
     string;
+
+  tone?:
+    "normal" |
+    "warning";
 }
 
 const DeliveryMetric =
@@ -676,17 +764,27 @@ const DeliveryMetric =
     function DeliveryMetric({
       label,
       value,
+      tone =
+        "normal",
     }: DeliveryMetricProps) {
       return (
         <View
-          style={
-            styles.deliveryMetric
-          }
+          style={[
+            styles.deliveryMetric,
+
+            tone ===
+              "warning" &&
+              styles.deliveryMetricWarning,
+          ]}
         >
           <Text
-            style={
-              styles.deliveryMetricLabel
-            }
+            style={[
+              styles.deliveryMetricLabel,
+
+              tone ===
+                "warning" &&
+                styles.deliveryMetricLabelWarning,
+            ]}
           >
             {
               label
@@ -694,9 +792,13 @@ const DeliveryMetric =
           </Text>
 
           <Text
-            style={
-              styles.deliveryMetricValue
-            }
+            style={[
+              styles.deliveryMetricValue,
+
+              tone ===
+                "warning" &&
+                styles.deliveryMetricValueWarning,
+            ]}
           >
             {
               value
@@ -1183,6 +1285,14 @@ const styles =
         "#F8FBFF",
     },
 
+    zeroDeliveryCard: {
+      borderColor:
+        "#FDE68A",
+
+      backgroundColor:
+        "#FFFBEB",
+    },
+
     deliveryHeader: {
       flexDirection:
         "row",
@@ -1216,6 +1326,11 @@ const styles =
         "#334E84",
     },
 
+    zeroDeliveryTitle: {
+      color:
+        "#92400E",
+    },
+
     deliveryDate: {
       marginLeft:
         10,
@@ -1228,6 +1343,62 @@ const styles =
 
       color:
         "#6B7280",
+    },
+
+    zeroReceiptMessage: {
+      marginTop:
+        11,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "flex-start",
+
+      gap:
+        7,
+
+      borderRadius:
+        10,
+
+      padding:
+        10,
+
+      backgroundColor:
+        "#FFF7ED",
+    },
+
+    zeroReceiptTextContainer: {
+      flex:
+        1,
+
+      minWidth:
+        0,
+    },
+
+    zeroReceiptTitle: {
+      fontSize:
+        11,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#92400E",
+    },
+
+    zeroReceiptText: {
+      marginTop:
+        3,
+
+      fontSize:
+        9,
+
+      lineHeight:
+        14,
+
+      color:
+        "#78614A",
     },
 
     deliveryMetricsRow: {
@@ -1255,6 +1426,11 @@ const styles =
         "#FFFFFF",
     },
 
+    deliveryMetricWarning: {
+      backgroundColor:
+        "#FFF7ED",
+    },
+
     deliveryMetricLabel: {
       fontSize:
         10,
@@ -1269,6 +1445,11 @@ const styles =
         "#7A838E",
     },
 
+    deliveryMetricLabelWarning: {
+      color:
+        "#B45309",
+    },
+
     deliveryMetricValue: {
       marginTop:
         4,
@@ -1281,6 +1462,11 @@ const styles =
 
       color:
         "#20252B",
+    },
+
+    deliveryMetricValueWarning: {
+      color:
+        "#B45309",
     },
 
     deliveryNote: {
@@ -1306,6 +1492,11 @@ const styles =
         10,
     },
 
+    zeroDeliveryNote: {
+      borderTopColor:
+        "#FDE68A",
+    },
+
     deliveryNoteText: {
       flex:
         1,
@@ -1318,6 +1509,11 @@ const styles =
 
       color:
         "#52698E",
+    },
+
+    zeroDeliveryNoteText: {
+      color:
+        "#92400E",
     },
 
     noDeliveryText: {

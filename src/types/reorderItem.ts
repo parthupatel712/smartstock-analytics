@@ -4,7 +4,6 @@ import type {
 
 export type ReorderPriority =
   | "out_of_stock"
-  | "critical"
   | "low_stock";
 
 export interface ReorderItem {
@@ -15,12 +14,6 @@ export interface ReorderItem {
     number;
 
   reorderLevel:
-    number;
-
-  targetStock:
-    number;
-
-  suggestedReorderQuantity:
     number;
 
   priority:
