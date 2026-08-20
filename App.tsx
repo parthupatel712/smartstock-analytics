@@ -33,6 +33,10 @@ import {
 } from "./src/components/CloudSyncStatus";
 
 import {
+  CreateOrder,
+} from "./src/components/CreateOrder";
+
+import {
   EditProductForm,
 } from "./src/components/EditProductForm";
 
@@ -69,6 +73,22 @@ import {
 } from "./src/components/InventoryTransactionForm";
 
 import {
+  InvoiceReview,
+} from "./src/components/InvoiceReview";
+
+import {
+  OrderDetails,
+} from "./src/components/OrderDetails";
+
+import {
+  OrderManagement,
+} from "./src/components/OrderManagement";
+
+import {
+  OrderPreview,
+} from "./src/components/OrderPreview";
+
+import {
   ProductCard,
 } from "./src/components/ProductCard";
 
@@ -83,6 +103,10 @@ import {
 import {
   ProductTransactionHistory,
 } from "./src/components/ProductTransactionHistory";
+
+import {
+  ReceiveOrder,
+} from "./src/components/ReceiveOrder";
 
 import {
   ReorderManagement,
@@ -103,6 +127,17 @@ import {
   getLatestDeliveriesByProduct,
   getTransactionHistoryForProduct,
 } from "./src/database/inventoryTransactionRepository";
+
+import {
+  deleteActiveDraftPurchaseOrder,
+  getActiveDraftPurchaseOrder,
+  getDraftQuantitiesByProduct,
+  getOrderedQuantitiesByProduct,
+  getPurchaseOrderById,
+  getPurchaseOrderHistory,
+  placeDraftPurchaseOrder,
+  saveOrCreateDraftPurchaseOrder,
+} from "./src/database/purchaseOrderRepository";
 
 import {
   archiveProduct,
@@ -152,6 +187,12 @@ import {
 } from "./src/services/excelExportService";
 
 import {
+  captureImportDocument,
+  chooseImportFile,
+  chooseImportImage,
+} from "./src/services/importDocumentService";
+
+import {
   subscribeToInventoryRealtime,
   unsubscribeFromInventoryRealtime,
 } from "./src/services/inventoryRealtimeService";
@@ -161,10 +202,18 @@ import type {
 } from "./src/services/inventoryRealtimeService";
 
 import {
+  createMockInvoiceImportResult,
+} from "./src/services/mockInvoiceParserService";
+
+import {
   exportAnalyticsPdf,
   exportInventoryPdf,
   exportTransactionsPdf,
 } from "./src/services/pdfExportService";
+
+import {
+  receivePurchaseOrder,
+} from "./src/services/purchaseOrderReceivingService";
 
 import {
   shareExportedReport,
@@ -196,6 +245,10 @@ import type {
 } from "./src/types/globalTransaction";
 
 import type {
+  ImportDocument,
+} from "./src/types/importDocument";
+
+import type {
   InventoryAnalyticsSummary,
 } from "./src/types/inventoryAnalytics";
 
@@ -213,6 +266,14 @@ import type {
 } from "./src/types/inventoryTransaction";
 
 import type {
+  InvoiceImportResult,
+} from "./src/types/invoiceImport";
+
+import type {
+  OrderDraftItem,
+} from "./src/types/orderDraft";
+
+import type {
   Product,
 } from "./src/types/product";
 
@@ -223,6 +284,11 @@ import type {
 import type {
   ProductFormValues,
 } from "./src/types/productForm";
+
+import type {
+  PurchaseOrderSummary,
+  PurchaseOrderWithItems,
+} from "./src/types/purchaseOrder";
 
 import type {
   ReorderItem,
@@ -246,6 +312,7 @@ type AppView =
   | "add-product"
   | "edit-product"
   | "scanner"
+  | "order-scanner"
   | "inventory-transaction"
   | "transaction-history"
   | "global-transactions"
@@ -254,11 +321,13 @@ type AppView =
   | "export-reports"
   | "product-details"
   | "reorder-management"
+  | "order-management"
+  | "order-details"
+  | "receive-order"
+  | "invoice-review"
+  | "create-order"
+  | "order-preview"
   | "import-inventory";
-
-type TransactionReturnView =
-  | "inventory"
-  | "reorder-management";
 
 const CLOUD_SYNC_TIMEOUT_MS =
   8000;
@@ -268,129 +337,83 @@ const INVENTORY_SEARCH_DEBOUNCE_MS =
 
 const INITIAL_DASHBOARD_SUMMARY:
   InventoryDashboardSummary = {
-    totalProducts:
-      0,
-
-    totalStockUnits:
-      0,
-
-    totalInventoryCostValue:
-      0,
-
-    totalInventoryRetailValue:
-      0,
-
-    potentialGrossProfit:
-      0,
-
-    lowStockProductCount:
-      0,
-
-    outOfStockProductCount:
-      0,
-
-    recentSalesValue:
-      0,
-
-    recentStockInValue:
-      0,
-
-    recentDamageValue:
-      0,
-
-    recentTransactionCount:
-      0,
+    totalProducts: 0,
+    totalStockUnits: 0,
+    totalInventoryCostValue: 0,
+    totalInventoryRetailValue: 0,
+    potentialGrossProfit: 0,
+    lowStockProductCount: 0,
+    outOfStockProductCount: 0,
+    recentSalesValue: 0,
+    recentStockInValue: 0,
+    recentDamageValue: 0,
+    recentTransactionCount: 0,
   };
 
 const INITIAL_ANALYTICS_SUMMARY:
   InventoryAnalyticsSummary = {
-    dailyMetrics:
-      [],
-
-    topProducts:
-      [],
-
-    topCategories:
-      [],
-
-    categoryShareMetrics:
-      [],
+    dailyMetrics: [],
+    topProducts: [],
+    topCategories: [],
+    categoryShareMetrics: [],
 
     comparison: {
       current: {
-        salesValue:
-          0,
-
-        estimatedProfit:
-          0,
-
-        salesUnits:
-          0,
-
-        stockInValue:
-          0,
-
-        stockInUnits:
-          0,
-
-        damageValue:
-          0,
-
-        damageUnits:
-          0,
-
-        transactionCount:
-          0,
+        salesValue: 0,
+        estimatedProfit: 0,
+        salesUnits: 0,
+        stockInValue: 0,
+        stockInUnits: 0,
+        damageValue: 0,
+        damageUnits: 0,
+        transactionCount: 0,
       },
 
       previous: {
-        salesValue:
-          0,
-
-        estimatedProfit:
-          0,
-
-        salesUnits:
-          0,
-
-        stockInValue:
-          0,
-
-        stockInUnits:
-          0,
-
-        damageValue:
-          0,
-
-        damageUnits:
-          0,
-
-        transactionCount:
-          0,
+        salesValue: 0,
+        estimatedProfit: 0,
+        salesUnits: 0,
+        stockInValue: 0,
+        stockInUnits: 0,
+        damageValue: 0,
+        damageUnits: 0,
+        transactionCount: 0,
       },
 
-      salesValueChangePercent:
-        0,
-
-      salesUnitsChangePercent:
-        0,
-
-      estimatedProfitChangePercent:
-        0,
-
-      stockInUnitsChangePercent:
-        0,
-
-      damageValueChangePercent:
-        0,
+      salesValueChangePercent: 0,
+      salesUnitsChangePercent: 0,
+      estimatedProfitChangePercent: 0,
+      stockInUnitsChangePercent: 0,
+      damageValueChangePercent: 0,
     },
 
-    productTrends:
-      [],
-
-    salesTrendMetrics:
-      [],
+    productTrends: [],
+    salesTrendMetrics: [],
   };
+
+const currencyFormatter =
+  new Intl.NumberFormat(
+    "en-CA",
+    {
+      style:
+        "currency",
+
+      currency:
+        "CAD",
+
+      maximumFractionDigits:
+        2,
+    },
+  );
+
+function formatCurrency(
+  value:
+    number,
+): string {
+  return currencyFormatter.format(
+    value,
+  );
+}
 
 async function withCloudTimeout<T>(
   operation:
@@ -414,7 +437,6 @@ async function withCloudTimeout<T>(
                 ),
               );
             },
-
             CLOUD_SYNC_TIMEOUT_MS,
           );
       },
@@ -435,6 +457,63 @@ async function withCloudTimeout<T>(
       );
     }
   }
+}
+
+function parseTaxAmount(
+  value:
+    string,
+): number {
+  const normalized =
+    value
+      .replace(
+        "$",
+        "",
+      )
+      .replace(
+        ",",
+        "",
+      )
+      .trim();
+
+  if (
+    normalized ===
+    ""
+  ) {
+    return 0;
+  }
+
+  const parsed =
+    Number(
+      normalized,
+    );
+
+  if (
+    !Number.isFinite(
+      parsed,
+    ) ||
+    parsed <
+      0
+  ) {
+    return 0;
+  }
+
+  return parsed;
+}
+
+function formatTaxInput(
+  value:
+    number,
+): string {
+  if (
+    value ===
+    0
+  ) {
+    return "";
+  }
+
+  return value.toFixed(
+    2,
+  );
 }
 
 export default function App() {
@@ -479,19 +558,19 @@ function SmartStockApp() {
     );
 
   const [
-    inventoryRevision,
-    setInventoryRevision,
-  ] =
-    useState(
-      0,
-    );
-
-  const [
     archivedProducts,
     setArchivedProducts,
   ] =
     useState<Product[]>(
       [],
+    );
+
+  const [
+    inventoryRevision,
+    setInventoryRevision,
+  ] =
+    useState(
+      0,
     );
 
   const [
@@ -508,6 +587,160 @@ function SmartStockApp() {
   ] =
     useState<ReorderItem[]>(
       [],
+    );
+
+  const [
+    orderDraftItems,
+    setOrderDraftItems,
+  ] =
+    useState<OrderDraftItem[]>(
+      [],
+    );
+
+  const [
+    scannedOrderProduct,
+    setScannedOrderProduct,
+  ] =
+    useState<Product | null>(
+      null,
+    );
+
+  const [
+    draftQuantities,
+    setDraftQuantities,
+  ] =
+    useState<
+      Map<
+        number,
+        number
+      >
+    >(
+      new Map(),
+    );
+
+  const [
+    orderedQuantities,
+    setOrderedQuantities,
+  ] =
+    useState<
+      Map<
+        number,
+        number
+      >
+    >(
+      new Map(),
+    );
+
+  const [
+    activeDraftOrderId,
+    setActiveDraftOrderId,
+  ] =
+    useState<number | null>(
+      null,
+    );
+
+  const [
+    orderNumber,
+    setOrderNumber,
+  ] =
+    useState(
+      "",
+    );
+
+  const [
+    orderVendorName,
+    setOrderVendorName,
+  ] =
+    useState(
+      "",
+    );
+
+  const [
+    orderNotes,
+    setOrderNotes,
+  ] =
+    useState(
+      "",
+    );
+
+  const [
+    orderTax,
+    setOrderTax,
+  ] =
+    useState(
+      "",
+    );
+
+  const [
+    isOrderDraftSaving,
+    setIsOrderDraftSaving,
+  ] =
+    useState(
+      false,
+    );
+
+  const [
+    isOrderPlacing,
+    setIsOrderPlacing,
+  ] =
+    useState(
+      false,
+    );
+
+  const [
+    purchaseOrderHistory,
+    setPurchaseOrderHistory,
+  ] =
+    useState<PurchaseOrderSummary[]>(
+      [],
+    );
+
+  const [
+    selectedPurchaseOrder,
+    setSelectedPurchaseOrder,
+  ] =
+    useState<PurchaseOrderWithItems | null>(
+      null,
+    );
+
+  const [
+    invoiceImportResult,
+    setInvoiceImportResult,
+  ] =
+    useState<InvoiceImportResult | null>(
+      null,
+    );
+
+  const [
+    isInvoiceProcessing,
+    setIsInvoiceProcessing,
+  ] =
+    useState(
+      false,
+    );
+
+  const [
+    isOrderReceiving,
+    setIsOrderReceiving,
+  ] =
+    useState(
+      false,
+    );
+
+  const [
+    isOrderManagementLoading,
+    setIsOrderManagementLoading,
+  ] =
+    useState(
+      false,
+    );
+
+  const [
+    isOrderDetailsLoading,
+    setIsOrderDetailsLoading,
+  ] =
+    useState(
+      false,
     );
 
   const [
@@ -535,20 +768,10 @@ function SmartStockApp() {
     );
 
   const [
-    transactionReturnView,
-    setTransactionReturnView,
-  ] =
-    useState<TransactionReturnView>(
-      "inventory",
-    );
-
-  const [
     transactionHistory,
     setTransactionHistory,
   ] =
-    useState<
-      TransactionHistoryItem[]
-    >(
+    useState<TransactionHistoryItem[]>(
       [],
     );
 
@@ -716,6 +939,67 @@ function SmartStockApp() {
       Promise.resolve(),
     );
 
+  const orderDraftSaveQueue =
+    useRef<Promise<void>>(
+      Promise.resolve(),
+    );
+
+  const hasLoadedOrderDraft =
+    useRef(
+      false,
+    );
+
+  const resetOrderDraftState =
+    useCallback(
+      (): void => {
+        setOrderDraftItems(
+          [],
+        );
+
+        setDraftQuantities(
+          new Map(),
+        );
+
+        setActiveDraftOrderId(
+          null,
+        );
+
+        setOrderNumber(
+          "",
+        );
+
+        setOrderVendorName(
+          "",
+        );
+
+        setOrderNotes(
+          "",
+        );
+
+        setOrderTax(
+          "",
+        );
+
+        setScannedOrderProduct(
+          null,
+        );
+      },
+      [],
+    );
+
+  const refreshDraftQuantities =
+    useCallback(
+      async (): Promise<void> => {
+        const quantities =
+          await getDraftQuantitiesByProduct();
+
+        setDraftQuantities(
+          quantities,
+        );
+      },
+      [],
+    );
+
   const loadInventoryData =
     useCallback(
       async (): Promise<void> => {
@@ -725,6 +1009,7 @@ function SmartStockApp() {
           dashboard,
           recentActivity,
           currentReorderItems,
+          currentOrderedQuantities,
         ] =
           await Promise.all([
             getAllProducts(),
@@ -738,6 +1023,8 @@ function SmartStockApp() {
             ),
 
             getReorderItems(),
+
+            getOrderedQuantitiesByProduct(),
           ]);
 
         setProducts(
@@ -760,6 +1047,10 @@ function SmartStockApp() {
           currentReorderItems,
         );
 
+        setOrderedQuantities(
+          currentOrderedQuantities,
+        );
+
         setInventoryRevision(
           (
             previous,
@@ -769,6 +1060,252 @@ function SmartStockApp() {
         );
       },
       [],
+    );
+
+  const loadSavedOrderDraft =
+    useCallback(
+      async (): Promise<void> => {
+        try {
+          const draft =
+            await getActiveDraftPurchaseOrder();
+
+          if (
+            !draft
+          ) {
+            setOrderDraftItems(
+              [],
+            );
+
+            setDraftQuantities(
+              new Map(),
+            );
+
+            setActiveDraftOrderId(
+              null,
+            );
+
+            setOrderNumber(
+              "",
+            );
+
+            setOrderVendorName(
+              "",
+            );
+
+            setOrderNotes(
+              "",
+            );
+
+            setOrderTax(
+              "",
+            );
+
+            return;
+          }
+
+          const productMap =
+            new Map<
+              number,
+              Product
+            >();
+
+          products.forEach(
+            (
+              product,
+            ) => {
+              productMap.set(
+                product.id,
+                product,
+              );
+            },
+          );
+
+          const restoredItems:
+            OrderDraftItem[] = [];
+
+          draft.items.forEach(
+            (
+              item,
+            ) => {
+              if (
+                item.productId ===
+                null
+              ) {
+                return;
+              }
+
+              const product =
+                productMap.get(
+                  item.productId,
+                );
+
+              if (
+                !product
+              ) {
+                return;
+              }
+
+              restoredItems.push({
+                product,
+
+                quantity:
+                  item.quantity,
+              });
+            },
+          );
+
+          setOrderDraftItems(
+            restoredItems,
+          );
+
+          setActiveDraftOrderId(
+            draft.order.id,
+          );
+
+          setOrderNumber(
+            draft.order.orderNumber,
+          );
+
+          setOrderVendorName(
+            draft.order.vendorName,
+          );
+
+          setOrderNotes(
+            draft.order.notes,
+          );
+
+          setOrderTax(
+            formatTaxInput(
+              draft.order.tax,
+            ),
+          );
+
+          await refreshDraftQuantities();
+        } catch (
+          error
+        ) {
+          console.error(
+            "Could not restore saved order draft:",
+            error,
+          );
+        }
+      },
+      [
+        products,
+        refreshDraftQuantities,
+      ],
+    );
+
+  const persistOrderItems =
+    useCallback(
+      (
+        items:
+          OrderDraftItem[],
+      ): void => {
+        const optimisticQuantities =
+          new Map<
+            number,
+            number
+          >();
+
+        items.forEach(
+          (
+            item,
+          ) => {
+            optimisticQuantities.set(
+              item.product.id,
+              item.quantity,
+            );
+          },
+        );
+
+        setDraftQuantities(
+          optimisticQuantities,
+        );
+
+        orderDraftSaveQueue.current =
+          orderDraftSaveQueue.current
+            .catch(
+              () =>
+                undefined,
+            )
+            .then(
+              async () => {
+                try {
+                  if (
+                    items.length ===
+                    0
+                  ) {
+                    await deleteActiveDraftPurchaseOrder();
+
+                    setActiveDraftOrderId(
+                      null,
+                    );
+
+                    setOrderNumber(
+                      "",
+                    );
+
+                    setDraftQuantities(
+                      new Map(),
+                    );
+
+                    return;
+                  }
+
+                  const saved =
+                    await saveOrCreateDraftPurchaseOrder({
+                      vendorName:
+                        orderVendorName,
+
+                      notes:
+                        orderNotes,
+
+                      tax:
+                        parseTaxAmount(
+                          orderTax,
+                        ),
+
+                      items,
+                    });
+
+                  setActiveDraftOrderId(
+                    saved.order.id,
+                  );
+
+                  setOrderNumber(
+                    saved.order.orderNumber,
+                  );
+
+                  await refreshDraftQuantities();
+                } catch (
+                  error
+                ) {
+                  console.error(
+                    "Could not persist order draft:",
+                    error,
+                  );
+
+                  try {
+                    await refreshDraftQuantities();
+                  } catch (
+                    refreshError
+                  ) {
+                    console.error(
+                      "Could not refresh draft quantities:",
+                      refreshError,
+                    );
+                  }
+                }
+              },
+            );
+      },
+      [
+        orderNotes,
+        orderTax,
+        orderVendorName,
+        refreshDraftQuantities,
+      ],
     );
 
   useEffect(
@@ -812,7 +1349,6 @@ function SmartStockApp() {
               }
             )();
           },
-
           INVENTORY_SEARCH_DEBOUNCE_MS,
         );
 
@@ -825,7 +1361,6 @@ function SmartStockApp() {
         );
       };
     },
-
     [
       filters,
       inventoryRevision,
@@ -942,7 +1477,6 @@ function SmartStockApp() {
           return false;
         }
       },
-
       [
         beginCloudSync,
         markCloudSyncFailed,
@@ -1010,7 +1544,6 @@ function SmartStockApp() {
               },
             );
       },
-
       [
         loadInventoryData,
       ],
@@ -1102,7 +1635,6 @@ function SmartStockApp() {
           );
         }
       },
-
       [
         beginCloudSync,
         loadInventoryData,
@@ -1115,9 +1647,34 @@ function SmartStockApp() {
     () => {
       void loadProducts();
     },
-
     [
       loadProducts,
+    ],
+  );
+
+  useEffect(
+    () => {
+      if (
+        status !==
+        "ready"
+      ) {
+        return;
+      }
+
+      if (
+        hasLoadedOrderDraft.current
+      ) {
+        return;
+      }
+
+      hasLoadedOrderDraft.current =
+        true;
+
+      void loadSavedOrderDraft();
+    },
+    [
+      loadSavedOrderDraft,
+      status,
     ],
   );
 
@@ -1155,7 +1712,6 @@ function SmartStockApp() {
         );
       };
     },
-
     [
       refreshInventoryFromRealtime,
     ],
@@ -1204,7 +1760,6 @@ function SmartStockApp() {
           );
         }
       },
-
       [
         beginCloudSync,
         cloudSyncStatus.state,
@@ -1303,7 +1858,6 @@ function SmartStockApp() {
 
       Alert.alert(
         "Product saved",
-
         `${values.name.trim()} was added successfully.`,
       );
     } catch (
@@ -1314,33 +1868,11 @@ function SmartStockApp() {
         error,
       );
 
-      const message =
+      Alert.alert(
+        "Could not save product",
         error instanceof Error
           ? error.message
-          : "The product could not be saved.";
-
-      const lowerMessage =
-        message.toLowerCase();
-
-      const isDuplicateBarcode =
-        lowerMessage.includes(
-          "unique",
-        ) ||
-        lowerMessage.includes(
-          "constraint",
-        ) ||
-        lowerMessage.includes(
-          "already uses this barcode",
-        );
-
-      Alert.alert(
-        isDuplicateBarcode
-          ? "Barcode already exists"
-          : "Could not save product",
-
-        isDuplicateBarcode
-          ? "Another product already uses this barcode."
-          : message,
+          : "The product could not be saved.",
       );
     } finally {
       setIsSubmitting(
@@ -1392,12 +1924,46 @@ function SmartStockApp() {
 
           Alert.alert(
             "Barcode lookup failed",
-
             error instanceof Error
               ? error.message
               : "The barcode could not be processed.",
           );
         }
+      },
+      [],
+    );
+
+  const handleOrderBarcodeDetected =
+    useCallback(
+      async (
+        barcode:
+          string,
+      ): Promise<void> => {
+        const product =
+          await getProductByBarcode(
+            barcode,
+          );
+
+        if (
+          !product
+        ) {
+          Alert.alert(
+            "Product not found",
+            "This barcode is not currently registered in your inventory.",
+          );
+
+          throw new Error(
+            "ORDER_PRODUCT_NOT_FOUND",
+          );
+        }
+
+        setScannedOrderProduct(
+          product,
+        );
+
+        setCurrentView(
+          "create-order",
+        );
       },
       [],
     );
@@ -1462,20 +2028,13 @@ function SmartStockApp() {
 
       Alert.alert(
         "Product updated",
-
         "The product details were updated successfully.",
       );
     } catch (
       error
     ) {
-      console.error(
-        "Could not update product:",
-        error,
-      );
-
       Alert.alert(
         "Could not update product",
-
         error instanceof Error
           ? error.message
           : "The product could not be updated.",
@@ -1505,38 +2064,23 @@ function SmartStockApp() {
           );
 
           setSelectedProduct(
-            (
-              current,
-            ) =>
-              current?.id ===
-              product.id
-                ? null
-                : current,
+            null,
           );
 
-          Alert.alert(
-            "Product archived",
-
-            `${product.name} was removed from active inventory.`,
+          setCurrentView(
+            "inventory",
           );
         } catch (
           error
         ) {
-          console.error(
-            "Could not archive product:",
-            error,
-          );
-
           Alert.alert(
             "Could not archive product",
-
             error instanceof Error
               ? error.message
               : "The product could not be archived.",
           );
         }
       },
-
       [
         loadInventoryData,
         pushToCloud,
@@ -1551,9 +2095,7 @@ function SmartStockApp() {
       ): void => {
         Alert.alert(
           "Archive product?",
-
-          `${product.name} will be removed from your active inventory.\n\nIts stock history and analytics records will be preserved.`,
-
+          `${product.name} will be removed from active inventory.`,
           [
             {
               text:
@@ -1579,7 +2121,6 @@ function SmartStockApp() {
           ],
         );
       },
-
       [
         handleArchiveProduct,
       ],
@@ -1589,45 +2130,22 @@ function SmartStockApp() {
     product:
       Product,
   ): Promise<void> {
-    try {
-      await restoreProduct(
-        product.id,
-      );
+    await restoreProduct(
+      product.id,
+    );
 
-      await loadInventoryData();
+    await loadInventoryData();
 
-      await pushToCloud(
-        "product-restore",
-      );
+    await pushToCloud(
+      "product-restore",
+    );
 
-      const refreshedArchivedProducts =
-        await getArchivedProducts();
+    const archived =
+      await getArchivedProducts();
 
-      setArchivedProducts(
-        refreshedArchivedProducts,
-      );
-
-      Alert.alert(
-        "Product restored",
-
-        `${product.name} is active again.`,
-      );
-    } catch (
-      error
-    ) {
-      console.error(
-        "Could not restore product:",
-        error,
-      );
-
-      Alert.alert(
-        "Could not restore product",
-
-        error instanceof Error
-          ? error.message
-          : "The product could not be restored.",
-      );
-    }
+    setArchivedProducts(
+      archived,
+    );
   }
 
   function confirmRestoreProduct(
@@ -1636,9 +2154,7 @@ function SmartStockApp() {
   ): void {
     Alert.alert(
       "Restore product?",
-
       `${product.name} will be returned to active inventory.`,
-
       [
         {
           text:
@@ -1662,114 +2178,71 @@ function SmartStockApp() {
     );
   }
 
-  async function handlePermanentDeleteProduct(
+  async function handleDeleteArchivedProduct(
     product:
       Product,
   ): Promise<void> {
-    try {
-      const canDelete =
-        await canPermanentlyDeleteProduct(
-          product.id,
-        );
+    await permanentlyDeleteProduct(
+      product.id,
+    );
 
-      if (
-        !canDelete
-      ) {
-        Alert.alert(
-          "Cannot permanently delete",
+    const archived =
+      await getArchivedProducts();
 
-          "This product has stock history and must remain archived so inventory records and analytics stay accurate.",
-        );
+    setArchivedProducts(
+      archived,
+    );
 
-        return;
-      }
-
-      Alert.alert(
-        "Delete permanently?",
-
-        `${product.name} has no stock history. This action cannot be undone.`,
-
-        [
-          {
-            text:
-              "Cancel",
-
-            style:
-              "cancel",
-          },
-
-          {
-            text:
-              "Delete",
-
-            style:
-              "destructive",
-
-            onPress:
-              () =>
-                void confirmPermanentDeleteProduct(
-                  product,
-                ),
-          },
-        ],
-      );
-    } catch (
-      error
-    ) {
-      console.error(
-        "Could not check product deletion:",
-        error,
-      );
-
-      Alert.alert(
-        "Could not check product",
-
-        error instanceof Error
-          ? error.message
-          : "The product could not be checked for deletion.",
-      );
-    }
+    await loadInventoryData();
   }
 
-  async function confirmPermanentDeleteProduct(
+  async function confirmDeleteArchivedProduct(
     product:
       Product,
   ): Promise<void> {
-    try {
-      await permanentlyDeleteProduct(
+    const canDelete =
+      await canPermanentlyDeleteProduct(
         product.id,
       );
 
-      await loadInventoryData();
-
-      const refreshedArchivedProducts =
-        await getArchivedProducts();
-
-      setArchivedProducts(
-        refreshedArchivedProducts,
-      );
-
-      Alert.alert(
-        "Product deleted",
-
-        `${product.name} was permanently deleted.`,
-      );
-    } catch (
-      error
+    if (
+      !canDelete
     ) {
-      console.error(
-        "Could not permanently delete product:",
-        error,
-      );
-
       Alert.alert(
-        "Could not delete product",
-
-        error instanceof Error
-          ? error.message
-          : "The product could not be permanently deleted.",
+        "Cannot permanently delete",
+        `${product.name} has stock history.`,
       );
+
+      return;
     }
+
+    Alert.alert(
+      "Delete permanently?",
+      `${product.name} will be permanently removed.`,
+      [
+        {
+          text:
+            "Cancel",
+
+          style:
+            "cancel",
+        },
+
+        {
+          text:
+            "Delete Permanently",
+
+          style:
+            "destructive",
+
+          onPress:
+            () =>
+              void handleDeleteArchivedProduct(
+                product,
+              ),
+        },
+      ],
+    );
   }
 
   async function openGlobalTransactions():
@@ -1802,25 +2275,6 @@ function SmartStockApp() {
       setArchivedProducts(
         archived,
       );
-    } catch (
-      error
-    ) {
-      console.error(
-        "Could not load stock history:",
-        error,
-      );
-
-      setCurrentView(
-        "inventory",
-      );
-
-      Alert.alert(
-        "Could not load stock history",
-
-        error instanceof Error
-          ? error.message
-          : "Stock history could not be loaded.",
-      );
     } finally {
       setIsGlobalTransactionsLoading(
         false,
@@ -1839,33 +2293,864 @@ function SmartStockApp() {
         "reorder-management",
       );
 
-      const items =
-        await getReorderItems();
+      const [
+        items,
+        currentDraftQuantities,
+        currentOrderedQuantities,
+      ] =
+        await Promise.all([
+          getReorderItems(),
+
+          getDraftQuantitiesByProduct(),
+
+          getOrderedQuantitiesByProduct(),
+        ]);
 
       setReorderItems(
         items,
+      );
+
+      setDraftQuantities(
+        currentDraftQuantities,
+      );
+
+      setOrderedQuantities(
+        currentOrderedQuantities,
+      );
+    } finally {
+      setIsReorderLoading(
+        false,
+      );
+    }
+  }
+
+  async function openOrderManagement():
+    Promise<void> {
+    try {
+      setIsOrderManagementLoading(
+        true,
+      );
+
+      setCurrentView(
+        "order-management",
+      );
+
+      const [
+        orders,
+        currentDraftQuantities,
+        currentOrderedQuantities,
+      ] =
+        await Promise.all([
+          getPurchaseOrderHistory(
+            200,
+          ),
+
+          getDraftQuantitiesByProduct(),
+
+          getOrderedQuantitiesByProduct(),
+        ]);
+
+      setPurchaseOrderHistory(
+        orders,
+      );
+
+      setDraftQuantities(
+        currentDraftQuantities,
+      );
+
+      setOrderedQuantities(
+        currentOrderedQuantities,
+      );
+    } finally {
+      setIsOrderManagementLoading(
+        false,
+      );
+    }
+  }
+
+  async function openPurchaseOrderDetails(
+    orderId:
+      number,
+  ): Promise<void> {
+    try {
+      setIsOrderDetailsLoading(
+        true,
+      );
+
+      setSelectedPurchaseOrder(
+        null,
+      );
+
+      setCurrentView(
+        "order-details",
+      );
+
+      const purchaseOrder =
+        await getPurchaseOrderById(
+          orderId,
+        );
+
+      if (
+        !purchaseOrder
+      ) {
+        throw new Error(
+          "Purchase order could not be found.",
+        );
+      }
+
+      setSelectedPurchaseOrder(
+        purchaseOrder,
+      );
+    } catch (
+      error
+    ) {
+      setCurrentView(
+        "order-management",
+      );
+
+      Alert.alert(
+        "Could not load order",
+        error instanceof Error
+          ? error.message
+          : "Purchase order could not be loaded.",
+      );
+    } finally {
+      setIsOrderDetailsLoading(
+        false,
+      );
+    }
+  }
+
+  const closePurchaseOrderDetails =
+    useCallback(
+      (): void => {
+        setSelectedPurchaseOrder(
+          null,
+        );
+
+        setInvoiceImportResult(
+          null,
+        );
+
+        setCurrentView(
+          "order-management",
+        );
+      },
+      [],
+    );
+
+  const openReceiveOrder =
+    useCallback(
+      (): void => {
+        if (
+          !selectedPurchaseOrder
+        ) {
+          return;
+        }
+
+        setInvoiceImportResult(
+          null,
+        );
+
+        setCurrentView(
+          "receive-order",
+        );
+      },
+      [
+        selectedPurchaseOrder,
+      ],
+    );
+
+  async function processReceivingDocument(
+    document:
+      ImportDocument,
+  ): Promise<void> {
+    if (
+      !selectedPurchaseOrder
+    ) {
+      return;
+    }
+
+    try {
+      setIsInvoiceProcessing(
+        true,
+      );
+
+      const result =
+        await createMockInvoiceImportResult(
+          selectedPurchaseOrder,
+          document,
+          products,
+        );
+
+      setInvoiceImportResult(
+        result,
+      );
+
+      setCurrentView(
+        "invoice-review",
+      );
+    } catch (
+      error
+    ) {
+      Alert.alert(
+        "Could not read invoice",
+        error instanceof Error
+          ? error.message
+          : "The invoice could not be processed.",
+      );
+    } finally {
+      setIsInvoiceProcessing(
+        false,
+      );
+    }
+  }
+
+  async function handleTakeInvoicePhoto():
+    Promise<void> {
+    try {
+      const result =
+        await captureImportDocument();
+
+      if (
+        result.cancelled ||
+        !result.document
+      ) {
+        return;
+      }
+
+      await processReceivingDocument(
+        result.document,
+      );
+    } catch (
+      error
+    ) {
+      Alert.alert(
+        "Camera unavailable",
+        error instanceof Error
+          ? error.message
+          : "The invoice photo could not be captured.",
+      );
+    }
+  }
+
+  async function handleChooseInvoiceImage():
+    Promise<void> {
+    try {
+      const result =
+        await chooseImportImage();
+
+      if (
+        result.cancelled ||
+        !result.document
+      ) {
+        return;
+      }
+
+      await processReceivingDocument(
+        result.document,
+      );
+    } catch (
+      error
+    ) {
+      Alert.alert(
+        "Could not choose image",
+        error instanceof Error
+          ? error.message
+          : "The invoice image could not be selected.",
+      );
+    }
+  }
+
+  async function handleChooseInvoiceFile():
+    Promise<void> {
+    try {
+      const result =
+        await chooseImportFile();
+
+      if (
+        result.cancelled ||
+        !result.document
+      ) {
+        return;
+      }
+
+      await processReceivingDocument(
+        result.document,
+      );
+    } catch (
+      error
+    ) {
+      Alert.alert(
+        "Could not choose file",
+        error instanceof Error
+          ? error.message
+          : "The invoice file could not be selected.",
+      );
+    }
+  }
+
+  async function handleManualReceivingReview():
+    Promise<void> {
+    if (
+      !selectedPurchaseOrder
+    ) {
+      return;
+    }
+
+    const document = {
+      uri:
+        "manual://receiving",
+
+      name:
+        "Manual receiving",
+
+      mimeType:
+        "text/plain",
+
+      fileType:
+        "unknown",
+
+      source:
+        "file",
+
+      size:
+        null,
+
+      createdAt:
+        new Date().toISOString(),
+    } as ImportDocument;
+
+    await processReceivingDocument(
+      document,
+    );
+  }
+
+  async function handleConfirmPurchaseOrderReceiving(
+    result:
+      InvoiceImportResult,
+  ): Promise<void> {
+    if (
+      isOrderReceiving
+    ) {
+      return;
+    }
+
+    if (
+      !selectedPurchaseOrder
+    ) {
+      Alert.alert(
+        "Purchase order unavailable",
+        "The purchase order could not be found.",
+      );
+
+      return;
+    }
+
+    try {
+      setIsOrderReceiving(
+        true,
+      );
+
+      setInvoiceImportResult(
+        result,
+      );
+
+      /*
+       * First commit the receiving operation
+       * to the local SQLite database.
+       */
+      const receivingResult =
+        await receivePurchaseOrder(
+          selectedPurchaseOrder,
+          result,
+        );
+
+      /*
+       * Refresh inventory/product data.
+       *
+       * This refreshes:
+       * - product stock
+       * - latest delivery
+       * - dashboard
+       * - reorder items
+       * - ordered quantities
+       */
+      await loadInventoryData();
+
+      /*
+       * Refresh Order Management history.
+       */
+      const updatedOrderHistory =
+        await getPurchaseOrderHistory(
+          200,
+        );
+
+      setPurchaseOrderHistory(
+        updatedOrderHistory,
+      );
+
+      /*
+       * Refresh all outstanding-order
+       * quantities after the PO becomes
+       * received.
+       */
+      const [
+        updatedDraftQuantities,
+        updatedOrderedQuantities,
+      ] =
+        await Promise.all([
+          getDraftQuantitiesByProduct(),
+
+          getOrderedQuantitiesByProduct(),
+        ]);
+
+      setDraftQuantities(
+        updatedDraftQuantities,
+      );
+
+      setOrderedQuantities(
+        updatedOrderedQuantities,
+      );
+
+      /*
+       * Reload the PO from SQLite so
+       * OrderDetails receives the newest:
+       *
+       * status
+       * received quantities
+       * notes
+       * received date
+       */
+      const completedOrder =
+        await getPurchaseOrderById(
+          receivingResult.orderId,
+        );
+
+      if (
+        !completedOrder
+      ) {
+        throw new Error(
+          "Receiving was completed, but the purchase order could not be reloaded.",
+        );
+      }
+
+      /*
+       * IMPORTANT FIX
+       *
+       * Previously invoiceImportResult was
+       * cleared while currentView was still
+       * "invoice-review".
+       *
+       * React then briefly rendered:
+       *
+       * "Invoice review unavailable"
+       *
+       * We now switch views FIRST.
+       */
+      setSelectedPurchaseOrder(
+        completedOrder,
+      );
+
+      setCurrentView(
+        "order-details",
+      );
+
+      setInvoiceImportResult(
+        null,
+      );
+
+      /*
+       * Cloud synchronization can happen
+       * after navigation.
+       *
+       * Local receiving has already been
+       * committed successfully, so the user
+       * should not wait on Invoice Review.
+       */
+      await pushToCloud(
+        "inventory-update",
+      );
+
+      const summaryLines:
+        string[] = [];
+
+      summaryLines.push(
+        `${receivingResult.receivedUnits} ${
+          receivingResult.receivedUnits ===
+          1
+            ? "unit"
+            : "units"
+        } received.`,
+      );
+
+      summaryLines.push(
+        `${receivingResult.receivedProductCount} ${
+          receivingResult.receivedProductCount ===
+          1
+            ? "product"
+            : "products"
+        } added to inventory.`,
+      );
+
+      if (
+        receivingResult.zeroReceivedProductCount >
+        0
+      ) {
+        summaryLines.push(
+          `${receivingResult.zeroReceivedProductCount} ${
+            receivingResult.zeroReceivedProductCount ===
+            1
+              ? "product was"
+              : "products were"
+          } not delivered. Stock for ${
+            receivingResult.zeroReceivedProductCount ===
+            1
+              ? "that product"
+              : "those products"
+          } remained unchanged.`,
+        );
+      }
+
+      if (
+        receivingResult.partialProductCount >
+        0
+      ) {
+        summaryLines.push(
+          `${receivingResult.partialProductCount} ${
+            receivingResult.partialProductCount ===
+            1
+              ? "product was"
+              : "products were"
+          } received in a lower quantity than ordered.`,
+        );
+      }
+
+      if (
+        receivingResult.shortageValue >
+        0
+      ) {
+        summaryLines.push(
+          `${formatCurrency(
+            receivingResult.shortageValue,
+          )} of ordered merchandise was not received.`,
+        );
+      }
+
+      summaryLines.push(
+        `Received merchandise value: ${formatCurrency(
+          receivingResult.receivedSubtotal,
+        )}.`,
+      );
+
+      Alert.alert(
+        "Order received",
+        summaryLines.join(
+          "\n\n",
+        ),
       );
     } catch (
       error
     ) {
       console.error(
-        "Could not load reorder management:",
+        "Could not receive purchase order:",
         error,
       );
 
+      Alert.alert(
+        "Could not receive order",
+        error instanceof Error
+          ? error.message
+          : "The purchase order could not be received.",
+      );
+    } finally {
+      setIsOrderReceiving(
+        false,
+      );
+    }
+  }
+
+  const startNewOrder =
+    useCallback(
+      async (): Promise<void> => {
+        await loadSavedOrderDraft();
+
+        setScannedOrderProduct(
+          null,
+        );
+
+        setCurrentView(
+          "create-order",
+        );
+      },
+      [
+        loadSavedOrderDraft,
+      ],
+    );
+
+  const addProductToOrderDraft =
+    useCallback(
+      (
+        product:
+          Product,
+
+        quantity:
+          number,
+      ): void => {
+        if (
+          quantity <=
+          0
+        ) {
+          return;
+        }
+
+        setOrderDraftItems(
+          (
+            current,
+          ) => {
+            const existing =
+              current.find(
+                (
+                  item,
+                ) =>
+                  item.product.id ===
+                  product.id,
+              );
+
+            const updated =
+              existing
+                ? current.map(
+                    (
+                      item,
+                    ) =>
+                      item.product.id ===
+                      product.id
+                        ? {
+                            ...item,
+
+                            quantity:
+                              item.quantity +
+                              quantity,
+                          }
+                        : item,
+                  )
+                : [
+                    ...current,
+
+                    {
+                      product,
+                      quantity,
+                    },
+                  ];
+
+            persistOrderItems(
+              updated,
+            );
+
+            return updated;
+          },
+        );
+      },
+      [
+        persistOrderItems,
+      ],
+    );
+
+  const changeOrderDraftQuantity =
+    useCallback(
+      (
+        productId:
+          number,
+
+        change:
+          number,
+      ): void => {
+        setOrderDraftItems(
+          (
+            current,
+          ) => {
+            const updated =
+              current
+                .map(
+                  (
+                    item,
+                  ) =>
+                    item.product.id ===
+                    productId
+                      ? {
+                          ...item,
+
+                          quantity:
+                            Math.max(
+                              0,
+                              item.quantity +
+                                change,
+                            ),
+                        }
+                      : item,
+                )
+                .filter(
+                  (
+                    item,
+                  ) =>
+                    item.quantity >
+                    0,
+                );
+
+            persistOrderItems(
+              updated,
+            );
+
+            return updated;
+          },
+        );
+      },
+      [
+        persistOrderItems,
+      ],
+    );
+
+  const removeOrderDraftItem =
+    useCallback(
+      (
+        productId:
+          number,
+      ): void => {
+        setOrderDraftItems(
+          (
+            current,
+          ) => {
+            const updated =
+              current.filter(
+                (
+                  item,
+                ) =>
+                  item.product.id !==
+                  productId,
+              );
+
+            persistOrderItems(
+              updated,
+            );
+
+            return updated;
+          },
+        );
+      },
+      [
+        persistOrderItems,
+      ],
+    );
+
+  async function handleSaveOrderDraft():
+    Promise<void> {
+    if (
+      orderDraftItems.length ===
+      0
+    ) {
+      return;
+    }
+
+    try {
+      setIsOrderDraftSaving(
+        true,
+      );
+
+      const saved =
+        await saveOrCreateDraftPurchaseOrder({
+          vendorName:
+            orderVendorName,
+
+          notes:
+            orderNotes,
+
+          tax:
+            parseTaxAmount(
+              orderTax,
+            ),
+
+          items:
+            orderDraftItems,
+        });
+
+      setActiveDraftOrderId(
+        saved.order.id,
+      );
+
+      setOrderNumber(
+        saved.order.orderNumber,
+      );
+
+      await refreshDraftQuantities();
+
+      Alert.alert(
+        "Draft saved",
+        `${saved.order.orderNumber} was saved.`,
+      );
+    } finally {
+      setIsOrderDraftSaving(
+        false,
+      );
+    }
+  }
+
+  async function handlePlaceOrder():
+    Promise<void> {
+    if (
+      orderDraftItems.length ===
+      0 ||
+      !orderVendorName.trim()
+    ) {
+      return;
+    }
+
+    try {
+      setIsOrderPlacing(
+        true,
+      );
+
+      const savedDraft =
+        await saveOrCreateDraftPurchaseOrder({
+          vendorName:
+            orderVendorName,
+
+          notes:
+            orderNotes,
+
+          tax:
+            parseTaxAmount(
+              orderTax,
+            ),
+
+          items:
+            orderDraftItems,
+        });
+
+      const placed =
+        await placeDraftPurchaseOrder(
+          savedDraft.order.id,
+        );
+
+      resetOrderDraftState();
+
+      await loadInventoryData();
+
+      setPurchaseOrderHistory(
+        await getPurchaseOrderHistory(
+          200,
+        ),
+      );
+
       setCurrentView(
-        "inventory",
+        "reorder-management",
       );
 
       Alert.alert(
-        "Could not load reorder list",
-
-        error instanceof Error
-          ? error.message
-          : "The reorder list could not be loaded.",
+        "Order placed",
+        `${placed.order.orderNumber} was placed successfully.`,
       );
     } finally {
-      setIsReorderLoading(
+      setIsOrderPlacing(
         false,
       );
     }
@@ -1877,31 +3162,6 @@ function SmartStockApp() {
         product:
           Product,
       ): void => {
-        setTransactionReturnView(
-          "inventory",
-        );
-
-        setSelectedProduct(
-          product,
-        );
-
-        setCurrentView(
-          "inventory-transaction",
-        );
-      },
-      [],
-    );
-
-  const openReorderStockForm =
-    useCallback(
-      (
-        product:
-          Product,
-      ): void => {
-        setTransactionReturnView(
-          "reorder-management",
-        );
-
         setSelectedProduct(
           product,
         );
@@ -1916,25 +3176,15 @@ function SmartStockApp() {
   const closeTransactionForm =
     useCallback(
       (): void => {
-        const returnView =
-          transactionReturnView;
-
         setSelectedProduct(
           null,
         );
 
-        setTransactionReturnView(
+        setCurrentView(
           "inventory",
         );
-
-        setCurrentView(
-          returnView,
-        );
       },
-
-      [
-        transactionReturnView,
-      ],
+      [],
     );
 
   async function handleInventoryTransaction(
@@ -1946,13 +3196,9 @@ function SmartStockApp() {
         true,
       );
 
-      const returnView =
-        transactionReturnView;
-
-      const transaction =
-        await createInventoryTransaction(
-          input,
-        );
+      await createInventoryTransaction(
+        input,
+      );
 
       await loadInventoryData();
 
@@ -1960,49 +3206,12 @@ function SmartStockApp() {
         "inventory-update",
       );
 
-      if (
-        returnView ===
-        "reorder-management"
-      ) {
-        const updatedReorderItems =
-          await getReorderItems();
-
-        setReorderItems(
-          updatedReorderItems,
-        );
-      }
-
       setSelectedProduct(
         null,
       );
 
-      setTransactionReturnView(
-        "inventory",
-      );
-
       setCurrentView(
-        returnView,
-      );
-
-      Alert.alert(
-        "Inventory updated",
-
-        `Stock changed from ${transaction.stockBefore} to ${transaction.stockAfter} units.`,
-      );
-    } catch (
-      error
-    ) {
-      console.error(
-        "Could not save inventory transaction:",
-        error,
-      );
-
-      Alert.alert(
-        "Could not update inventory",
-
-        error instanceof Error
-          ? error.message
-          : "The inventory transaction could not be saved.",
+        "inventory",
       );
     } finally {
       setIsTransactionSubmitting(
@@ -2017,53 +3226,23 @@ function SmartStockApp() {
         product:
           Product,
       ): Promise<void> => {
+        setSelectedProduct(
+          product,
+        );
+
+        setIsHistoryLoading(
+          true,
+        );
+
+        setCurrentView(
+          "transaction-history",
+        );
+
         try {
-          setSelectedProduct(
-            product,
-          );
-
           setTransactionHistory(
-            [],
-          );
-
-          setIsHistoryLoading(
-            true,
-          );
-
-          setCurrentView(
-            "transaction-history",
-          );
-
-          const history =
             await getTransactionHistoryForProduct(
               product.id,
-            );
-
-          setTransactionHistory(
-            history,
-          );
-        } catch (
-          error
-        ) {
-          console.error(
-            "Could not load transaction history:",
-            error,
-          );
-
-          setCurrentView(
-            "inventory",
-          );
-
-          setSelectedProduct(
-            null,
-          );
-
-          Alert.alert(
-            "Could not load history",
-
-            error instanceof Error
-              ? error.message
-              : "Transaction history could not be loaded.",
+            ),
           );
         } finally {
           setIsHistoryLoading(
@@ -2094,15 +3273,15 @@ function SmartStockApp() {
 
   async function openDashboard():
     Promise<void> {
+    setIsDashboardLoading(
+      true,
+    );
+
+    setCurrentView(
+      "dashboard",
+    );
+
     try {
-      setIsDashboardLoading(
-        true,
-      );
-
-      setCurrentView(
-        "dashboard",
-      );
-
       const [
         summary,
         recentActivity,
@@ -2122,25 +3301,6 @@ function SmartStockApp() {
       setDashboardRecentActivity(
         recentActivity,
       );
-    } catch (
-      error
-    ) {
-      console.error(
-        "Could not load inventory dashboard:",
-        error,
-      );
-
-      setCurrentView(
-        "inventory",
-      );
-
-      Alert.alert(
-        "Could not load dashboard",
-
-        error instanceof Error
-          ? error.message
-          : "The dashboard could not be loaded.",
-      );
     } finally {
       setIsDashboardLoading(
         false,
@@ -2152,49 +3312,27 @@ function SmartStockApp() {
     period:
       AnalyticsPeriodDays,
   ): Promise<void> {
-    const summary =
+    setAnalyticsSummary(
       await getInventoryAnalyticsSummary(
         period,
         5,
-      );
-
-    setAnalyticsSummary(
-      summary,
+      ),
     );
   }
 
   async function openAnalytics():
     Promise<void> {
+    setIsAnalyticsLoading(
+      true,
+    );
+
+    setCurrentView(
+      "analytics",
+    );
+
     try {
-      setIsAnalyticsLoading(
-        true,
-      );
-
-      setCurrentView(
-        "analytics",
-      );
-
       await loadAnalytics(
         analyticsPeriod,
-      );
-    } catch (
-      error
-    ) {
-      console.error(
-        "Could not load analytics:",
-        error,
-      );
-
-      setCurrentView(
-        "inventory",
-      );
-
-      Alert.alert(
-        "Could not load analytics",
-
-        error instanceof Error
-          ? error.message
-          : "Inventory analytics could not be loaded.",
       );
     } finally {
       setIsAnalyticsLoading(
@@ -2207,39 +3345,17 @@ function SmartStockApp() {
     period:
       AnalyticsPeriodDays,
   ): Promise<void> {
-    if (
-      period ===
-      analyticsPeriod
-    ) {
-      return;
-    }
+    setAnalyticsPeriod(
+      period,
+    );
+
+    setIsAnalyticsLoading(
+      true,
+    );
 
     try {
-      setAnalyticsPeriod(
-        period,
-      );
-
-      setIsAnalyticsLoading(
-        true,
-      );
-
       await loadAnalytics(
         period,
-      );
-    } catch (
-      error
-    ) {
-      console.error(
-        "Could not change analytics period:",
-        error,
-      );
-
-      Alert.alert(
-        "Could not update analytics",
-
-        error instanceof Error
-          ? error.message
-          : "Analytics could not be loaded for the selected period.",
       );
     } finally {
       setIsAnalyticsLoading(
@@ -2249,9 +3365,7 @@ function SmartStockApp() {
   }
 
   async function loadAllTransactionsForExport():
-    Promise<
-      TransactionHistoryItem[]
-    > {
+    Promise<TransactionHistoryItem[]> {
     const histories =
       await Promise.all(
         products.map(
@@ -2286,24 +3400,27 @@ function SmartStockApp() {
       selectedExportReportType ===
       "inventory"
     ) {
-      switch (
-        selectedExportFormat
+      if (
+        selectedExportFormat ===
+        "csv"
       ) {
-        case "csv":
-          return exportInventoryCsv(
-            products,
-          );
-
-        case "xlsx":
-          return exportInventoryExcel(
-            products,
-          );
-
-        case "pdf":
-          return exportInventoryPdf(
-            products,
-          );
+        return exportInventoryCsv(
+          products,
+        );
       }
+
+      if (
+        selectedExportFormat ===
+        "xlsx"
+      ) {
+        return exportInventoryExcel(
+          products,
+        );
+      }
+
+      return exportInventoryPdf(
+        products,
+      );
     }
 
     if (
@@ -2313,24 +3430,27 @@ function SmartStockApp() {
       const transactions =
         await loadAllTransactionsForExport();
 
-      switch (
-        selectedExportFormat
+      if (
+        selectedExportFormat ===
+        "csv"
       ) {
-        case "csv":
-          return exportTransactionsCsv(
-            transactions,
-          );
-
-        case "xlsx":
-          return exportTransactionsExcel(
-            transactions,
-          );
-
-        case "pdf":
-          return exportTransactionsPdf(
-            transactions,
-          );
+        return exportTransactionsCsv(
+          transactions,
+        );
       }
+
+      if (
+        selectedExportFormat ===
+        "xlsx"
+      ) {
+        return exportTransactionsExcel(
+          transactions,
+        );
+      }
+
+      return exportTransactionsPdf(
+        transactions,
+      );
     }
 
     const analytics =
@@ -2339,24 +3459,27 @@ function SmartStockApp() {
         50,
       );
 
-    switch (
-      selectedExportFormat
+    if (
+      selectedExportFormat ===
+      "csv"
     ) {
-      case "csv":
-        return exportAnalyticsCsv(
-          analytics,
-        );
-
-      case "xlsx":
-        return exportAnalyticsExcel(
-          analytics,
-        );
-
-      case "pdf":
-        return exportAnalyticsPdf(
-          analytics,
-        );
+      return exportAnalyticsCsv(
+        analytics,
+      );
     }
+
+    if (
+      selectedExportFormat ===
+      "xlsx"
+    ) {
+      return exportAnalyticsExcel(
+        analytics,
+      );
+    }
+
+    return exportAnalyticsPdf(
+      analytics,
+    );
   }
 
   async function handleExport():
@@ -2366,26 +3489,8 @@ function SmartStockApp() {
         true,
       );
 
-      const report =
-        await generateExport();
-
       await shareExportedReport(
-        report,
-      );
-    } catch (
-      error
-    ) {
-      console.error(
-        "Could not export report:",
-        error,
-      );
-
-      Alert.alert(
-        "Export failed",
-
-        error instanceof Error
-          ? error.message
-          : "The report could not be generated.",
+        await generateExport(),
       );
     } finally {
       setIsExporting(
@@ -2446,60 +3551,6 @@ function SmartStockApp() {
       [],
     );
 
-  const openScanner =
-    useCallback(
-      (): void => {
-        setScannedBarcode(
-          "",
-        );
-
-        setCurrentView(
-          "scanner",
-        );
-      },
-      [],
-    );
-
-  const closeScanner =
-    useCallback(
-      (): void => {
-        setCurrentView(
-          "inventory",
-        );
-      },
-      [],
-    );
-
-  const closeImportInventory =
-    useCallback(
-      (): void => {
-        setCurrentView(
-          "inventory",
-        );
-      },
-      [],
-    );
-
-  const openImportInventory =
-    useCallback(
-      (): void => {
-        setCurrentView(
-          "import-inventory",
-        );
-      },
-      [],
-    );
-
-  const openExportReports =
-    useCallback(
-      (): void => {
-        setCurrentView(
-          "export-reports",
-        );
-      },
-      [],
-    );
-
   const renderProduct =
     useCallback(
       ({
@@ -2531,7 +3582,6 @@ function SmartStockApp() {
           }
         />
       ),
-
       [
         latestDeliveries,
         openTransactionForm,
@@ -2557,68 +3607,14 @@ function SmartStockApp() {
     "error"
   ) {
     return (
-      <SafeAreaView
-        edges={[
-          "top",
-          "left",
-          "right",
-          "bottom",
-        ]}
-        style={
-          styles.screen
+      <FallbackScreen
+        message={
+          errorMessage
         }
-      >
-        <View
-          style={
-            styles.centeredContainer
-          }
-        >
-          <Text
-            style={
-              styles.errorTitle
-            }
-          >
-            Could not load inventory
-          </Text>
-
-          <Text
-            style={
-              styles.errorMessage
-            }
-          >
-            {
-              errorMessage
-            }
-          </Text>
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={() =>
-              void loadProducts()
-            }
-            style={({
-              pressed,
-            }) => [
-              styles.primaryButton,
-
-              pressed &&
-                styles.primaryButtonPressed,
-            ]}
-          >
-            <Text
-              style={
-                styles.primaryButtonText
-              }
-            >
-              Try Again
-            </Text>
-          </Pressable>
-
-          <StatusBar
-            style="auto"
-          />
-        </View>
-      </SafeAreaView>
+        onReturn={() =>
+          void loadProducts()
+        }
+      />
     );
   }
 
@@ -2631,8 +3627,10 @@ function SmartStockApp() {
         onBarcodeDetected={
           handleBarcodeDetected
         }
-        onClose={
-          closeScanner
+        onClose={() =>
+          setCurrentView(
+            "inventory",
+          )
         }
       />
     );
@@ -2640,21 +3638,27 @@ function SmartStockApp() {
 
   if (
     currentView ===
-    "product-details"
+    "order-scanner"
   ) {
-    if (
-      !selectedProduct
-    ) {
-      return (
-        <FallbackScreen
-          message="Product not selected"
-          onReturn={
-            closeProductDetails
-          }
-        />
-      );
-    }
+    return (
+      <BarcodeScanner
+        onBarcodeDetected={
+          handleOrderBarcodeDetected
+        }
+        onClose={() =>
+          setCurrentView(
+            "create-order",
+          )
+        }
+      />
+    );
+  }
 
+  if (
+    currentView ===
+      "product-details" &&
+    selectedProduct
+  ) {
     return (
       <ProductDetails
         product={
@@ -2747,7 +3751,7 @@ function SmartStockApp() {
           confirmRestoreProduct
         }
         onDeleteArchivedProduct={
-          handlePermanentDeleteProduct
+          confirmDeleteArchivedProduct
         }
         onClose={() =>
           setCurrentView(
@@ -2777,12 +3781,342 @@ function SmartStockApp() {
         items={
           reorderItems
         }
-        onStockIn={
-          openReorderStockForm
+        draftQuantities={
+          draftQuantities
+        }
+        orderedQuantities={
+          orderedQuantities
+        }
+        onCreateOrder={() =>
+          void startNewOrder()
+        }
+        onOpenOrderManagement={() =>
+          void openOrderManagement()
         }
         onClose={() =>
           setCurrentView(
             "inventory",
+          )
+        }
+      />
+    );
+  }
+
+  if (
+    currentView ===
+    "order-management"
+  ) {
+    if (
+      isOrderManagementLoading
+    ) {
+      return (
+        <LoadingScreen
+          message="Loading purchase orders…"
+        />
+      );
+    }
+
+    return (
+      <OrderManagement
+        orders={
+          purchaseOrderHistory
+        }
+        hasDraft={
+          activeDraftOrderId !==
+            null ||
+          orderDraftItems.length >
+            0
+        }
+        draftProductCount={
+          orderDraftItems.length
+        }
+        onCreateOrder={() =>
+          void startNewOrder()
+        }
+        onContinueDraft={() =>
+          void startNewOrder()
+        }
+        onOpenOrder={(
+          orderId,
+        ) =>
+          void openPurchaseOrderDetails(
+            orderId,
+          )
+        }
+        onClose={() =>
+          setCurrentView(
+            "reorder-management",
+          )
+        }
+      />
+    );
+  }
+
+  if (
+    currentView ===
+    "order-details"
+  ) {
+    if (
+      isOrderDetailsLoading
+    ) {
+      return (
+        <LoadingScreen
+          message="Loading order details…"
+        />
+      );
+    }
+
+    if (
+      !selectedPurchaseOrder
+    ) {
+      return (
+        <FallbackScreen
+          message="Purchase order not selected"
+          onReturn={
+            closePurchaseOrderDetails
+          }
+        />
+      );
+    }
+
+    return (
+      <OrderDetails
+        purchaseOrder={
+          selectedPurchaseOrder
+        }
+        onReceiveOrder={
+          openReceiveOrder
+        }
+        onClose={
+          closePurchaseOrderDetails
+        }
+      />
+    );
+  }
+
+  if (
+    currentView ===
+    "receive-order"
+  ) {
+    if (
+      !selectedPurchaseOrder
+    ) {
+      return (
+        <FallbackScreen
+          message="Purchase order not selected"
+          onReturn={
+            closePurchaseOrderDetails
+          }
+        />
+      );
+    }
+
+    return (
+      <ReceiveOrder
+        purchaseOrder={
+          selectedPurchaseOrder
+        }
+        isProcessing={
+          isInvoiceProcessing
+        }
+        onTakePhoto={() =>
+          void handleTakeInvoicePhoto()
+        }
+        onChooseImage={() =>
+          void handleChooseInvoiceImage()
+        }
+        onChooseFile={() =>
+          void handleChooseInvoiceFile()
+        }
+        onManualReview={() =>
+          void handleManualReceivingReview()
+        }
+        onClose={() =>
+          setCurrentView(
+            "order-details",
+          )
+        }
+      />
+    );
+  }
+
+  if (
+    currentView ===
+    "invoice-review"
+  ) {
+    if (
+      !invoiceImportResult
+    ) {
+      return (
+        <FallbackScreen
+          message="Invoice review unavailable"
+          onReturn={() =>
+            setCurrentView(
+              "receive-order",
+            )
+          }
+        />
+      );
+    }
+
+    if (
+      isOrderReceiving
+    ) {
+      return (
+        <LoadingScreen
+          message="Receiving order and updating inventory…"
+        />
+      );
+    }
+
+    return (
+      <InvoiceReview
+        result={
+          invoiceImportResult
+        }
+        onChangeResult={
+          setInvoiceImportResult
+        }
+        onConfirm={(
+          result,
+        ) =>
+          void handleConfirmPurchaseOrderReceiving(
+            result,
+          )
+        }
+        onClose={() => {
+          if (
+            isOrderReceiving
+          ) {
+            return;
+          }
+
+          setInvoiceImportResult(
+            null,
+          );
+
+          setCurrentView(
+            "receive-order",
+          );
+        }}
+      />
+    );
+  }
+
+  if (
+    currentView ===
+    "create-order"
+  ) {
+    return (
+      <CreateOrder
+        reorderItems={
+          reorderItems
+        }
+        products={
+          products
+        }
+        cartItems={
+          orderDraftItems
+        }
+        scannedProduct={
+          scannedOrderProduct
+        }
+        onAddToCart={
+          addProductToOrderDraft
+        }
+        onScanBarcode={() =>
+          setCurrentView(
+            "order-scanner",
+          )
+        }
+        onClearScannedProduct={() =>
+          setScannedOrderProduct(
+            null,
+          )
+        }
+        onPreviewOrder={() =>
+          setCurrentView(
+            "order-preview",
+          )
+        }
+        onClose={() =>
+          setCurrentView(
+            "reorder-management",
+          )
+        }
+      />
+    );
+  }
+
+  if (
+    currentView ===
+    "order-preview"
+  ) {
+    return (
+      <OrderPreview
+        items={
+          orderDraftItems
+        }
+        vendorName={
+          orderVendorName
+        }
+        notes={
+          orderNotes
+        }
+        tax={
+          orderTax
+        }
+        orderNumber={
+          orderNumber
+        }
+        onVendorNameChange={
+          setOrderVendorName
+        }
+        onNotesChange={
+          setOrderNotes
+        }
+        onTaxChange={
+          setOrderTax
+        }
+        onIncrease={(
+          productId,
+        ) =>
+          changeOrderDraftQuantity(
+            productId,
+            1,
+          )
+        }
+        onDecrease={(
+          productId,
+        ) =>
+          changeOrderDraftQuantity(
+            productId,
+            -1,
+          )
+        }
+        onRemove={
+          removeOrderDraftItem
+        }
+        onAddMore={() =>
+          setCurrentView(
+            "create-order",
+          )
+        }
+        onSaveDraft={() =>
+          void handleSaveOrderDraft()
+        }
+        onPlaceOrder={() =>
+          void handlePlaceOrder()
+        }
+        isSaving={
+          isOrderDraftSaving
+        }
+        isPlacing={
+          isOrderPlacing
+        }
+        onClose={() =>
+          setCurrentView(
+            "create-order",
           )
         }
       />
@@ -2862,27 +4196,9 @@ function SmartStockApp() {
 
   if (
     currentView ===
-    "inventory-transaction"
+      "inventory-transaction" &&
+    selectedProduct
   ) {
-    if (
-      !selectedProduct
-    ) {
-      return (
-        <FallbackScreen
-          message="Product not selected"
-          onReturn={() => {
-            setTransactionReturnView(
-              "inventory",
-            );
-
-            setCurrentView(
-              "inventory",
-            );
-          }}
-        />
-      );
-    }
-
     return (
       <InventoryTransactionForm
         product={
@@ -2890,24 +4206,6 @@ function SmartStockApp() {
         }
         isSubmitting={
           isTransactionSubmitting
-        }
-        initialTransactionType={
-          transactionReturnView ===
-          "reorder-management"
-            ? "stock_in"
-            : undefined
-        }
-        initialQuantity={
-          transactionReturnView ===
-          "reorder-management"
-            ? Math.max(
-                selectedProduct.reorderLevel *
-                  2 -
-                  selectedProduct.currentStock,
-
-                0,
-              )
-            : undefined
         }
         onCancel={
           closeTransactionForm
@@ -2921,21 +4219,9 @@ function SmartStockApp() {
 
   if (
     currentView ===
-    "transaction-history"
+      "transaction-history" &&
+    selectedProduct
   ) {
-    if (
-      !selectedProduct
-    ) {
-      return (
-        <FallbackScreen
-          message="Product not selected"
-          onReturn={
-            closeTransactionHistory
-          }
-        />
-      );
-    }
-
     if (
       isHistoryLoading
     ) {
@@ -2966,21 +4252,9 @@ function SmartStockApp() {
 
   if (
     currentView ===
-    "edit-product"
+      "edit-product" &&
+    selectedProduct
   ) {
-    if (
-      !selectedProduct
-    ) {
-      return (
-        <FallbackScreen
-          message="Product not selected"
-          onReturn={
-            closeEditProduct
-          }
-        />
-      );
-    }
-
     return (
       <EditProductForm
         product={
@@ -3021,21 +4295,12 @@ function SmartStockApp() {
           }
         >
           <Pressable
-            accessibilityRole="button"
-            hitSlop={
-              10
-            }
             onPress={
               closeProductForm
             }
-            style={({
-              pressed,
-            }) => [
-              styles.secondaryButton,
-
-              pressed &&
-                styles.secondaryButtonPressed,
-            ]}
+            style={
+              styles.secondaryButton
+            }
           >
             <Text
               style={
@@ -3058,10 +4323,6 @@ function SmartStockApp() {
             handleCreateProduct
           }
         />
-
-        <StatusBar
-          style="auto"
-        />
       </SafeAreaView>
     );
   }
@@ -3072,8 +4333,10 @@ function SmartStockApp() {
   ) {
     return (
       <ImportInventory
-        onClose={
-          closeImportInventory
+        onClose={() =>
+          setCurrentView(
+            "inventory",
+          )
         }
       />
     );
@@ -3106,21 +4369,6 @@ function SmartStockApp() {
         contentContainerStyle={
           styles.listContent
         }
-        initialNumToRender={
-          10
-        }
-        maxToRenderPerBatch={
-          10
-        }
-        updateCellsBatchingPeriod={
-          40
-        }
-        windowSize={
-          7
-        }
-        removeClippedSubviews={
-          true
-        }
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <View>
@@ -3133,9 +4381,6 @@ function SmartStockApp() {
                 style={
                   styles.title
                 }
-                numberOfLines={
-                  2
-                }
               >
                 SmartStock
               </Text>
@@ -3145,11 +4390,7 @@ function SmartStockApp() {
                   styles.summary
                 }
               >
-                {products.length} active{" "}
-                {products.length ===
-                1
-                  ? "product"
-                  : "products"}
+                {products.length} active products
               </Text>
 
               <CloudSyncStatus
@@ -3174,17 +4415,23 @@ function SmartStockApp() {
                 onAnalytics={() =>
                   void openAnalytics()
                 }
-                onScanBarcode={
-                  openScanner
+                onScanBarcode={() =>
+                  setCurrentView(
+                    "scanner",
+                  )
                 }
                 onAddProductManually={
                   openManualProductForm
                 }
-                onImport={
-                  openImportInventory
+                onImport={() =>
+                  setCurrentView(
+                    "import-inventory",
+                  )
                 }
-                onExport={
-                  openExportReports
+                onExport={() =>
+                  setCurrentView(
+                    "export-reports",
+                  )
                 }
               />
             </View>
@@ -3206,64 +4453,6 @@ function SmartStockApp() {
                 clearInventoryFilters
               }
             />
-          </View>
-        }
-        ListEmptyComponent={
-          <View
-            style={
-              styles.emptyContainer
-            }
-          >
-            <Text
-              style={
-                styles.emptyTitle
-              }
-            >
-              {products.length ===
-              0
-                ? "No products yet"
-                : "No matching products"}
-            </Text>
-
-            <Text
-              style={
-                styles.statusText
-              }
-            >
-              {products.length ===
-              0
-                ? "Add your first product to start tracking inventory."
-                : "Try changing or resetting your inventory filters."}
-            </Text>
-
-            <Pressable
-              accessibilityRole="button"
-              onPress={
-                products.length ===
-                0
-                  ? openManualProductForm
-                  : clearInventoryFilters
-              }
-              style={({
-                pressed,
-              }) => [
-                styles.primaryButton,
-
-                pressed &&
-                  styles.primaryButtonPressed,
-              ]}
-            >
-              <Text
-                style={
-                  styles.primaryButtonText
-                }
-              >
-                {products.length ===
-                0
-                  ? "Add First Product"
-                  : "Reset Filters"}
-              </Text>
-            </Pressable>
           </View>
         }
         refreshing={
@@ -3370,21 +4559,16 @@ function FallbackScreen({
           onPress={
             onReturn
           }
-          style={({
-            pressed,
-          }) => [
-            styles.primaryButton,
-
-            pressed &&
-              styles.primaryButtonPressed,
-          ]}
+          style={
+            styles.primaryButton
+          }
         >
           <Text
             style={
               styles.primaryButtonText
             }
           >
-            Return to Inventory
+            Return
           </Text>
         </Pressable>
       </View>
@@ -3496,26 +4680,6 @@ const styles =
         "#111827",
     },
 
-    errorMessage: {
-      marginTop:
-        12,
-
-      maxWidth:
-        340,
-
-      fontSize:
-        14,
-
-      lineHeight:
-        21,
-
-      textAlign:
-        "center",
-
-      color:
-        "#5D6673",
-    },
-
     primaryButton: {
       marginTop:
         18,
@@ -3537,11 +4701,6 @@ const styles =
 
       backgroundColor:
         "#20252B",
-    },
-
-    primaryButtonPressed: {
-      backgroundColor:
-        "#111827",
     },
 
     primaryButtonText: {
@@ -3581,11 +4740,6 @@ const styles =
         "#FFFFFF",
     },
 
-    secondaryButtonPressed: {
-      backgroundColor:
-        "#F1F5F9",
-    },
-
     secondaryButtonText: {
       fontSize:
         14,
@@ -3595,30 +4749,5 @@ const styles =
 
       color:
         "#20252B",
-    },
-
-    emptyContainer: {
-      paddingHorizontal:
-        20,
-
-      paddingVertical:
-        60,
-
-      alignItems:
-        "center",
-    },
-
-    emptyTitle: {
-      fontSize:
-        20,
-
-      fontWeight:
-        "800",
-
-      textAlign:
-        "center",
-
-      color:
-        "#111827",
     },
   });

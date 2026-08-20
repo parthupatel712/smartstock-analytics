@@ -1,20 +1,45 @@
-import type { SQLiteDatabase } from "expo-sqlite";
+import type {
+  SQLiteDatabase,
+} from "expo-sqlite";
 
-import { getDatabase } from "./database";
+import {
+  getDatabase,
+} from "./database";
 
 interface TableColumn {
-  cid: number;
-  name: string;
-  type: string;
-  notnull: number;
-  dflt_value: string | null;
-  pk: number;
+  cid:
+    number;
+
+  name:
+    string;
+
+  type:
+    string;
+
+  notnull:
+    number;
+
+  dflt_value:
+    string | null;
+
+  pk:
+    number;
+}
+
+interface TableSqlRow {
+  sql:
+    string | null;
 }
 
 async function columnExists(
-  database: SQLiteDatabase,
-  tableName: string,
-  columnName: string,
+  database:
+    SQLiteDatabase,
+
+  tableName:
+    string,
+
+  columnName:
+    string,
 ): Promise<boolean> {
   const columns =
     await database.getAllAsync<TableColumn>(
@@ -22,14 +47,17 @@ async function columnExists(
     );
 
   return columns.some(
-    (column) =>
+    (
+      column,
+    ) =>
       column.name ===
       columnName,
   );
 }
 
 async function migrateProductsTable(
-  database: SQLiteDatabase,
+  database:
+    SQLiteDatabase,
 ): Promise<void> {
   const hasDepartment =
     await columnExists(
@@ -38,7 +66,9 @@ async function migrateProductsTable(
       "department",
     );
 
-  if (!hasDepartment) {
+  if (
+    !hasDepartment
+  ) {
     await database.execAsync(`
       ALTER TABLE products
       ADD COLUMN department TEXT NOT NULL DEFAULT 'Other';
@@ -52,7 +82,9 @@ async function migrateProductsTable(
       "brand",
     );
 
-  if (!hasBrand) {
+  if (
+    !hasBrand
+  ) {
     await database.execAsync(`
       ALTER TABLE products
       ADD COLUMN brand TEXT NOT NULL DEFAULT 'Generic';
@@ -61,6 +93,7 @@ async function migrateProductsTable(
 
   await database.execAsync(`
     UPDATE products
+
     SET
       department = CASE
         WHEN name = 'Sparkling Water 500 mL'
@@ -93,23 +126,13 @@ async function migrateProductsTable(
 }
 
 async function createProductIndexes(
-  database: SQLiteDatabase,
+  database:
+    SQLiteDatabase,
 ): Promise<void> {
   await database.execAsync(`
-    /*
-     * Barcode lookup.
-     *
-     * The UNIQUE constraint on barcode
-     * already creates an internal index,
-     * but keeping this explicit index is
-     * harmless and makes intent obvious.
-     */
     CREATE INDEX IF NOT EXISTS idx_products_barcode
       ON products(barcode);
 
-    /*
-     * Alphabetical sorting / search support.
-     */
     CREATE INDEX IF NOT EXISTS idx_products_name
       ON products(name);
 
@@ -122,35 +145,15 @@ async function createProductIndexes(
     CREATE INDEX IF NOT EXISTS idx_products_brand
       ON products(brand);
 
-    /*
-     * Very common active inventory query.
-     *
-     * Helps:
-     * - inventory list
-     * - archived vs active separation
-     * - dashboard counts
-     */
     CREATE INDEX IF NOT EXISTS idx_products_active
       ON products(is_active);
 
-    /*
-     * Useful when filtering active products
-     * by department.
-     */
     CREATE INDEX IF NOT EXISTS idx_products_active_department
       ON products(
         is_active,
         department
       );
 
-    /*
-     * Useful for low-stock / reorder queries.
-     *
-     * SQLite can use this for active product
-     * filtering before evaluating:
-     *
-     * current_stock <= reorder_level
-     */
     CREATE INDEX IF NOT EXISTS idx_products_active_stock
       ON products(
         is_active,
@@ -158,27 +161,20 @@ async function createProductIndexes(
         reorder_level
       );
 
-    /*
-     * Helps common active + alphabetical list
-     * queries.
-     */
     CREATE INDEX IF NOT EXISTS idx_products_active_name
       ON products(
         is_active,
         name
       );
 
-    /*
-     * Useful for cloud-sync conflict checks
-     * and recency-related operations.
-     */
     CREATE INDEX IF NOT EXISTS idx_products_updated_at
       ON products(updated_at);
   `);
 }
 
 async function createInventoryTransactionTable(
-  database: SQLiteDatabase,
+  database:
+    SQLiteDatabase,
 ): Promise<void> {
   await database.execAsync(`
     CREATE TABLE IF NOT EXISTS inventory_transactions (
@@ -239,57 +235,31 @@ async function createInventoryTransactionTable(
 }
 
 async function createInventoryTransactionIndexes(
-  database: SQLiteDatabase,
+  database:
+    SQLiteDatabase,
 ): Promise<void> {
   await database.execAsync(`
-    /*
-     * Product transaction history.
-     */
     CREATE INDEX IF NOT EXISTS idx_transactions_product_id
       ON inventory_transactions(product_id);
 
-    /*
-     * Filters such as:
-     * sale / stock_in / damage.
-     */
     CREATE INDEX IF NOT EXISTS idx_transactions_type
       ON inventory_transactions(transaction_type);
 
-    /*
-     * Global history / recent activity /
-     * Dashboard / Analytics date filters.
-     */
     CREATE INDEX IF NOT EXISTS idx_transactions_created_at
       ON inventory_transactions(created_at);
 
-    /*
-     * Product-specific history ordered or
-     * filtered by date.
-     */
     CREATE INDEX IF NOT EXISTS idx_transactions_product_created
       ON inventory_transactions(
         product_id,
         created_at
       );
 
-    /*
-     * Analytics commonly filters by
-     * transaction_type + created_at.
-     *
-     * Example:
-     * sale transactions from last 30 days.
-     */
     CREATE INDEX IF NOT EXISTS idx_transactions_type_created
       ON inventory_transactions(
         transaction_type,
         created_at
       );
 
-    /*
-     * Useful when analytics needs:
-     *
-     * product + transaction type + time period.
-     */
     CREATE INDEX IF NOT EXISTS idx_transactions_product_type_created
       ON inventory_transactions(
         product_id,
@@ -297,22 +267,12 @@ async function createInventoryTransactionIndexes(
         created_at
       );
 
-    /*
-     * Recent transaction ordering.
-     *
-     * SQLite indexes can be scanned in reverse,
-     * so ASC/DESC declaration isn't required.
-     */
     CREATE INDEX IF NOT EXISTS idx_transactions_created_id
       ON inventory_transactions(
         created_at,
         id
       );
 
-    /*
-     * Helps the latest stock-in / delivery
-     * queries for each product.
-     */
     CREATE INDEX IF NOT EXISTS idx_transactions_product_type_id
       ON inventory_transactions(
         product_id,
@@ -322,10 +282,392 @@ async function createInventoryTransactionIndexes(
   `);
 }
 
-export async function initializeDatabase(): Promise<void> {
+async function createPurchaseOrderTable(
+  database:
+    SQLiteDatabase,
+): Promise<void> {
+  await database.execAsync(`
+    CREATE TABLE IF NOT EXISTS purchase_orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+      order_number TEXT NOT NULL UNIQUE,
+
+      vendor_name TEXT NOT NULL DEFAULT '',
+
+      status TEXT NOT NULL
+        CHECK (
+          status IN (
+            'draft',
+            'ordered',
+            'partially_received',
+            'received',
+            'cancelled'
+          )
+        ),
+
+      notes TEXT NOT NULL DEFAULT '',
+
+      subtotal REAL NOT NULL DEFAULT 0
+        CHECK (subtotal >= 0),
+
+      tax REAL NOT NULL DEFAULT 0
+        CHECK (tax >= 0),
+
+      total REAL NOT NULL DEFAULT 0
+        CHECK (total >= 0),
+
+      created_at TEXT NOT NULL,
+
+      updated_at TEXT NOT NULL,
+
+      ordered_at TEXT,
+
+      received_at TEXT,
+
+      cancelled_at TEXT
+    );
+  `);
+}
+
+/*
+ * SQLite cannot modify an existing
+ * CHECK constraint directly.
+ *
+ * Rebuild old purchase_orders tables
+ * when the newest status is missing.
+ */
+async function migratePurchaseOrderStatus(
+  database:
+    SQLiteDatabase,
+): Promise<void> {
+  const row =
+    await database.getFirstAsync<TableSqlRow>(
+      `
+        SELECT
+          sql
+
+        FROM sqlite_master
+
+        WHERE
+          type = 'table'
+
+          AND name = 'purchase_orders'
+
+        LIMIT 1;
+      `,
+    );
+
+  const tableSql =
+    row?.sql ??
+    "";
+
+  if (
+    !tableSql ||
+    tableSql.includes(
+      "partially_received",
+    )
+  ) {
+    return;
+  }
+
+  await database.execAsync(`
+    PRAGMA foreign_keys = OFF;
+  `);
+
+  try {
+    await database.execAsync(`
+      BEGIN TRANSACTION;
+
+      CREATE TABLE purchase_orders_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        order_number TEXT NOT NULL UNIQUE,
+
+        vendor_name TEXT NOT NULL DEFAULT '',
+
+        status TEXT NOT NULL
+          CHECK (
+            status IN (
+              'draft',
+              'ordered',
+              'partially_received',
+              'received',
+              'received_with_exceptions',
+              'cancelled'
+            )
+          ),
+
+        notes TEXT NOT NULL DEFAULT '',
+
+        subtotal REAL NOT NULL DEFAULT 0
+          CHECK (subtotal >= 0),
+
+        tax REAL NOT NULL DEFAULT 0
+          CHECK (tax >= 0),
+
+        total REAL NOT NULL DEFAULT 0
+          CHECK (total >= 0),
+
+        created_at TEXT NOT NULL,
+
+        updated_at TEXT NOT NULL,
+
+        ordered_at TEXT,
+
+        received_at TEXT,
+
+        cancelled_at TEXT
+      );
+
+      INSERT INTO purchase_orders_new (
+        id,
+        order_number,
+        vendor_name,
+        status,
+        notes,
+        subtotal,
+        tax,
+        total,
+        created_at,
+        updated_at,
+        ordered_at,
+        received_at,
+        cancelled_at
+      )
+
+      SELECT
+        id,
+        order_number,
+        vendor_name,
+        status,
+        notes,
+        subtotal,
+        tax,
+        total,
+        created_at,
+        updated_at,
+        ordered_at,
+        received_at,
+        cancelled_at
+
+      FROM purchase_orders;
+
+      DROP TABLE purchase_orders;
+
+      ALTER TABLE purchase_orders_new
+      RENAME TO purchase_orders;
+
+      COMMIT;
+    `);
+  } catch (
+    error
+  ) {
+    try {
+      await database.execAsync(`
+        ROLLBACK;
+      `);
+    } catch {
+      /*
+       * Keep original migration error.
+       */
+    }
+
+    throw error;
+  } finally {
+    await database.execAsync(`
+      PRAGMA foreign_keys = ON;
+    `);
+  }
+}
+
+async function createPurchaseOrderItemsTable(
+  database:
+    SQLiteDatabase,
+): Promise<void> {
+  await database.execAsync(`
+    CREATE TABLE IF NOT EXISTS purchase_order_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+      order_id INTEGER NOT NULL,
+
+      product_id INTEGER,
+
+      barcode TEXT NOT NULL DEFAULT '',
+
+      product_name TEXT NOT NULL,
+
+      brand TEXT NOT NULL DEFAULT '',
+
+      department TEXT NOT NULL DEFAULT '',
+
+      category TEXT NOT NULL DEFAULT '',
+
+      quantity INTEGER NOT NULL
+        CHECK (quantity > 0),
+
+      received_quantity INTEGER NOT NULL DEFAULT 0
+        CHECK (received_quantity >= 0),
+
+      unit_cost REAL NOT NULL
+        CHECK (unit_cost >= 0),
+
+      line_total REAL NOT NULL
+        CHECK (line_total >= 0),
+
+      created_at TEXT NOT NULL,
+
+      last_received_at TEXT,
+
+      FOREIGN KEY (order_id)
+        REFERENCES purchase_orders(id)
+        ON UPDATE CASCADE
+        ON DELETE CASCADE,
+
+      FOREIGN KEY (product_id)
+        REFERENCES products(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+    );
+  `);
+}
+
+async function migratePurchaseOrderItemsTable(
+  database:
+    SQLiteDatabase,
+): Promise<void> {
+  const hasReceivedQuantity =
+    await columnExists(
+      database,
+      "purchase_order_items",
+      "received_quantity",
+    );
+
+  if (
+    !hasReceivedQuantity
+  ) {
+    await database.execAsync(`
+      ALTER TABLE purchase_order_items
+
+      ADD COLUMN received_quantity
+        INTEGER NOT NULL DEFAULT 0
+
+        CHECK (
+          received_quantity >= 0
+        );
+    `);
+  }
+
+  const hasLastReceivedAt =
+    await columnExists(
+      database,
+      "purchase_order_items",
+      "last_received_at",
+    );
+
+  if (
+    !hasLastReceivedAt
+  ) {
+    await database.execAsync(`
+      ALTER TABLE purchase_order_items
+      ADD COLUMN last_received_at TEXT;
+    `);
+  }
+
+  await database.execAsync(`
+    UPDATE purchase_order_items
+
+    SET received_quantity = 0
+
+    WHERE
+      received_quantity IS NULL
+
+      OR received_quantity < 0;
+  `);
+
+  await database.execAsync(`
+    UPDATE purchase_order_items
+
+    SET received_quantity = quantity
+
+    WHERE
+      received_quantity > quantity;
+  `);
+}
+
+async function createPurchaseOrderIndexes(
+  database:
+    SQLiteDatabase,
+): Promise<void> {
+  await database.execAsync(`
+    CREATE INDEX IF NOT EXISTS idx_purchase_orders_order_number
+      ON purchase_orders(order_number);
+
+    CREATE INDEX IF NOT EXISTS idx_purchase_orders_status
+      ON purchase_orders(status);
+
+    CREATE INDEX IF NOT EXISTS idx_purchase_orders_vendor
+      ON purchase_orders(vendor_name);
+
+    CREATE INDEX IF NOT EXISTS idx_purchase_orders_created_at
+      ON purchase_orders(created_at);
+
+    CREATE INDEX IF NOT EXISTS idx_purchase_orders_ordered_at
+      ON purchase_orders(ordered_at);
+
+    CREATE INDEX IF NOT EXISTS idx_purchase_orders_status_created
+      ON purchase_orders(
+        status,
+        created_at
+      );
+
+    CREATE INDEX IF NOT EXISTS idx_purchase_orders_vendor_created
+      ON purchase_orders(
+        vendor_name,
+        created_at
+      );
+
+    CREATE INDEX IF NOT EXISTS idx_purchase_orders_updated_at
+      ON purchase_orders(updated_at);
+
+    CREATE INDEX IF NOT EXISTS idx_purchase_order_items_order_id
+      ON purchase_order_items(order_id);
+
+    CREATE INDEX IF NOT EXISTS idx_purchase_order_items_product_id
+      ON purchase_order_items(product_id);
+
+    CREATE INDEX IF NOT EXISTS idx_purchase_order_items_barcode
+      ON purchase_order_items(barcode);
+
+    CREATE INDEX IF NOT EXISTS idx_purchase_order_items_order_product
+      ON purchase_order_items(
+        order_id,
+        product_id
+      );
+
+    CREATE INDEX IF NOT EXISTS idx_purchase_order_items_receiving
+      ON purchase_order_items(
+        order_id,
+        received_quantity,
+        quantity
+      );
+
+    CREATE INDEX IF NOT EXISTS idx_purchase_order_items_product_receiving
+      ON purchase_order_items(
+        product_id,
+        received_quantity,
+        quantity
+      );
+  `);
+}
+
+export async function initializeDatabase():
+  Promise<void> {
   const database =
     await getDatabase();
 
+  /*
+   * V1 PRODUCTS
+   */
   await database.execAsync(`
     CREATE TABLE IF NOT EXISTS products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -369,11 +711,37 @@ export async function initializeDatabase(): Promise<void> {
     database,
   );
 
+  /*
+   * V1 TRANSACTIONS
+   */
   await createInventoryTransactionTable(
     database,
   );
 
   await createInventoryTransactionIndexes(
+    database,
+  );
+
+  /*
+   * V2 PURCHASE ORDERS
+   */
+  await createPurchaseOrderTable(
+    database,
+  );
+
+  await migratePurchaseOrderStatus(
+    database,
+  );
+
+  await createPurchaseOrderItemsTable(
+    database,
+  );
+
+  await migratePurchaseOrderItemsTable(
+    database,
+  );
+
+  await createPurchaseOrderIndexes(
     database,
   );
 }

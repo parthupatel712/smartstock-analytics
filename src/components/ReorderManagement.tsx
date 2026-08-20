@@ -23,10 +23,23 @@ interface ReorderManagementProps {
   items:
     ReorderItem[];
 
-  onStockIn: (
-    product:
-      ReorderItem["product"],
-  ) => void;
+  draftQuantities:
+    Map<
+      number,
+      number
+    >;
+
+  orderedQuantities:
+    Map<
+      number,
+      number
+    >;
+
+  onCreateOrder:
+    () => void;
+
+  onOpenOrderManagement:
+    () => void;
 
   onClose:
     () => void;
@@ -34,7 +47,10 @@ interface ReorderManagementProps {
 
 export function ReorderManagement({
   items,
-  onStockIn,
+  draftQuantities,
+  orderedQuantities,
+  onCreateOrder,
+  onOpenOrderManagement,
   onClose,
 }: ReorderManagementProps) {
   const outOfStockCount =
@@ -46,15 +62,6 @@ export function ReorderManagement({
         "out_of_stock",
     ).length;
 
-  const criticalCount =
-    items.filter(
-      (
-        item,
-      ) =>
-        item.priority ===
-        "critical",
-    ).length;
-
   const lowStockCount =
     items.filter(
       (
@@ -62,6 +69,34 @@ export function ReorderManagement({
       ) =>
         item.priority ===
         "low_stock",
+    ).length;
+
+  const productsInDraft =
+    items.filter(
+      (
+        item,
+      ) =>
+        (
+          draftQuantities.get(
+            item.product.id,
+          ) ??
+          0
+        ) >
+        0,
+    ).length;
+
+  const productsOnOrder =
+    items.filter(
+      (
+        item,
+      ) =>
+        (
+          orderedQuantities.get(
+            item.product.id,
+          ) ??
+          0
+        ) >
+        0,
     ).length;
 
   return (
@@ -107,7 +142,7 @@ export function ReorderManagement({
                 styles.subtitle
               }
             >
-              Products at or below their reorder level appear here automatically.
+              Review low-stock products and track what is already in draft or waiting to arrive.
             </Text>
           </View>
 
@@ -161,22 +196,179 @@ export function ReorderManagement({
           />
 
           <SummaryCard
-            label="Critical"
+            label="In Draft"
             value={
-              criticalCount
+              productsInDraft
             }
-            icon="warning-outline"
-            tone="warning"
+            icon="document-text-outline"
+            tone="draft"
           />
 
           <SummaryCard
-            label="Low Stock"
+            label="On Order"
             value={
-              lowStockCount
+              productsOnOrder
             }
-            icon="trending-down-outline"
+            icon="cube-outline"
+            tone="ordered"
           />
         </View>
+
+        <View
+          style={
+            styles.orderActions
+          }
+        >
+          <Pressable
+            accessibilityRole="button"
+            onPress={
+              onCreateOrder
+            }
+            style={({
+              pressed,
+            }) => [
+              styles.createOrderButton,
+
+              pressed &&
+                styles.createOrderButtonPressed,
+            ]}
+          >
+            <Ionicons
+              name={
+                productsInDraft >
+                0
+                  ? "document-text-outline"
+                  : "cart-outline"
+              }
+              size={
+                19
+              }
+              color="#FFFFFF"
+            />
+
+            <Text
+              style={
+                styles.createOrderButtonText
+              }
+            >
+              {productsInDraft >
+              0
+                ? "Continue Draft Order"
+                : "Create Order"}
+            </Text>
+
+            <Ionicons
+              name="arrow-forward"
+              size={
+                18
+              }
+              color="#FFFFFF"
+            />
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={
+              onOpenOrderManagement
+            }
+            style={({
+              pressed,
+            }) => [
+              styles.orderManagementButton,
+
+              pressed &&
+                styles.orderManagementButtonPressed,
+            ]}
+          >
+            <Ionicons
+              name="file-tray-full-outline"
+              size={
+                19
+              }
+              color="#20252B"
+            />
+
+            <View
+              style={
+                styles.orderManagementTextContainer
+              }
+            >
+              <Text
+                style={
+                  styles.orderManagementTitle
+                }
+              >
+                Order Management
+              </Text>
+
+              <Text
+                style={
+                  styles.orderManagementSubtitle
+                }
+              >
+                View drafts, placed orders and purchase history
+              </Text>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={
+                19
+              }
+              color="#64748B"
+            />
+          </Pressable>
+        </View>
+
+        {productsInDraft >
+        0 ? (
+          <View
+            style={
+              styles.draftMessageContainer
+            }
+          >
+            <Ionicons
+              name="document-text-outline"
+              size={
+                16
+              }
+              color="#2563EB"
+            />
+
+            <Text
+              style={
+                styles.draftMessage
+              }
+            >
+              Draft quantities are saved, but the product still needs attention until the purchase order is placed.
+            </Text>
+          </View>
+        ) : null}
+
+        {productsOnOrder >
+        0 ? (
+          <View
+            style={
+              styles.orderedMessageContainer
+            }
+          >
+            <Ionicons
+              name="cube-outline"
+              size={
+                16
+              }
+              color="#B45309"
+            />
+
+            <Text
+              style={
+                styles.orderedMessage
+              }
+            >
+              On-order quantities have already been purchased but are not part of physical stock until the order is received.
+            </Text>
+          </View>
+        ) : null}
 
         <View
           style={
@@ -196,7 +388,7 @@ export function ReorderManagement({
               styles.sectionSubtitle
             }
           >
-            Highest-priority products appear first.
+            Physical stock determines whether a product remains in this queue.
           </Text>
         </View>
 
@@ -230,6 +422,37 @@ export function ReorderManagement({
             >
               No active products are currently at or below their reorder level.
             </Text>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={
+                onOpenOrderManagement
+              }
+              style={({
+                pressed,
+              }) => [
+                styles.emptyOrdersButton,
+
+                pressed &&
+                  styles.buttonPressed,
+              ]}
+            >
+              <Ionicons
+                name="file-tray-full-outline"
+                size={
+                  17
+                }
+                color="#20252B"
+              />
+
+              <Text
+                style={
+                  styles.emptyOrdersButtonText
+                }
+              >
+                View Order Management
+              </Text>
+            </Pressable>
           </View>
         ) : (
           items.map(
@@ -243,8 +466,17 @@ export function ReorderManagement({
                 item={
                   item
                 }
-                onStockIn={
-                  onStockIn
+                draftQuantity={
+                  draftQuantities.get(
+                    item.product.id,
+                  ) ??
+                  0
+                }
+                orderedQuantity={
+                  orderedQuantities.get(
+                    item.product.id,
+                  ) ??
+                  0
                 }
               />
             ),
@@ -271,22 +503,26 @@ function SummaryCard({
   icon:
     | "cart-outline"
     | "alert-circle-outline"
-    | "warning-outline"
-    | "trending-down-outline";
+    | "document-text-outline"
+    | "cube-outline";
 
   tone?:
     | "normal"
-    | "warning"
-    | "danger";
+    | "danger"
+    | "draft"
+    | "ordered";
 }) {
   const color =
     tone ===
     "danger"
       ? "#B42318"
       : tone ===
-          "warning"
-        ? "#B45309"
-        : "#52606D";
+          "draft"
+        ? "#2563EB"
+        : tone ===
+            "ordered"
+          ? "#B45309"
+          : "#52606D";
 
   return (
     <View
@@ -294,12 +530,16 @@ function SummaryCard({
         styles.summaryCard,
 
         tone ===
-          "warning" &&
-          styles.summaryCardWarning,
-
-        tone ===
           "danger" &&
           styles.summaryCardDanger,
+
+        tone ===
+          "draft" &&
+          styles.summaryCardDraft,
+
+        tone ===
+          "ordered" &&
+          styles.summaryCardOrdered,
       ]}
     >
       <Ionicons
@@ -318,13 +558,9 @@ function SummaryCard({
         style={[
           styles.summaryValue,
 
-          tone ===
-            "warning" &&
-            styles.summaryValueWarning,
-
-          tone ===
-            "danger" &&
-            styles.summaryValueDanger,
+          {
+            color,
+          },
         ]}
       >
         {
@@ -347,15 +583,17 @@ function SummaryCard({
 
 function ReorderCard({
   item,
-  onStockIn,
+  draftQuantity,
+  orderedQuantity,
 }: {
   item:
     ReorderItem;
 
-  onStockIn: (
-    product:
-      ReorderItem["product"],
-  ) => void;
+  draftQuantity:
+    number;
+
+  orderedQuantity:
+    number;
 }) {
   const priority =
     getPriorityDisplay(
@@ -374,10 +612,6 @@ function ReorderCard({
       " · ",
     );
 
-  const estimatedReorderCost =
-    item.suggestedReorderQuantity *
-    item.product.unitCost;
-
   return (
     <View
       style={[
@@ -388,7 +622,7 @@ function ReorderCard({
           styles.reorderCardDanger,
 
         item.priority ===
-          "critical" &&
+          "low_stock" &&
           styles.reorderCardWarning,
       ]}
     >
@@ -450,9 +684,6 @@ function ReorderCard({
                   priority.color,
               },
             ]}
-            numberOfLines={
-              1
-            }
           >
             {
               priority.label
@@ -477,101 +708,78 @@ function ReorderCard({
 
       <View
         style={
-          styles.metricsGrid
-        }
-      >
-        <Metric
-          label="Current"
-          value={
-            item.currentStock
-          }
-        />
-
-        <Metric
-          label="Reorder At"
-          value={
-            item.reorderLevel
-          }
-        />
-
-        <Metric
-          label="Target"
-          value={
-            item.targetStock
-          }
-        />
-
-        <Metric
-          label="Suggested"
-          value={
-            item.suggestedReorderQuantity
-          }
-          emphasized
-        />
-      </View>
-
-      <View
-        style={
-          styles.costRow
+          styles.infoRow
         }
       >
         <View
           style={
-            styles.costBlock
+            styles.infoBlock
           }
         >
           <Text
             style={
-              styles.costLabel
+              styles.infoLabel
             }
           >
-            Estimated reorder cost
+            Current Stock
+          </Text>
+
+          <Text
+            style={[
+              styles.infoValue,
+
+              item.currentStock ===
+                0 &&
+                styles.outOfStockValue,
+            ]}
+          >
+            {
+              item.currentStock
+            }
+          </Text>
+        </View>
+
+        <View
+          style={
+            styles.infoBlock
+          }
+        >
+          <Text
+            style={
+              styles.infoLabel
+            }
+          >
+            Reorder At
           </Text>
 
           <Text
             style={
-              styles.costValue
-            }
-            numberOfLines={
-              1
-            }
-            adjustsFontSizeToFit
-            minimumFontScale={
-              0.8
+              styles.infoValue
             }
           >
             {
-              formatCurrency(
-                estimatedReorderCost,
-              )
+              item.reorderLevel
             }
           </Text>
         </View>
 
         <View
           style={[
-            styles.costBlock,
-            styles.costRight,
+            styles.infoBlock,
+            styles.infoBlockRight,
           ]}
         >
           <Text
             style={
-              styles.costLabel
+              styles.infoLabel
             }
           >
-            Unit cost
+            Unit Cost
           </Text>
 
           <Text
             style={
               styles.unitCostValue
-            }
-            numberOfLines={
-              1
-            }
-            adjustsFontSizeToFit
-            minimumFontScale={
-              0.8
             }
           >
             {
@@ -583,96 +791,83 @@ function ReorderCard({
         </View>
       </View>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Add stock for ${item.product.name}`}
-        onPress={() =>
-          onStockIn(
-            item.product,
-          )
-        }
-        style={({
-          pressed,
-        }) => [
-          styles.stockInButton,
-
-          pressed &&
-            styles.buttonPressed,
-        ]}
-      >
-        <Ionicons
-          name="add-circle-outline"
-          size={
-            18
-          }
-          color="#FFFFFF"
-        />
-
-        <Text
+      {draftQuantity >
+      0 ? (
+        <View
           style={
-            styles.stockInButtonText
+            styles.draftBadgeRow
           }
         >
-          Stock In
-        </Text>
-      </Pressable>
-    </View>
-  );
-}
+          <Ionicons
+            name="document-text-outline"
+            size={
+              16
+            }
+            color="#2563EB"
+          />
 
-function Metric({
-  label,
-  value,
-  emphasized =
-    false,
-}: {
-  label:
-    string;
+          <View
+            style={
+              styles.statusTextContainer
+            }
+          >
+            <Text
+              style={
+                styles.draftBadgeText
+              }
+            >
+              {draftQuantity} in Draft Order
+            </Text>
 
-  value:
-    number;
+            <Text
+              style={
+                styles.statusDescription
+              }
+            >
+              Selected, but the purchase order has not been placed yet.
+            </Text>
+          </View>
+        </View>
+      ) : null}
 
-  emphasized?:
-    boolean;
-}) {
-  return (
-    <View
-      style={[
-        styles.metric,
+      {orderedQuantity >
+      0 ? (
+        <View
+          style={
+            styles.orderedBadgeRow
+          }
+        >
+          <Ionicons
+            name="cube-outline"
+            size={
+              16
+            }
+            color="#B45309"
+          />
 
-        emphasized &&
-          styles.metricEmphasized,
-      ]}
-    >
-      <Text
-        style={
-          styles.metricLabel
-        }
-      >
-        {
-          label
-        }
-      </Text>
+          <View
+            style={
+              styles.statusTextContainer
+            }
+          >
+            <Text
+              style={
+                styles.orderedBadgeText
+              }
+            >
+              {orderedQuantity} On Order
+            </Text>
 
-      <Text
-        style={[
-          styles.metricValue,
-
-          emphasized &&
-            styles.metricValueEmphasized,
-        ]}
-        numberOfLines={
-          1
-        }
-        adjustsFontSizeToFit
-        minimumFontScale={
-          0.8
-        }
-      >
-        {
-          value
-        }
-      </Text>
+            <Text
+              style={
+                styles.statusDescription
+              }
+            >
+              Purchase order placed. Waiting for the stock to be received.
+            </Text>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -705,18 +900,6 @@ function getPriorityDisplay(
           "#FFF1F0",
       };
 
-    case "critical":
-      return {
-        label:
-          "Critical",
-
-        color:
-          "#B45309",
-
-        background:
-          "#FFF7ED",
-      };
-
     case "low_stock":
     default:
       return {
@@ -724,10 +907,10 @@ function getPriorityDisplay(
           "Low Stock",
 
         color:
-          "#2563EB",
+          "#B45309",
 
         background:
-          "#EFF6FF",
+          "#FFF7ED",
       };
   }
 }
@@ -885,7 +1068,7 @@ const styles =
         "48%",
 
       minHeight:
-        105,
+        100,
 
       borderWidth:
         1,
@@ -903,20 +1086,28 @@ const styles =
         "#FFFFFF",
     },
 
-    summaryCardWarning: {
-      borderColor:
-        "#FDE68A",
-
-      backgroundColor:
-        "#FFFBEB",
-    },
-
     summaryCardDanger: {
       borderColor:
         "#FECACA",
 
       backgroundColor:
         "#FFF8F7",
+    },
+
+    summaryCardDraft: {
+      borderColor:
+        "#BFDBFE",
+
+      backgroundColor:
+        "#EFF6FF",
+    },
+
+    summaryCardOrdered: {
+      borderColor:
+        "#FDE68A",
+
+      backgroundColor:
+        "#FFFBEB",
     },
 
     summaryValue: {
@@ -928,19 +1119,6 @@ const styles =
 
       fontWeight:
         "800",
-
-      color:
-        "#111827",
-    },
-
-    summaryValueWarning: {
-      color:
-        "#B45309",
-    },
-
-    summaryValueDanger: {
-      color:
-        "#B42318",
     },
 
     summaryLabel: {
@@ -955,6 +1133,194 @@ const styles =
 
       color:
         "#6B7280",
+    },
+
+    orderActions: {
+      marginTop:
+        18,
+
+      gap:
+        10,
+    },
+
+    createOrderButton: {
+      minHeight:
+        50,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "center",
+
+      gap:
+        8,
+
+      borderRadius:
+        13,
+
+      backgroundColor:
+        "#20252B",
+    },
+
+    createOrderButtonPressed: {
+      backgroundColor:
+        "#111827",
+    },
+
+    createOrderButtonText: {
+      fontSize:
+        14,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#FFFFFF",
+    },
+
+    orderManagementButton: {
+      minHeight:
+        65,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
+      gap:
+        10,
+
+      borderWidth:
+        1,
+
+      borderColor:
+        "#D6DCE3",
+
+      borderRadius:
+        13,
+
+      paddingHorizontal:
+        14,
+
+      backgroundColor:
+        "#FFFFFF",
+    },
+
+    orderManagementButtonPressed: {
+      backgroundColor:
+        "#F8FAFC",
+    },
+
+    orderManagementTextContainer: {
+      flex:
+        1,
+
+      minWidth:
+        0,
+    },
+
+    orderManagementTitle: {
+      fontSize:
+        13,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#20252B",
+    },
+
+    orderManagementSubtitle: {
+      marginTop:
+        2,
+
+      fontSize:
+        10,
+
+      lineHeight:
+        14,
+
+      color:
+        "#7A838E",
+    },
+
+    draftMessageContainer: {
+      marginTop:
+        10,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "flex-start",
+
+      gap:
+        7,
+
+      borderRadius:
+        10,
+
+      padding:
+        10,
+
+      backgroundColor:
+        "#EFF6FF",
+    },
+
+    draftMessage: {
+      flex:
+        1,
+
+      fontSize:
+        10,
+
+      lineHeight:
+        15,
+
+      color:
+        "#64748B",
+    },
+
+    orderedMessageContainer: {
+      marginTop:
+        10,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "flex-start",
+
+      gap:
+        7,
+
+      borderRadius:
+        10,
+
+      padding:
+        10,
+
+      backgroundColor:
+        "#FFFBEB",
+    },
+
+    orderedMessage: {
+      flex:
+        1,
+
+      fontSize:
+        10,
+
+      lineHeight:
+        15,
+
+      color:
+        "#78614A",
     },
 
     sectionHeader: {
@@ -1043,9 +1409,6 @@ const styles =
     },
 
     productName: {
-      flexShrink:
-        1,
-
       fontSize:
         17,
 
@@ -1080,9 +1443,6 @@ const styles =
       alignSelf:
         "flex-start",
 
-      maxWidth:
-        110,
-
       borderRadius:
         999,
 
@@ -1099,9 +1459,6 @@ const styles =
 
       fontWeight:
         "800",
-
-      textAlign:
-        "center",
     },
 
     barcode: {
@@ -1115,43 +1472,40 @@ const styles =
         "#8B949E",
     },
 
-    metricsGrid: {
+    infoRow: {
       marginTop:
-        15,
+        14,
 
       flexDirection:
         "row",
 
-      flexWrap:
-        "wrap",
-
       gap:
         8,
+
+      borderTopWidth:
+        1,
+
+      borderTopColor:
+        "#EEF0F2",
+
+      paddingTop:
+        12,
     },
 
-    metric: {
-      width:
-        "48%",
+    infoBlock: {
+      flex:
+        1,
 
       minWidth:
         0,
-
-      borderRadius:
-        10,
-
-      padding:
-        10,
-
-      backgroundColor:
-        "#F8FAFC",
     },
 
-    metricEmphasized: {
-      backgroundColor:
-        "#EFF6FF",
+    infoBlockRight: {
+      alignItems:
+        "flex-end",
     },
 
-    metricLabel: {
+    infoLabel: {
       fontSize:
         9,
 
@@ -1165,12 +1519,12 @@ const styles =
         "#8B949E",
     },
 
-    metricValue: {
+    infoValue: {
       marginTop:
         4,
 
       fontSize:
-        18,
+        16,
 
       fontWeight:
         "800",
@@ -1179,118 +1533,116 @@ const styles =
         "#20252B",
     },
 
-    metricValueEmphasized: {
+    outOfStockValue: {
       color:
-        "#1D4ED8",
-    },
-
-    costRow: {
-      marginTop:
-        14,
-
-      flexDirection:
-        "row",
-
-      justifyContent:
-        "space-between",
-
-      gap:
-        12,
-
-      borderTopWidth:
-        1,
-
-      borderTopColor:
-        "#EEF0F2",
-
-      paddingTop:
-        13,
-    },
-
-    costBlock: {
-      flex:
-        1,
-
-      minWidth:
-        0,
-    },
-
-    costRight: {
-      alignItems:
-        "flex-end",
-    },
-
-    costLabel: {
-      fontSize:
-        10,
-
-      color:
-        "#8B949E",
-    },
-
-    costValue: {
-      marginTop:
-        3,
-
-      fontSize:
-        15,
-
-      fontWeight:
-        "800",
-
-      color:
-        "#111827",
+        "#B42318",
     },
 
     unitCostValue: {
       marginTop:
-        3,
+        4,
 
       fontSize:
-        13,
-
-      fontWeight:
-        "700",
-
-      color:
-        "#52606D",
-    },
-
-    stockInButton: {
-      marginTop:
-        15,
-
-      minHeight:
-        46,
-
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      justifyContent:
-        "center",
-
-      gap:
-        7,
-
-      borderRadius:
-        11,
-
-      backgroundColor:
-        "#20252B",
-    },
-
-    stockInButtonText: {
-      fontSize:
-        13,
+        14,
 
       fontWeight:
         "800",
 
       color:
-        "#FFFFFF",
+        "#20252B",
+    },
+
+    draftBadgeRow: {
+      marginTop:
+        13,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "flex-start",
+
+      gap:
+        8,
+
+      borderRadius:
+        11,
+
+      paddingHorizontal:
+        10,
+
+      paddingVertical:
+        9,
+
+      backgroundColor:
+        "#EFF6FF",
+    },
+
+    orderedBadgeRow: {
+      marginTop:
+        9,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "flex-start",
+
+      gap:
+        8,
+
+      borderRadius:
+        11,
+
+      paddingHorizontal:
+        10,
+
+      paddingVertical:
+        9,
+
+      backgroundColor:
+        "#FFFBEB",
+    },
+
+    statusTextContainer: {
+      flex:
+        1,
+    },
+
+    draftBadgeText: {
+      fontSize:
+        11,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#2563EB",
+    },
+
+    orderedBadgeText: {
+      fontSize:
+        11,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#B45309",
+    },
+
+    statusDescription: {
+      marginTop:
+        2,
+
+      fontSize:
+        9,
+
+      lineHeight:
+        14,
+
+      color:
+        "#64748B",
     },
 
     emptyCard: {
@@ -1351,5 +1703,51 @@ const styles =
 
       color:
         "#6B7280",
+    },
+
+    emptyOrdersButton: {
+      marginTop:
+        16,
+
+      minHeight:
+        42,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "center",
+
+      gap:
+        7,
+
+      borderWidth:
+        1,
+
+      borderColor:
+        "#CBD2DA",
+
+      borderRadius:
+        10,
+
+      paddingHorizontal:
+        14,
+
+      backgroundColor:
+        "#FFFFFF",
+    },
+
+    emptyOrdersButtonText: {
+      fontSize:
+        12,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#20252B",
     },
   });

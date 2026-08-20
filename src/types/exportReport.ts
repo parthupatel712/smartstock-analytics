@@ -1,7 +1,8 @@
 export type ExportReportType =
   | "inventory"
   | "transactions"
-  | "analytics";
+  | "analytics"
+  |"purchase-order";
 
 export type ExportFileFormat =
   | "csv"
