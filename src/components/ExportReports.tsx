@@ -160,7 +160,6 @@ export function ExportReports({
         "top",
         "left",
         "right",
-        "bottom",
       ]}
       style={
         styles.screen

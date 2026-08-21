@@ -105,7 +105,6 @@ export function ReorderManagement({
         "top",
         "left",
         "right",
-        "bottom",
       ]}
       style={
         styles.screen

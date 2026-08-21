@@ -29,6 +29,11 @@ import {
 } from "./src/components/BarcodeScanner";
 
 import {
+  BottomNavigation,
+  type BottomNavigationItem,
+} from "./src/components/BottomNavigation";
+
+import {
   CloudSyncStatus,
 } from "./src/components/CloudSyncStatus";
 
@@ -329,6 +334,37 @@ type AppView =
   | "order-preview"
   | "import-inventory";
 
+function getActiveBottomNavigationItem(
+  view:
+    AppView,
+): BottomNavigationItem | null {
+  switch (
+    view
+  ) {
+    case "dashboard":
+      return "dashboard";
+
+    case "global-transactions":
+      return "history";
+
+    case "scanner":
+      return "scan";
+
+    case "reorder-management":
+      return "reorder";
+
+    case "analytics":
+      return "analytics";
+
+    case "export-reports":
+    case "import-inventory":
+      return "data";
+
+    default:
+      return null;
+  }
+}
+
 const CLOUD_SYNC_TIMEOUT_MS =
   8000;
 
@@ -337,58 +373,128 @@ const INVENTORY_SEARCH_DEBOUNCE_MS =
 
 const INITIAL_DASHBOARD_SUMMARY:
   InventoryDashboardSummary = {
-    totalProducts: 0,
-    totalStockUnits: 0,
-    totalInventoryCostValue: 0,
-    totalInventoryRetailValue: 0,
-    potentialGrossProfit: 0,
-    lowStockProductCount: 0,
-    outOfStockProductCount: 0,
-    recentSalesValue: 0,
-    recentStockInValue: 0,
-    recentDamageValue: 0,
-    recentTransactionCount: 0,
+    totalProducts:
+      0,
+
+    totalStockUnits:
+      0,
+
+    totalInventoryCostValue:
+      0,
+
+    totalInventoryRetailValue:
+      0,
+
+    potentialGrossProfit:
+      0,
+
+    lowStockProductCount:
+      0,
+
+    outOfStockProductCount:
+      0,
+
+    recentSalesValue:
+      0,
+
+    recentStockInValue:
+      0,
+
+    recentDamageValue:
+      0,
+
+    recentTransactionCount:
+      0,
   };
 
 const INITIAL_ANALYTICS_SUMMARY:
   InventoryAnalyticsSummary = {
-    dailyMetrics: [],
-    topProducts: [],
-    topCategories: [],
-    categoryShareMetrics: [],
+    dailyMetrics:
+      [],
+
+    topProducts:
+      [],
+
+    topCategories:
+      [],
+
+    categoryShareMetrics:
+      [],
 
     comparison: {
       current: {
-        salesValue: 0,
-        estimatedProfit: 0,
-        salesUnits: 0,
-        stockInValue: 0,
-        stockInUnits: 0,
-        damageValue: 0,
-        damageUnits: 0,
-        transactionCount: 0,
+        salesValue:
+          0,
+
+        estimatedProfit:
+          0,
+
+        salesUnits:
+          0,
+
+        stockInValue:
+          0,
+
+        stockInUnits:
+          0,
+
+        damageValue:
+          0,
+
+        damageUnits:
+          0,
+
+        transactionCount:
+          0,
       },
 
       previous: {
-        salesValue: 0,
-        estimatedProfit: 0,
-        salesUnits: 0,
-        stockInValue: 0,
-        stockInUnits: 0,
-        damageValue: 0,
-        damageUnits: 0,
-        transactionCount: 0,
+        salesValue:
+          0,
+
+        estimatedProfit:
+          0,
+
+        salesUnits:
+          0,
+
+        stockInValue:
+          0,
+
+        stockInUnits:
+          0,
+
+        damageValue:
+          0,
+
+        damageUnits:
+          0,
+
+        transactionCount:
+          0,
       },
 
-      salesValueChangePercent: 0,
-      salesUnitsChangePercent: 0,
-      estimatedProfitChangePercent: 0,
-      stockInUnitsChangePercent: 0,
-      damageValueChangePercent: 0,
+      salesValueChangePercent:
+        0,
+
+      salesUnitsChangePercent:
+        0,
+
+      estimatedProfitChangePercent:
+        0,
+
+      stockInUnitsChangePercent:
+        0,
+
+      damageValueChangePercent:
+        0,
     },
 
-    productTrends: [],
-    salesTrendMetrics: [],
+    productTrends:
+      [],
+
+    salesTrendMetrics:
+      [],
   };
 
 const currencyFormatter =
@@ -437,6 +543,7 @@ async function withCloudTimeout<T>(
                 ),
               );
             },
+
             CLOUD_SYNC_TIMEOUT_MS,
           );
       },
@@ -984,6 +1091,7 @@ function SmartStockApp() {
           null,
         );
       },
+
       [],
     );
 
@@ -997,6 +1105,7 @@ function SmartStockApp() {
           quantities,
         );
       },
+
       [],
     );
 
@@ -1059,6 +1168,7 @@ function SmartStockApp() {
             1,
         );
       },
+
       [],
     );
 
@@ -1190,6 +1300,7 @@ function SmartStockApp() {
           );
         }
       },
+
       [
         products,
         refreshDraftQuantities,
@@ -1300,6 +1411,7 @@ function SmartStockApp() {
               },
             );
       },
+
       [
         orderNotes,
         orderTax,
@@ -1349,6 +1461,7 @@ function SmartStockApp() {
               }
             )();
           },
+
           INVENTORY_SEARCH_DEBOUNCE_MS,
         );
 
@@ -1361,6 +1474,7 @@ function SmartStockApp() {
         );
       };
     },
+
     [
       filters,
       inventoryRevision,
@@ -1390,6 +1504,7 @@ function SmartStockApp() {
           }),
         );
       },
+
       [],
     );
 
@@ -1410,6 +1525,7 @@ function SmartStockApp() {
             null,
         });
       },
+
       [],
     );
 
@@ -1441,6 +1557,7 @@ function SmartStockApp() {
           }),
         );
       },
+
       [],
     );
 
@@ -1477,6 +1594,7 @@ function SmartStockApp() {
           return false;
         }
       },
+
       [
         beginCloudSync,
         markCloudSyncFailed,
@@ -1544,6 +1662,7 @@ function SmartStockApp() {
               },
             );
       },
+
       [
         loadInventoryData,
       ],
@@ -1635,6 +1754,7 @@ function SmartStockApp() {
           );
         }
       },
+
       [
         beginCloudSync,
         loadInventoryData,
@@ -1647,6 +1767,7 @@ function SmartStockApp() {
     () => {
       void loadProducts();
     },
+
     [
       loadProducts,
     ],
@@ -1672,6 +1793,7 @@ function SmartStockApp() {
 
       void loadSavedOrderDraft();
     },
+
     [
       loadSavedOrderDraft,
       status,
@@ -1712,6 +1834,7 @@ function SmartStockApp() {
         );
       };
     },
+
     [
       refreshInventoryFromRealtime,
     ],
@@ -1760,6 +1883,7 @@ function SmartStockApp() {
           );
         }
       },
+
       [
         beginCloudSync,
         cloudSyncStatus.state,
@@ -1930,6 +2054,7 @@ function SmartStockApp() {
           );
         }
       },
+
       [],
     );
 
@@ -1965,6 +2090,7 @@ function SmartStockApp() {
           "create-order",
         );
       },
+
       [],
     );
 
@@ -1982,6 +2108,7 @@ function SmartStockApp() {
           "edit-product",
         );
       },
+
       [],
     );
 
@@ -1996,6 +2123,7 @@ function SmartStockApp() {
           "inventory",
         );
       },
+
       [],
     );
 
@@ -2081,6 +2209,7 @@ function SmartStockApp() {
           );
         }
       },
+
       [
         loadInventoryData,
         pushToCloud,
@@ -2121,6 +2250,7 @@ function SmartStockApp() {
           ],
         );
       },
+
       [
         handleArchiveProduct,
       ],
@@ -2436,6 +2566,7 @@ function SmartStockApp() {
           "order-management",
         );
       },
+
       [],
     );
 
@@ -2456,6 +2587,7 @@ function SmartStockApp() {
           "receive-order",
         );
       },
+
       [
         selectedPurchaseOrder,
       ],
@@ -2656,31 +2788,14 @@ function SmartStockApp() {
         result,
       );
 
-      /*
-       * First commit the receiving operation
-       * to the local SQLite database.
-       */
       const receivingResult =
         await receivePurchaseOrder(
           selectedPurchaseOrder,
           result,
         );
 
-      /*
-       * Refresh inventory/product data.
-       *
-       * This refreshes:
-       * - product stock
-       * - latest delivery
-       * - dashboard
-       * - reorder items
-       * - ordered quantities
-       */
       await loadInventoryData();
 
-      /*
-       * Refresh Order Management history.
-       */
       const updatedOrderHistory =
         await getPurchaseOrderHistory(
           200,
@@ -2690,11 +2805,6 @@ function SmartStockApp() {
         updatedOrderHistory,
       );
 
-      /*
-       * Refresh all outstanding-order
-       * quantities after the PO becomes
-       * received.
-       */
       const [
         updatedDraftQuantities,
         updatedOrderedQuantities,
@@ -2713,15 +2823,6 @@ function SmartStockApp() {
         updatedOrderedQuantities,
       );
 
-      /*
-       * Reload the PO from SQLite so
-       * OrderDetails receives the newest:
-       *
-       * status
-       * received quantities
-       * notes
-       * received date
-       */
       const completedOrder =
         await getPurchaseOrderById(
           receivingResult.orderId,
@@ -2735,19 +2836,6 @@ function SmartStockApp() {
         );
       }
 
-      /*
-       * IMPORTANT FIX
-       *
-       * Previously invoiceImportResult was
-       * cleared while currentView was still
-       * "invoice-review".
-       *
-       * React then briefly rendered:
-       *
-       * "Invoice review unavailable"
-       *
-       * We now switch views FIRST.
-       */
       setSelectedPurchaseOrder(
         completedOrder,
       );
@@ -2760,14 +2848,6 @@ function SmartStockApp() {
         null,
       );
 
-      /*
-       * Cloud synchronization can happen
-       * after navigation.
-       *
-       * Local receiving has already been
-       * committed successfully, so the user
-       * should not wait on Invoice Review.
-       */
       await pushToCloud(
         "inventory-update",
       );
@@ -2803,12 +2883,7 @@ function SmartStockApp() {
             1
               ? "product was"
               : "products were"
-          } not delivered. Stock for ${
-            receivingResult.zeroReceivedProductCount ===
-            1
-              ? "that product"
-              : "those products"
-          } remained unchanged.`,
+          } not delivered.`,
         );
       }
 
@@ -2883,6 +2958,7 @@ function SmartStockApp() {
           "create-order",
         );
       },
+
       [
         loadSavedOrderDraft,
       ],
@@ -2939,6 +3015,7 @@ function SmartStockApp() {
 
                     {
                       product,
+
                       quantity,
                     },
                   ];
@@ -2951,6 +3028,7 @@ function SmartStockApp() {
           },
         );
       },
+
       [
         persistOrderItems,
       ],
@@ -3005,6 +3083,7 @@ function SmartStockApp() {
           },
         );
       },
+
       [
         persistOrderItems,
       ],
@@ -3037,6 +3116,7 @@ function SmartStockApp() {
           },
         );
       },
+
       [
         persistOrderItems,
       ],
@@ -3098,7 +3178,7 @@ function SmartStockApp() {
     Promise<void> {
     if (
       orderDraftItems.length ===
-      0 ||
+        0 ||
       !orderVendorName.trim()
     ) {
       return;
@@ -3170,6 +3250,7 @@ function SmartStockApp() {
           "inventory-transaction",
         );
       },
+
       [],
     );
 
@@ -3184,6 +3265,7 @@ function SmartStockApp() {
           "inventory",
         );
       },
+
       [],
     );
 
@@ -3250,6 +3332,7 @@ function SmartStockApp() {
           );
         }
       },
+
       [],
     );
 
@@ -3268,17 +3351,18 @@ function SmartStockApp() {
           "inventory",
         );
       },
+
       [],
     );
 
   async function openDashboard():
     Promise<void> {
-    setIsDashboardLoading(
-      true,
-    );
-
     setCurrentView(
       "dashboard",
+    );
+
+    setIsDashboardLoading(
+      true,
     );
 
     try {
@@ -3322,12 +3406,12 @@ function SmartStockApp() {
 
   async function openAnalytics():
     Promise<void> {
-    setIsAnalyticsLoading(
-      true,
-    );
-
     setCurrentView(
       "analytics",
+    );
+
+    setIsAnalyticsLoading(
+      true,
     );
 
     try {
@@ -3510,6 +3594,7 @@ function SmartStockApp() {
           "add-product",
         );
       },
+
       [],
     );
 
@@ -3524,6 +3609,7 @@ function SmartStockApp() {
           "inventory",
         );
       },
+
       [],
     );
 
@@ -3534,6 +3620,7 @@ function SmartStockApp() {
           DEFAULT_INVENTORY_FILTERS,
         );
       },
+
       [],
     );
 
@@ -3548,8 +3635,84 @@ function SmartStockApp() {
           "inventory",
         );
       },
+
       [],
     );
+
+  const openDataMenu =
+    useCallback(
+      (): void => {
+        Alert.alert(
+          "Inventory Data",
+          "Choose an inventory data action.",
+          [
+            {
+              text:
+                "Import Inventory",
+
+              onPress:
+                () =>
+                  setCurrentView(
+                    "import-inventory",
+                  ),
+            },
+
+            {
+              text:
+                "Export Reports",
+
+              onPress:
+                () =>
+                  setCurrentView(
+                    "export-reports",
+                  ),
+            },
+
+            {
+              text:
+                "Cancel",
+
+              style:
+                "cancel",
+            },
+          ],
+        );
+      },
+
+      [],
+    );
+
+  function renderBottomNavigation() {
+    return (
+      <BottomNavigation
+        activeItem={
+          getActiveBottomNavigationItem(
+            currentView,
+          )
+        }
+        onDashboard={() =>
+          void openDashboard()
+        }
+        onHistory={() =>
+          void openGlobalTransactions()
+        }
+        onScan={() =>
+          setCurrentView(
+            "scanner",
+          )
+        }
+        onReorder={() =>
+          void openReorderManagement()
+        }
+        onAnalytics={() =>
+          void openAnalytics()
+        }
+        onData={
+          openDataMenu
+        }
+      />
+    );
+  }
 
   const renderProduct =
     useCallback(
@@ -3582,6 +3745,7 @@ function SmartStockApp() {
           }
         />
       ),
+
       [
         latestDeliveries,
         openTransactionForm,
@@ -3618,6 +3782,10 @@ function SmartStockApp() {
     );
   }
 
+  /*
+   * Scanner remains a dedicated
+   * full-screen workflow.
+   */
   if (
     currentView ===
     "scanner"
@@ -3688,40 +3856,59 @@ function SmartStockApp() {
     );
   }
 
+  /*
+   * Primary navigation screens.
+   *
+   * Navbar now participates in flex
+   * layout instead of overlapping
+   * these components.
+   */
   if (
     currentView ===
     "dashboard"
   ) {
-    if (
-      isDashboardLoading
-    ) {
-      return (
-        <LoadingScreen
-          message="Loading dashboard…"
-        />
-      );
-    }
-
     return (
-      <InventoryDashboard
-        summary={
-          dashboardSummary
+      <View
+        style={
+          styles.primaryNavigationScreen
         }
-        recentDays={
-          30
+      >
+        <View
+          style={
+            styles.primaryContent
+          }
+        >
+          {isDashboardLoading ? (
+            <PrimaryLoadingContent
+              message="Loading dashboard…"
+            />
+          ) : (
+            <InventoryDashboard
+              summary={
+                dashboardSummary
+              }
+              recentDays={
+                30
+              }
+              recentActivity={
+                dashboardRecentActivity
+              }
+              onViewAllActivity={() =>
+                void openGlobalTransactions()
+              }
+              onClose={() =>
+                setCurrentView(
+                  "inventory",
+                )
+              }
+            />
+          )}
+        </View>
+
+        {
+          renderBottomNavigation()
         }
-        recentActivity={
-          dashboardRecentActivity
-        }
-        onViewAllActivity={() =>
-          void openGlobalTransactions()
-        }
-        onClose={() =>
-          setCurrentView(
-            "inventory",
-          )
-        }
-      />
+      </View>
     );
   }
 
@@ -3729,36 +3916,48 @@ function SmartStockApp() {
     currentView ===
     "global-transactions"
   ) {
-    if (
-      isGlobalTransactionsLoading
-    ) {
-      return (
-        <LoadingScreen
-          message="Loading stock history…"
-        />
-      );
-    }
-
     return (
-      <GlobalTransactions
-        transactions={
-          globalTransactions
+      <View
+        style={
+          styles.primaryNavigationScreen
         }
-        archivedProducts={
-          archivedProducts
+      >
+        <View
+          style={
+            styles.primaryContent
+          }
+        >
+          {isGlobalTransactionsLoading ? (
+            <PrimaryLoadingContent
+              message="Loading stock history…"
+            />
+          ) : (
+            <GlobalTransactions
+              transactions={
+                globalTransactions
+              }
+              archivedProducts={
+                archivedProducts
+              }
+              onRestoreArchivedProduct={
+                confirmRestoreProduct
+              }
+              onDeleteArchivedProduct={
+                confirmDeleteArchivedProduct
+              }
+              onClose={() =>
+                setCurrentView(
+                  "inventory",
+                )
+              }
+            />
+          )}
+        </View>
+
+        {
+          renderBottomNavigation()
         }
-        onRestoreArchivedProduct={
-          confirmRestoreProduct
-        }
-        onDeleteArchivedProduct={
-          confirmDeleteArchivedProduct
-        }
-        onClose={() =>
-          setCurrentView(
-            "inventory",
-          )
-        }
-      />
+      </View>
     );
   }
 
@@ -3766,42 +3965,59 @@ function SmartStockApp() {
     currentView ===
     "reorder-management"
   ) {
-    if (
-      isReorderLoading
-    ) {
-      return (
-        <LoadingScreen
-          message="Loading reorder list…"
-        />
-      );
-    }
-
     return (
-      <ReorderManagement
-        items={
-          reorderItems
+      <View
+        style={
+          styles.primaryNavigationScreen
         }
-        draftQuantities={
-          draftQuantities
+      >
+        <View
+          style={
+            styles.primaryContent
+          }
+        >
+          {isReorderLoading ? (
+            <PrimaryLoadingContent
+              message="Loading reorder list…"
+            />
+          ) : (
+            <ReorderManagement
+              items={
+                reorderItems
+              }
+              draftQuantities={
+                draftQuantities
+              }
+              orderedQuantities={
+                orderedQuantities
+              }
+              onCreateOrder={() =>
+                void startNewOrder()
+              }
+              onOpenOrderManagement={() =>
+                void openOrderManagement()
+              }
+              onClose={() =>
+                setCurrentView(
+                  "inventory",
+                )
+              }
+            />
+          )}
+        </View>
+
+        {
+          renderBottomNavigation()
         }
-        orderedQuantities={
-          orderedQuantities
-        }
-        onCreateOrder={() =>
-          void startNewOrder()
-        }
-        onOpenOrderManagement={() =>
-          void openOrderManagement()
-        }
-        onClose={() =>
-          setCurrentView(
-            "inventory",
-          )
-        }
-      />
+      </View>
     );
   }
 
+  /*
+   * Deeper order workflow.
+   *
+   * Main navbar intentionally hidden.
+   */
   if (
     currentView ===
     "order-management"
@@ -4127,37 +4343,49 @@ function SmartStockApp() {
     currentView ===
     "analytics"
   ) {
-    if (
-      isAnalyticsLoading
-    ) {
-      return (
-        <LoadingScreen
-          message="Loading analytics…"
-        />
-      );
-    }
-
     return (
-      <InventoryAnalytics
-        summary={
-          analyticsSummary
+      <View
+        style={
+          styles.primaryNavigationScreen
         }
-        selectedPeriod={
-          analyticsPeriod
+      >
+        <View
+          style={
+            styles.primaryContent
+          }
+        >
+          {isAnalyticsLoading ? (
+            <PrimaryLoadingContent
+              message="Loading analytics…"
+            />
+          ) : (
+            <InventoryAnalytics
+              summary={
+                analyticsSummary
+              }
+              selectedPeriod={
+                analyticsPeriod
+              }
+              onPeriodChange={(
+                period,
+              ) =>
+                void handleAnalyticsPeriodChange(
+                  period,
+                )
+              }
+              onClose={() =>
+                setCurrentView(
+                  "inventory",
+                )
+              }
+            />
+          )}
+        </View>
+
+        {
+          renderBottomNavigation()
         }
-        onPeriodChange={(
-          period,
-        ) =>
-          void handleAnalyticsPeriodChange(
-            period,
-          )
-        }
-        onClose={() =>
-          setCurrentView(
-            "inventory",
-          )
-        }
-      />
+      </View>
     );
   }
 
@@ -4166,31 +4394,47 @@ function SmartStockApp() {
     "export-reports"
   ) {
     return (
-      <ExportReports
-        selectedReportType={
-          selectedExportReportType
+      <View
+        style={
+          styles.primaryNavigationScreen
         }
-        selectedFormat={
-          selectedExportFormat
+      >
+        <View
+          style={
+            styles.primaryContent
+          }
+        >
+          <ExportReports
+            selectedReportType={
+              selectedExportReportType
+            }
+            selectedFormat={
+              selectedExportFormat
+            }
+            isExporting={
+              isExporting
+            }
+            onReportTypeChange={
+              setSelectedExportReportType
+            }
+            onFormatChange={
+              setSelectedExportFormat
+            }
+            onExport={() =>
+              void handleExport()
+            }
+            onClose={() =>
+              setCurrentView(
+                "inventory",
+              )
+            }
+          />
+        </View>
+
+        {
+          renderBottomNavigation()
         }
-        isExporting={
-          isExporting
-        }
-        onReportTypeChange={
-          setSelectedExportReportType
-        }
-        onFormatChange={
-          setSelectedExportFormat
-        }
-        onExport={() =>
-          void handleExport()
-        }
-        onClose={() =>
-          setCurrentView(
-            "inventory",
-          )
-        }
-      />
+      </View>
     );
   }
 
@@ -4332,143 +4576,203 @@ function SmartStockApp() {
     "import-inventory"
   ) {
     return (
-      <ImportInventory
-        onClose={() =>
-          setCurrentView(
-            "inventory",
-          )
+      <View
+        style={
+          styles.primaryNavigationScreen
         }
-      />
+      >
+        <View
+          style={
+            styles.primaryContent
+          }
+        >
+          <ImportInventory
+            onClose={() =>
+              setCurrentView(
+                "inventory",
+              )
+            }
+          />
+        </View>
+
+        {
+          renderBottomNavigation()
+        }
+      </View>
     );
   }
 
+  /*
+   * MAIN INVENTORY
+   *
+   * Bottom safe area intentionally omitted
+   * here because BottomNavigation owns it.
+   */
   return (
     <SafeAreaView
       edges={[
         "top",
         "left",
         "right",
-        "bottom",
       ]}
       style={
         styles.screen
       }
     >
-      <FlatList
-        data={
-          visibleProducts
+      <View
+        style={
+          styles.inventoryScreen
         }
-        keyExtractor={(
-          product,
-        ) =>
-          product.id.toString()
-        }
-        renderItem={
-          renderProduct
-        }
-        contentContainerStyle={
-          styles.listContent
-        }
-        keyboardShouldPersistTaps="handled"
-        ListHeaderComponent={
-          <View>
-            <View
-              style={
-                styles.header
-              }
-            >
-              <Text
+      >
+        <FlatList
+          data={
+            visibleProducts
+          }
+          keyExtractor={(
+            product,
+          ) =>
+            product.id.toString()
+          }
+          renderItem={
+            renderProduct
+          }
+          contentContainerStyle={
+            styles.listContent
+          }
+          keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={
+            <View>
+              <View
                 style={
-                  styles.title
+                  styles.header
                 }
               >
-                SmartStock
-              </Text>
+                <Text
+                  style={
+                    styles.title
+                  }
+                >
+                  SmartStock
+                </Text>
 
-              <Text
-                style={
-                  styles.summary
-                }
-              >
-                {products.length} active products
-              </Text>
+                <Text
+                  style={
+                    styles.summary
+                  }
+                >
+                  {products.length} active products
+                </Text>
 
-              <CloudSyncStatus
-                status={
-                  cloudSyncStatus
-                }
-                onSync={() =>
-                  void handleManualSync()
-                }
-              />
+                <CloudSyncStatus
+                  status={
+                    cloudSyncStatus
+                  }
+                  onSync={() =>
+                    void handleManualSync()
+                  }
+                />
 
-              <InventoryActionBar
-                onDashboard={() =>
-                  void openDashboard()
+                <InventoryActionBar
+                  onDashboard={() =>
+                    void openDashboard()
+                  }
+                  onReorder={() =>
+                    void openReorderManagement()
+                  }
+                  onStockHistory={() =>
+                    void openGlobalTransactions()
+                  }
+                  onAnalytics={() =>
+                    void openAnalytics()
+                  }
+                  onScanBarcode={() =>
+                    setCurrentView(
+                      "scanner",
+                    )
+                  }
+                  onAddProductManually={
+                    openManualProductForm
+                  }
+                  onImport={() =>
+                    setCurrentView(
+                      "import-inventory",
+                    )
+                  }
+                  onExport={() =>
+                    setCurrentView(
+                      "export-reports",
+                    )
+                  }
+                />
+              </View>
+
+              <InventoryToolbar
+                filters={
+                  filters
                 }
-                onReorder={() =>
-                  void openReorderManagement()
+                resultCount={
+                  visibleProducts.length
                 }
-                onStockHistory={() =>
-                  void openGlobalTransactions()
+                totalCount={
+                  products.length
                 }
-                onAnalytics={() =>
-                  void openAnalytics()
+                onFiltersChange={
+                  setFilters
                 }
-                onScanBarcode={() =>
-                  setCurrentView(
-                    "scanner",
-                  )
-                }
-                onAddProductManually={
-                  openManualProductForm
-                }
-                onImport={() =>
-                  setCurrentView(
-                    "import-inventory",
-                  )
-                }
-                onExport={() =>
-                  setCurrentView(
-                    "export-reports",
-                  )
+                onClearFilters={
+                  clearInventoryFilters
                 }
               />
             </View>
+          }
+          refreshing={
+            isRefreshing
+          }
+          onRefresh={() =>
+            void loadProducts(
+              true,
+            )
+          }
+        />
 
-            <InventoryToolbar
-              filters={
-                filters
-              }
-              resultCount={
-                visibleProducts.length
-              }
-              totalCount={
-                products.length
-              }
-              onFiltersChange={
-                setFilters
-              }
-              onClearFilters={
-                clearInventoryFilters
-              }
-            />
-          </View>
+        {
+          renderBottomNavigation()
         }
-        refreshing={
-          isRefreshing
-        }
-        onRefresh={() =>
-          void loadProducts(
-            true,
-          )
-        }
-      />
+      </View>
 
       <StatusBar
         style="auto"
       />
     </SafeAreaView>
+  );
+}
+
+function PrimaryLoadingContent({
+  message,
+}: {
+  message:
+    string;
+}) {
+  return (
+    <View
+      style={
+        styles.primaryLoadingContent
+      }
+    >
+      <ActivityIndicator
+        size="large"
+      />
+
+      <Text
+        style={
+          styles.statusText
+        }
+      >
+        {
+          message
+        }
+      </Text>
+    </View>
   );
 }
 
@@ -4586,12 +4890,60 @@ const styles =
         "#F4F6F8",
     },
 
+    /*
+     * Navbar is now a normal second child:
+     *
+     * [ primaryContent flex:1 ]
+     * [ bottom navigation       ]
+     */
+    primaryNavigationScreen: {
+      flex:
+        1,
+
+      backgroundColor:
+        "#F4F6F8",
+    },
+
+    primaryContent: {
+      flex:
+        1,
+
+      minHeight:
+        0,
+    },
+
+    primaryLoadingContent: {
+      flex:
+        1,
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "center",
+
+      paddingHorizontal:
+        24,
+    },
+
+    inventoryScreen: {
+      flex:
+        1,
+
+      minHeight:
+        0,
+    },
+
+    /*
+     * We no longer need 125px for
+     * an overlapping floating navbar.
+     */
     listContent: {
       padding:
         16,
 
       paddingBottom:
-        40,
+        10,
     },
 
     header: {

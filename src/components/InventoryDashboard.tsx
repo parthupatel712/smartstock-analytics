@@ -53,7 +53,6 @@ export function InventoryDashboard({
         "top",
         "left",
         "right",
-        "bottom",
       ]}
       style={
         styles.screen
