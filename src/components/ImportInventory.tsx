@@ -23,7 +23,6 @@ export function ImportInventory({
         "top",
         "left",
         "right",
-        "bottom",
       ]}
       style={
         styles.screen

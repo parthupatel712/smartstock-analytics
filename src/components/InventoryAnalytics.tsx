@@ -122,7 +122,6 @@ export function InventoryAnalytics({
         "top",
         "left",
         "right",
-        "bottom",
       ]}
       style={
         styles.screen

@@ -362,7 +362,6 @@ export function GlobalTransactions({
         "top",
         "left",
         "right",
-        "bottom",
       ]}
       style={
         styles.screen
@@ -1752,6 +1751,16 @@ const styles =
         "#F4F6F8",
     },
 
+    /*
+     * IMPORTANT:
+     *
+     * Content is allowed to travel behind
+     * the floating bottom navigation.
+     *
+     * paddingBottom is only trailing scroll
+     * room so the final transaction can
+     * eventually move fully ABOVE the bar.
+     */
     content: {
       paddingHorizontal:
         18,
@@ -1760,7 +1769,7 @@ const styles =
         12,
 
       paddingBottom:
-        50,
+        155,
     },
 
     headerRow: {
