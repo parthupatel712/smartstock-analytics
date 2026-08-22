@@ -118,6 +118,10 @@ import {
 } from "./src/components/ReorderManagement";
 
 import {
+  ScannerProductResult,
+} from "./src/components/ScannerProductResult";
+
+import {
   getInventoryAnalyticsSummary,
 } from "./src/database/inventoryAnalyticsRepository";
 
@@ -334,6 +338,21 @@ type AppView =
   | "order-preview"
   | "import-inventory";
 
+type ProductFormReturnView =
+  | "inventory"
+  | "scanner";
+
+/*
+ * NEW:
+ *
+ * Used by Update Inventory, History
+ * and Edit Product so those screens
+ * know where they were opened from.
+ */
+type ProductActionReturnView =
+  | "inventory"
+  | "scanner";
+
 function getActiveBottomNavigationItem(
   view:
     AppView,
@@ -346,9 +365,6 @@ function getActiveBottomNavigationItem(
 
     case "global-transactions":
       return "history";
-
-    case "scanner":
-      return "scan";
 
     case "reorder-management":
       return "reorder";
@@ -1039,6 +1055,44 @@ function SmartStockApp() {
   ] =
     useState(
       "",
+    );
+
+  const [
+    scannerProduct,
+    setScannerProduct,
+  ] =
+    useState<Product | null>(
+      null,
+    );
+
+  const [
+    productFormReturnView,
+    setProductFormReturnView,
+  ] =
+    useState<ProductFormReturnView>(
+      "inventory",
+    );
+
+  /*
+   * NEW:
+   *
+   * Controls navigation after Edit,
+   * Update Inventory and History.
+   */
+  const [
+    productActionReturnView,
+    setProductActionReturnView,
+  ] =
+    useState<ProductActionReturnView>(
+      "inventory",
+    );
+
+  const [
+    scannerSessionKey,
+    setScannerSessionKey,
+  ] =
+    useState(
+      0,
     );
 
   const realtimeRefreshQueue =
@@ -1972,9 +2026,37 @@ function SmartStockApp() {
         "product-create",
       );
 
+      const createdProduct =
+        productFormReturnView ===
+        "scanner"
+          ? await getProductByBarcode(
+              values.barcode,
+            )
+          : null;
+
       setScannedBarcode(
         "",
       );
+
+      if (
+        productFormReturnView ===
+        "scanner"
+      ) {
+        setScannerProduct(
+          createdProduct,
+        );
+
+        setCurrentView(
+          "scanner",
+        );
+
+        Alert.alert(
+          "Product added",
+          `${values.name.trim()} was added successfully.`,
+        );
+
+        return;
+      }
 
       setCurrentView(
         "inventory",
@@ -2020,19 +2102,23 @@ function SmartStockApp() {
           if (
             existingProduct
           ) {
-            setSelectedProduct(
+            setScannerProduct(
               existingProduct,
-            );
-
-            setCurrentView(
-              "product-details",
             );
 
             return;
           }
 
+          setScannerProduct(
+            null,
+          );
+
           setScannedBarcode(
             barcode,
+          );
+
+          setProductFormReturnView(
+            "scanner",
           );
 
           setCurrentView(
@@ -2052,6 +2138,8 @@ function SmartStockApp() {
               ? error.message
               : "The barcode could not be processed.",
           );
+
+          throw error;
         }
       },
 
@@ -2094,12 +2182,44 @@ function SmartStockApp() {
       [],
     );
 
+  /*
+   * NORMAL INVENTORY EDIT
+   */
   const openEditProduct =
     useCallback(
       (
         product:
           Product,
       ): void => {
+        setProductActionReturnView(
+          "inventory",
+        );
+
+        setSelectedProduct(
+          product,
+        );
+
+        setCurrentView(
+          "edit-product",
+        );
+      },
+
+      [],
+    );
+
+  /*
+   * SCANNER EDIT
+   */
+  const openScannerEditProduct =
+    useCallback(
+      (
+        product:
+          Product,
+      ): void => {
+        setProductActionReturnView(
+          "scanner",
+        );
+
         setSelectedProduct(
           product,
         );
@@ -2120,11 +2240,13 @@ function SmartStockApp() {
         );
 
         setCurrentView(
-          "inventory",
+          productActionReturnView,
         );
       },
 
-      [],
+      [
+        productActionReturnView,
+      ],
     );
 
   async function handleUpdateProduct(
@@ -2136,6 +2258,14 @@ function SmartStockApp() {
         true,
       );
 
+      /*
+       * Save the original barcode before
+       * selectedProduct is cleared.
+       */
+      const originalBarcode =
+        selectedProduct?.barcode ??
+        "";
+
       await updateProduct(
         input,
       );
@@ -2146,9 +2276,65 @@ function SmartStockApp() {
         "product-update",
       );
 
+      let scannerUpdatedProduct:
+        Product | null = null;
+
+      if (
+        productActionReturnView ===
+        "scanner"
+      ) {
+        /*
+         * If UpdateProductInput includes a
+         * new barcode, use it.
+         *
+         * Otherwise fall back to the
+         * original barcode.
+         */
+        const inputBarcode =
+          "barcode" in input &&
+          typeof input.barcode ===
+            "string"
+            ? input.barcode
+            : "";
+
+        const barcodeToReload =
+          inputBarcode.trim()
+            ? inputBarcode
+            : originalBarcode;
+
+        if (
+          barcodeToReload
+        ) {
+          scannerUpdatedProduct =
+            await getProductByBarcode(
+              barcodeToReload,
+            );
+        }
+      }
+
       setSelectedProduct(
         null,
       );
+
+      if (
+        productActionReturnView ===
+        "scanner"
+      ) {
+        setScannerProduct(
+          scannerUpdatedProduct,
+        );
+
+        setCurrentView(
+          "scanner",
+        );
+
+        Alert.alert(
+          "Product updated",
+          "The product details were updated successfully.",
+        );
+
+        return;
+      }
 
       setCurrentView(
         "inventory",
@@ -2174,11 +2360,22 @@ function SmartStockApp() {
     }
   }
 
+  /*
+   * Archive now receives its return
+   * destination explicitly.
+   *
+   * This avoids accidentally returning
+   * scanner actions to Inventory.
+   */
   const handleArchiveProduct =
     useCallback(
       async (
         product:
           Product,
+
+        returnView:
+          ProductActionReturnView =
+          "inventory",
       ): Promise<void> => {
         try {
           await archiveProduct(
@@ -2194,6 +2391,29 @@ function SmartStockApp() {
           setSelectedProduct(
             null,
           );
+
+          setScannerProduct(
+            null,
+          );
+
+          if (
+            returnView ===
+            "scanner"
+          ) {
+            setScannerSessionKey(
+              (
+                previous,
+              ) =>
+                previous +
+                1,
+            );
+
+            setCurrentView(
+              "scanner",
+            );
+
+            return;
+          }
 
           setCurrentView(
             "inventory",
@@ -2221,6 +2441,10 @@ function SmartStockApp() {
       (
         product:
           Product,
+
+        returnView:
+          ProductActionReturnView =
+          "inventory",
       ): void => {
         Alert.alert(
           "Archive product?",
@@ -2245,6 +2469,7 @@ function SmartStockApp() {
                 () =>
                   void handleArchiveProduct(
                     product,
+                    returnView,
                   ),
             },
           ],
@@ -3236,12 +3461,44 @@ function SmartStockApp() {
     }
   }
 
+  /*
+   * NORMAL INVENTORY TRANSACTION
+   */
   const openTransactionForm =
     useCallback(
       (
         product:
           Product,
       ): void => {
+        setProductActionReturnView(
+          "inventory",
+        );
+
+        setSelectedProduct(
+          product,
+        );
+
+        setCurrentView(
+          "inventory-transaction",
+        );
+      },
+
+      [],
+    );
+
+  /*
+   * SCANNER TRANSACTION
+   */
+  const openScannerTransactionForm =
+    useCallback(
+      (
+        product:
+          Product,
+      ): void => {
+        setProductActionReturnView(
+          "scanner",
+        );
+
         setSelectedProduct(
           product,
         );
@@ -3262,11 +3519,13 @@ function SmartStockApp() {
         );
 
         setCurrentView(
-          "inventory",
+          productActionReturnView,
         );
       },
 
-      [],
+      [
+        productActionReturnView,
+      ],
     );
 
   async function handleInventoryTransaction(
@@ -3278,6 +3537,14 @@ function SmartStockApp() {
         true,
       );
 
+      /*
+       * Save barcode before clearing
+       * selectedProduct.
+       */
+      const productBarcode =
+        selectedProduct?.barcode ??
+        "";
+
       await createInventoryTransaction(
         input,
       );
@@ -3288,9 +3555,38 @@ function SmartStockApp() {
         "inventory-update",
       );
 
+      let updatedScannerProduct:
+        Product | null = null;
+
+      if (
+        productActionReturnView ===
+          "scanner" &&
+        productBarcode
+      ) {
+        updatedScannerProduct =
+          await getProductByBarcode(
+            productBarcode,
+          );
+      }
+
       setSelectedProduct(
         null,
       );
+
+      if (
+        productActionReturnView ===
+        "scanner"
+      ) {
+        setScannerProduct(
+          updatedScannerProduct,
+        );
+
+        setCurrentView(
+          "scanner",
+        );
+
+        return;
+      }
 
       setCurrentView(
         "inventory",
@@ -3302,12 +3598,60 @@ function SmartStockApp() {
     }
   }
 
+  /*
+   * NORMAL INVENTORY HISTORY
+   */
   const openTransactionHistory =
     useCallback(
       async (
         product:
           Product,
       ): Promise<void> => {
+        setProductActionReturnView(
+          "inventory",
+        );
+
+        setSelectedProduct(
+          product,
+        );
+
+        setIsHistoryLoading(
+          true,
+        );
+
+        setCurrentView(
+          "transaction-history",
+        );
+
+        try {
+          setTransactionHistory(
+            await getTransactionHistoryForProduct(
+              product.id,
+            ),
+          );
+        } finally {
+          setIsHistoryLoading(
+            false,
+          );
+        }
+      },
+
+      [],
+    );
+
+  /*
+   * SCANNER HISTORY
+   */
+  const openScannerTransactionHistory =
+    useCallback(
+      async (
+        product:
+          Product,
+      ): Promise<void> => {
+        setProductActionReturnView(
+          "scanner",
+        );
+
         setSelectedProduct(
           product,
         );
@@ -3348,11 +3692,13 @@ function SmartStockApp() {
         );
 
         setCurrentView(
-          "inventory",
+          productActionReturnView,
         );
       },
 
-      [],
+      [
+        productActionReturnView,
+      ],
     );
 
   async function openDashboard():
@@ -3590,6 +3936,37 @@ function SmartStockApp() {
           "",
         );
 
+        setScannerProduct(
+          null,
+        );
+
+        setProductFormReturnView(
+          "inventory",
+        );
+
+        setCurrentView(
+          "add-product",
+        );
+      },
+
+      [],
+    );
+
+  const openManualProductFromScanner =
+    useCallback(
+      (): void => {
+        setScannerProduct(
+          null,
+        );
+
+        setScannedBarcode(
+          "",
+        );
+
+        setProductFormReturnView(
+          "scanner",
+        );
+
         setCurrentView(
           "add-product",
         );
@@ -3605,12 +3982,25 @@ function SmartStockApp() {
           "",
         );
 
+        if (
+          productFormReturnView ===
+          "scanner"
+        ) {
+          setCurrentView(
+            "scanner",
+          );
+
+          return;
+        }
+
         setCurrentView(
           "inventory",
         );
       },
 
-      [],
+      [
+        productFormReturnView,
+      ],
     );
 
   const clearInventoryFilters =
@@ -3637,6 +4027,75 @@ function SmartStockApp() {
       },
 
       [],
+    );
+
+  const resetScannerWorkspace =
+    useCallback(
+      (): void => {
+        setScannerProduct(
+          null,
+        );
+
+        setScannedBarcode(
+          "",
+        );
+
+        setScannerSessionKey(
+          (
+            previous,
+          ) =>
+            previous +
+            1,
+        );
+      },
+
+      [],
+    );
+
+  const openScannerWorkspace =
+    useCallback(
+      (): void => {
+        resetScannerWorkspace();
+
+        setProductFormReturnView(
+          "inventory",
+        );
+
+        setProductActionReturnView(
+          "inventory",
+        );
+
+        setCurrentView(
+          "scanner",
+        );
+      },
+
+      [
+        resetScannerWorkspace,
+      ],
+    );
+
+  const closeScannerWorkspace =
+    useCallback(
+      (): void => {
+        resetScannerWorkspace();
+
+        setProductFormReturnView(
+          "inventory",
+        );
+
+        setProductActionReturnView(
+          "inventory",
+        );
+
+        setCurrentView(
+          "inventory",
+        );
+      },
+
+      [
+        resetScannerWorkspace,
+      ],
     );
 
   const openDataMenu =
@@ -3696,10 +4155,8 @@ function SmartStockApp() {
         onHistory={() =>
           void openGlobalTransactions()
         }
-        onScan={() =>
-          setCurrentView(
-            "scanner",
-          )
+        onScan={
+          openScannerWorkspace
         }
         onReorder={() =>
           void openReorderManagement()
@@ -3740,8 +4197,13 @@ function SmartStockApp() {
           onEditProduct={
             openEditProduct
           }
-          onArchiveProduct={
-            confirmArchiveProduct
+          onArchiveProduct={(
+            product,
+          ) =>
+            confirmArchiveProduct(
+              product,
+              "inventory",
+            )
           }
         />
       ),
@@ -3783,26 +4245,62 @@ function SmartStockApp() {
   }
 
   /*
-   * Scanner remains a dedicated
-   * full-screen workflow.
+   * INVENTORY SCANNER
    */
   if (
-    currentView ===
-    "scanner"
-  ) {
-    return (
-      <BarcodeScanner
-        onBarcodeDetected={
-          handleBarcodeDetected
-        }
-        onClose={() =>
-          setCurrentView(
-            "inventory",
-          )
-        }
-      />
-    );
-  }
+  currentView ===
+  "scanner"
+) {
+  return (
+    <BarcodeScanner
+      key={
+        scannerSessionKey
+      }
+      title="Scan Product"
+      subtitle="Scan a barcode or add a product manually."
+      onBarcodeDetected={
+        handleBarcodeDetected
+      }
+      onAddProductManually={
+        openManualProductFromScanner
+      }
+      onClose={
+        closeScannerWorkspace
+      }
+      bottomContent={
+        scannerProduct ? (
+          <ScannerProductResult
+            product={
+              scannerProduct
+            }
+            latestDelivery={
+              latestDeliveries.get(
+                scannerProduct.id,
+              )
+            }
+            onUpdateInventory={
+              openScannerTransactionForm
+            }
+            onViewHistory={
+              openScannerTransactionHistory
+            }
+            onEditProduct={
+              openScannerEditProduct
+            }
+            onArchiveProduct={(
+              product,
+            ) =>
+              confirmArchiveProduct(
+                product,
+                "scanner",
+              )
+            }
+          />
+        ) : undefined
+      }
+    />
+  );
+}
 
   if (
     currentView ===
@@ -3810,6 +4308,8 @@ function SmartStockApp() {
   ) {
     return (
       <BarcodeScanner
+        title="Scan Order Product"
+        subtitle="Scan a product barcode to add it to the purchase order."
         onBarcodeDetected={
           handleOrderBarcodeDetected
         }
@@ -3846,8 +4346,13 @@ function SmartStockApp() {
         onEdit={
           openEditProduct
         }
-        onArchive={
-          confirmArchiveProduct
+        onArchive={(
+          product,
+        ) =>
+          confirmArchiveProduct(
+            product,
+            "inventory",
+          )
         }
         onClose={
           closeProductDetails
@@ -3856,13 +4361,6 @@ function SmartStockApp() {
     );
   }
 
-  /*
-   * Primary navigation screens.
-   *
-   * Navbar now participates in flex
-   * layout instead of overlapping
-   * these components.
-   */
   if (
     currentView ===
     "dashboard"
@@ -4013,11 +4511,6 @@ function SmartStockApp() {
     );
   }
 
-  /*
-   * Deeper order workflow.
-   *
-   * Main navbar intentionally hidden.
-   */
   if (
     currentView ===
     "order-management"
@@ -4551,7 +5044,10 @@ function SmartStockApp() {
                 styles.secondaryButtonText
               }
             >
-              Cancel
+              {productFormReturnView ===
+              "scanner"
+                ? "Back"
+                : "Cancel"}
             </Text>
           </Pressable>
         </View>
@@ -4602,12 +5098,6 @@ function SmartStockApp() {
     );
   }
 
-  /*
-   * MAIN INVENTORY
-   *
-   * Bottom safe area intentionally omitted
-   * here because BottomNavigation owns it.
-   */
   return (
     <SafeAreaView
       edges={[
@@ -4685,10 +5175,8 @@ function SmartStockApp() {
                   onAnalytics={() =>
                     void openAnalytics()
                   }
-                  onScanBarcode={() =>
-                    setCurrentView(
-                      "scanner",
-                    )
+                  onScanBarcode={
+                    openScannerWorkspace
                   }
                   onAddProductManually={
                     openManualProductForm
@@ -4890,12 +5378,6 @@ const styles =
         "#F4F6F8",
     },
 
-    /*
-     * Navbar is now a normal second child:
-     *
-     * [ primaryContent flex:1 ]
-     * [ bottom navigation       ]
-     */
     primaryNavigationScreen: {
       flex:
         1,
@@ -4934,10 +5416,6 @@ const styles =
         0,
     },
 
-    /*
-     * We no longer need 125px for
-     * an overlapping floating navbar.
-     */
     listContent: {
       padding:
         16,
