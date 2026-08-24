@@ -1,4 +1,8 @@
 import {
+  Ionicons,
+} from "@expo/vector-icons";
+
+import {
   StatusBar,
 } from "expo-status-bar";
 
@@ -13,6 +17,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -342,13 +347,6 @@ type ProductFormReturnView =
   | "inventory"
   | "scanner";
 
-/*
- * NEW:
- *
- * Used by Update Inventory, History
- * and Edit Product so those screens
- * know where they were opened from.
- */
 type ProductActionReturnView =
   | "inventory"
   | "scanner";
@@ -361,20 +359,25 @@ function getActiveBottomNavigationItem(
     view
   ) {
     case "dashboard":
-      return "dashboard";
+      return "home";
 
-    case "global-transactions":
-      return "history";
+    case "inventory":
+      return "inventory";
+
+    case "scanner":
+      return "scan";
 
     case "reorder-management":
-      return "reorder";
+    case "order-management":
+      return "orders";
 
     case "analytics":
       return "analytics";
 
+    case "global-transactions":
     case "export-reports":
     case "import-inventory":
-      return "data";
+      return "inventory";
 
     default:
       return null;
@@ -661,7 +664,7 @@ function SmartStockApp() {
     setCurrentView,
   ] =
     useState<AppView>(
-      "inventory",
+      "dashboard",
     );
 
   const [
@@ -1073,12 +1076,6 @@ function SmartStockApp() {
       "inventory",
     );
 
-  /*
-   * NEW:
-   *
-   * Controls navigation after Edit,
-   * Update Inventory and History.
-   */
   const [
     productActionReturnView,
     setProductActionReturnView,
@@ -1093,6 +1090,14 @@ function SmartStockApp() {
   ] =
     useState(
       0,
+    );
+
+  const [
+    isInventoryMenuVisible,
+    setIsInventoryMenuVisible,
+  ] =
+    useState(
+      false,
     );
 
   const realtimeRefreshQueue =
@@ -2182,9 +2187,6 @@ function SmartStockApp() {
       [],
     );
 
-  /*
-   * NORMAL INVENTORY EDIT
-   */
   const openEditProduct =
     useCallback(
       (
@@ -2207,9 +2209,6 @@ function SmartStockApp() {
       [],
     );
 
-  /*
-   * SCANNER EDIT
-   */
   const openScannerEditProduct =
     useCallback(
       (
@@ -2258,10 +2257,6 @@ function SmartStockApp() {
         true,
       );
 
-      /*
-       * Save the original barcode before
-       * selectedProduct is cleared.
-       */
       const originalBarcode =
         selectedProduct?.barcode ??
         "";
@@ -2283,13 +2278,6 @@ function SmartStockApp() {
         productActionReturnView ===
         "scanner"
       ) {
-        /*
-         * If UpdateProductInput includes a
-         * new barcode, use it.
-         *
-         * Otherwise fall back to the
-         * original barcode.
-         */
         const inputBarcode =
           "barcode" in input &&
           typeof input.barcode ===
@@ -2360,13 +2348,6 @@ function SmartStockApp() {
     }
   }
 
-  /*
-   * Archive now receives its return
-   * destination explicitly.
-   *
-   * This avoids accidentally returning
-   * scanner actions to Inventory.
-   */
   const handleArchiveProduct =
     useCallback(
       async (
@@ -3461,9 +3442,6 @@ function SmartStockApp() {
     }
   }
 
-  /*
-   * NORMAL INVENTORY TRANSACTION
-   */
   const openTransactionForm =
     useCallback(
       (
@@ -3486,9 +3464,6 @@ function SmartStockApp() {
       [],
     );
 
-  /*
-   * SCANNER TRANSACTION
-   */
   const openScannerTransactionForm =
     useCallback(
       (
@@ -3537,10 +3512,6 @@ function SmartStockApp() {
         true,
       );
 
-      /*
-       * Save barcode before clearing
-       * selectedProduct.
-       */
       const productBarcode =
         selectedProduct?.barcode ??
         "";
@@ -3598,9 +3569,6 @@ function SmartStockApp() {
     }
   }
 
-  /*
-   * NORMAL INVENTORY HISTORY
-   */
   const openTransactionHistory =
     useCallback(
       async (
@@ -3639,9 +3607,6 @@ function SmartStockApp() {
       [],
     );
 
-  /*
-   * SCANNER HISTORY
-   */
   const openScannerTransactionHistory =
     useCallback(
       async (
@@ -3737,6 +3702,29 @@ function SmartStockApp() {
       );
     }
   }
+
+  const openInventory =
+    useCallback(
+      (): void => {
+        setSelectedProduct(
+          null,
+        );
+
+        setProductActionReturnView(
+          "inventory",
+        );
+
+        setProductFormReturnView(
+          "inventory",
+        );
+
+        setCurrentView(
+          "inventory",
+        );
+      },
+
+      [],
+    );
 
   async function loadAnalytics(
     period:
@@ -4098,43 +4086,22 @@ function SmartStockApp() {
       ],
     );
 
-  const openDataMenu =
+  const openInventoryMenu =
     useCallback(
       (): void => {
-        Alert.alert(
-          "Inventory Data",
-          "Choose an inventory data action.",
-          [
-            {
-              text:
-                "Import Inventory",
+        setIsInventoryMenuVisible(
+          true,
+        );
+      },
 
-              onPress:
-                () =>
-                  setCurrentView(
-                    "import-inventory",
-                  ),
-            },
+      [],
+    );
 
-            {
-              text:
-                "Export Reports",
-
-              onPress:
-                () =>
-                  setCurrentView(
-                    "export-reports",
-                  ),
-            },
-
-            {
-              text:
-                "Cancel",
-
-              style:
-                "cancel",
-            },
-          ],
+  const closeInventoryMenu =
+    useCallback(
+      (): void => {
+        setIsInventoryMenuVisible(
+          false,
         );
       },
 
@@ -4149,23 +4116,20 @@ function SmartStockApp() {
             currentView,
           )
         }
-        onDashboard={() =>
+        onHome={() =>
           void openDashboard()
         }
-        onHistory={() =>
-          void openGlobalTransactions()
+        onInventory={
+          openInventory
         }
         onScan={
           openScannerWorkspace
         }
-        onReorder={() =>
+        onOrders={() =>
           void openReorderManagement()
         }
         onAnalytics={() =>
           void openAnalytics()
-        }
-        onData={
-          openDataMenu
         }
       />
     );
@@ -4244,63 +4208,60 @@ function SmartStockApp() {
     );
   }
 
-  /*
-   * INVENTORY SCANNER
-   */
   if (
-  currentView ===
-  "scanner"
-) {
-  return (
-    <BarcodeScanner
-      key={
-        scannerSessionKey
-      }
-      title="Scan Product"
-      subtitle="Scan a barcode or add a product manually."
-      onBarcodeDetected={
-        handleBarcodeDetected
-      }
-      onAddProductManually={
-        openManualProductFromScanner
-      }
-      onClose={
-        closeScannerWorkspace
-      }
-      bottomContent={
-        scannerProduct ? (
-          <ScannerProductResult
-            product={
-              scannerProduct
-            }
-            latestDelivery={
-              latestDeliveries.get(
-                scannerProduct.id,
-              )
-            }
-            onUpdateInventory={
-              openScannerTransactionForm
-            }
-            onViewHistory={
-              openScannerTransactionHistory
-            }
-            onEditProduct={
-              openScannerEditProduct
-            }
-            onArchiveProduct={(
-              product,
-            ) =>
-              confirmArchiveProduct(
+    currentView ===
+    "scanner"
+  ) {
+    return (
+      <BarcodeScanner
+        key={
+          scannerSessionKey
+        }
+        title="Scan Product"
+        subtitle="Scan a barcode or add a product manually."
+        onBarcodeDetected={
+          handleBarcodeDetected
+        }
+        onAddProductManually={
+          openManualProductFromScanner
+        }
+        onClose={
+          closeScannerWorkspace
+        }
+        bottomContent={
+          scannerProduct ? (
+            <ScannerProductResult
+              product={
+                scannerProduct
+              }
+              latestDelivery={
+                latestDeliveries.get(
+                  scannerProduct.id,
+                )
+              }
+              onUpdateInventory={
+                openScannerTransactionForm
+              }
+              onViewHistory={
+                openScannerTransactionHistory
+              }
+              onEditProduct={
+                openScannerEditProduct
+              }
+              onArchiveProduct={(
                 product,
-                "scanner",
-              )
-            }
-          />
-        ) : undefined
-      }
-    />
-  );
-}
+              ) =>
+                confirmArchiveProduct(
+                  product,
+                  "scanner",
+                )
+              }
+            />
+          ) : undefined
+        }
+      />
+    );
+  }
 
   if (
     currentView ===
@@ -4378,7 +4339,7 @@ function SmartStockApp() {
         >
           {isDashboardLoading ? (
             <PrimaryLoadingContent
-              message="Loading dashboard…"
+              message="Loading home…"
             />
           ) : (
             <InventoryDashboard
@@ -4394,10 +4355,8 @@ function SmartStockApp() {
               onViewAllActivity={() =>
                 void openGlobalTransactions()
               }
-              onClose={() =>
-                setCurrentView(
-                  "inventory",
-                )
+              onClose={
+                openInventory
               }
             />
           )}
@@ -4443,10 +4402,8 @@ function SmartStockApp() {
               onDeleteArchivedProduct={
                 confirmDeleteArchivedProduct
               }
-              onClose={() =>
-                setCurrentView(
-                  "inventory",
-                )
+              onClose={
+                openInventory
               }
             />
           )}
@@ -4476,7 +4433,7 @@ function SmartStockApp() {
         >
           {isReorderLoading ? (
             <PrimaryLoadingContent
-              message="Loading reorder list…"
+              message="Loading orders…"
             />
           ) : (
             <ReorderManagement
@@ -4495,10 +4452,8 @@ function SmartStockApp() {
               onOpenOrderManagement={() =>
                 void openOrderManagement()
               }
-              onClose={() =>
-                setCurrentView(
-                  "inventory",
-                )
+              onClose={
+                openInventory
               }
             />
           )}
@@ -4866,10 +4821,8 @@ function SmartStockApp() {
                   period,
                 )
               }
-              onClose={() =>
-                setCurrentView(
-                  "inventory",
-                )
+              onClose={
+                openInventory
               }
             />
           )}
@@ -4916,10 +4869,8 @@ function SmartStockApp() {
             onExport={() =>
               void handleExport()
             }
-            onClose={() =>
-              setCurrentView(
-                "inventory",
-              )
+            onClose={
+              openInventory
             }
           />
         </View>
@@ -5083,10 +5034,8 @@ function SmartStockApp() {
           }
         >
           <ImportInventory
-            onClose={() =>
-              setCurrentView(
-                "inventory",
-              )
+            onClose={
+              openInventory
             }
           />
         </View>
@@ -5137,21 +5086,60 @@ function SmartStockApp() {
                   styles.header
                 }
               >
-                <Text
+                <View
                   style={
-                    styles.title
+                    styles.inventoryHeaderRow
                   }
                 >
-                  SmartStock
-                </Text>
+                  <View
+                    style={
+                      styles.inventoryHeaderText
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.title
+                      }
+                    >
+                      Inventory
+                    </Text>
 
-                <Text
-                  style={
-                    styles.summary
-                  }
-                >
-                  {products.length} active products
-                </Text>
+                    <Text
+                      style={
+                        styles.summary
+                      }
+                    >
+                      {products.length} active products
+                    </Text>
+                  </View>
+
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Inventory tools"
+                    hitSlop={
+                      8
+                    }
+                    onPress={
+                      openInventoryMenu
+                    }
+                    style={({
+                      pressed,
+                    }) => [
+                      styles.inventoryMenuButton,
+
+                      pressed &&
+                        styles.inventoryMenuButtonPressed,
+                    ]}
+                  >
+                    <Ionicons
+                      name="ellipsis-horizontal"
+                      size={
+                        22
+                      }
+                      color="#20252B"
+                    />
+                  </Pressable>
+                </View>
 
                 <CloudSyncStatus
                   status={
@@ -5228,10 +5216,241 @@ function SmartStockApp() {
         }
       </View>
 
+      <Modal
+        animationType="slide"
+        transparent
+        visible={
+          isInventoryMenuVisible
+        }
+        onRequestClose={
+          closeInventoryMenu
+        }
+      >
+        <Pressable
+          style={
+            styles.inventoryMenuBackdrop
+          }
+          onPress={
+            closeInventoryMenu
+          }
+        >
+          <Pressable
+            style={
+              styles.inventoryMenuSheet
+            }
+            onPress={() => {
+              // Prevent backdrop press.
+            }}
+          >
+            <View
+              style={
+                styles.inventoryMenuHandle
+              }
+            />
+
+            <View
+              style={
+                styles.inventoryMenuHeader
+              }
+            >
+              <View
+                style={
+                  styles.inventoryMenuTitleRow
+                }
+              >
+                <View
+                  style={
+                    styles.inventoryMenuHeaderIcon
+                  }
+                >
+                  <Ionicons
+                    name="cube-outline"
+                    size={
+                      20
+                    }
+                    color="#2563EB"
+                  />
+                </View>
+
+                <View
+                  style={
+                    styles.inventoryMenuHeaderText
+                  }
+                >
+                  <Text
+                    style={
+                      styles.inventoryMenuTitle
+                    }
+                  >
+                    Inventory Tools
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.inventoryMenuSubtitle
+                    }
+                  >
+                    Manage inventory data and review activity.
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <InventoryMenuItem
+              icon="download-outline"
+              title="Import Inventory"
+              subtitle="Add or update products from a file"
+              onPress={() => {
+                closeInventoryMenu();
+
+                setCurrentView(
+                  "import-inventory",
+                );
+              }}
+            />
+
+            <InventoryMenuItem
+              icon="share-outline"
+              title="Export Reports"
+              subtitle="Generate CSV, Excel or PDF reports"
+              onPress={() => {
+                closeInventoryMenu();
+
+                setCurrentView(
+                  "export-reports",
+                );
+              }}
+            />
+
+            <InventoryMenuItem
+              icon="time-outline"
+              title="Stock Audit History"
+              subtitle="Review stock changes and archived products"
+              onPress={() => {
+                closeInventoryMenu();
+
+                void openGlobalTransactions();
+              }}
+            />
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={
+                closeInventoryMenu
+              }
+              style={({
+                pressed,
+              }) => [
+                styles.inventoryMenuCancel,
+
+                pressed &&
+                  styles.inventoryMenuCancelPressed,
+              ]}
+            >
+              <Text
+                style={
+                  styles.inventoryMenuCancelText
+                }
+              >
+                Cancel
+              </Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <StatusBar
         style="auto"
       />
     </SafeAreaView>
+  );
+}
+
+function InventoryMenuItem({
+  icon,
+  title,
+  subtitle,
+  onPress,
+}: {
+  icon:
+    | "download-outline"
+    | "share-outline"
+    | "time-outline";
+
+  title:
+    string;
+
+  subtitle:
+    string;
+
+  onPress:
+    () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={
+        onPress
+      }
+      style={({
+        pressed,
+      }) => [
+        styles.inventoryMenuItem,
+
+        pressed &&
+          styles.inventoryMenuItemPressed,
+      ]}
+    >
+      <View
+        style={
+          styles.inventoryMenuItemIcon
+        }
+      >
+        <Ionicons
+          name={
+            icon
+          }
+          size={
+            21
+          }
+          color="#2563EB"
+        />
+      </View>
+
+      <View
+        style={
+          styles.inventoryMenuItemText
+        }
+      >
+        <Text
+          style={
+            styles.inventoryMenuItemTitle
+          }
+        >
+          {
+            title
+          }
+        </Text>
+
+        <Text
+          style={
+            styles.inventoryMenuItemSubtitle
+          }
+        >
+          {
+            subtitle
+          }
+        </Text>
+      </View>
+
+      <Ionicons
+        name="chevron-forward"
+        size={
+          18
+        }
+        color="#98A2B3"
+      />
+    </Pressable>
   );
 }
 
@@ -5429,6 +5648,59 @@ const styles =
         18,
     },
 
+    inventoryHeaderRow: {
+      flexDirection:
+        "row",
+
+      alignItems:
+        "flex-start",
+
+      justifyContent:
+        "space-between",
+    },
+
+    inventoryHeaderText: {
+      flex:
+        1,
+
+      minWidth:
+        0,
+
+      marginRight:
+        12,
+    },
+
+    inventoryMenuButton: {
+      width:
+        42,
+
+      height:
+        42,
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "center",
+
+      borderWidth:
+        1,
+
+      borderColor:
+        "#D8DEE6",
+
+      borderRadius:
+        13,
+
+      backgroundColor:
+        "#FFFFFF",
+    },
+
+    inventoryMenuButtonPressed: {
+      backgroundColor:
+        "#F2F4F7",
+    },
+
     title: {
       fontSize:
         30,
@@ -5579,5 +5851,254 @@ const styles =
 
       color:
         "#20252B",
+    },
+
+    inventoryMenuBackdrop: {
+      flex:
+        1,
+
+      justifyContent:
+        "flex-end",
+
+      backgroundColor:
+        "rgba(15, 23, 42, 0.32)",
+    },
+
+    inventoryMenuSheet: {
+      borderTopLeftRadius:
+        28,
+
+      borderTopRightRadius:
+        28,
+
+      paddingHorizontal:
+        18,
+
+      paddingTop:
+        9,
+
+      paddingBottom:
+        28,
+
+      backgroundColor:
+        "#FFFFFF",
+    },
+
+    inventoryMenuHandle: {
+      width:
+        38,
+
+      height:
+        4,
+
+      alignSelf:
+        "center",
+
+      borderRadius:
+        999,
+
+      backgroundColor:
+        "#D0D5DD",
+    },
+
+    inventoryMenuHeader: {
+      marginTop:
+        18,
+
+      marginBottom:
+        16,
+    },
+
+    inventoryMenuTitleRow: {
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+    },
+
+    inventoryMenuHeaderIcon: {
+      width:
+        44,
+
+      height:
+        44,
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "center",
+
+      borderRadius:
+        14,
+
+      backgroundColor:
+        "#EFF6FF",
+    },
+
+    inventoryMenuHeaderText: {
+      flex:
+        1,
+
+      minWidth:
+        0,
+
+      marginLeft:
+        12,
+    },
+
+    inventoryMenuTitle: {
+      fontSize:
+        20,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#101828",
+    },
+
+    inventoryMenuSubtitle: {
+      marginTop:
+        3,
+
+      fontSize:
+        12,
+
+      lineHeight:
+        18,
+
+      color:
+        "#667085",
+    },
+
+    inventoryMenuItem: {
+      minHeight:
+        68,
+
+      flexDirection:
+        "row",
+
+      alignItems:
+        "center",
+
+      marginBottom:
+        9,
+
+      borderWidth:
+        1,
+
+      borderColor:
+        "#EAECF0",
+
+      borderRadius:
+        17,
+
+      paddingHorizontal:
+        13,
+
+      backgroundColor:
+        "#FFFFFF",
+    },
+
+    inventoryMenuItemPressed: {
+      backgroundColor:
+        "#F8FAFC",
+    },
+
+    inventoryMenuItemIcon: {
+      width:
+        42,
+
+      height:
+        42,
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "center",
+
+      borderRadius:
+        13,
+
+      backgroundColor:
+        "#EFF6FF",
+    },
+
+    inventoryMenuItemText: {
+      flex:
+        1,
+
+      minWidth:
+        0,
+
+      marginLeft:
+        12,
+
+      marginRight:
+        8,
+    },
+
+    inventoryMenuItemTitle: {
+      fontSize:
+        14,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#101828",
+    },
+
+    inventoryMenuItemSubtitle: {
+      marginTop:
+        3,
+
+      fontSize:
+        11,
+
+      lineHeight:
+        16,
+
+      color:
+        "#667085",
+    },
+
+    inventoryMenuCancel: {
+      minHeight:
+        50,
+
+      alignItems:
+        "center",
+
+      justifyContent:
+        "center",
+
+      marginTop:
+        4,
+
+      borderRadius:
+        15,
+
+      backgroundColor:
+        "#F2F4F7",
+    },
+
+    inventoryMenuCancelPressed: {
+      backgroundColor:
+        "#E4E7EC",
+    },
+
+    inventoryMenuCancelText: {
+      fontSize:
+        14,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#344054",
     },
   });
