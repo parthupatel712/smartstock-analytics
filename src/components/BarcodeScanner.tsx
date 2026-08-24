@@ -1,16 +1,10 @@
 import {
-  Ionicons,
-} from "@expo/vector-icons";
-
-import {
   type BarcodeScanningResult,
   CameraView,
   useCameraPermissions,
 } from "expo-camera";
 
 import {
-  type ReactNode,
-  useRef,
   useState,
 } from "react";
 
@@ -28,6 +22,12 @@ import {
 } from "react-native-safe-area-context";
 
 interface BarcodeScannerProps {
+  title?:
+    string;
+
+  subtitle?:
+    string;
+
   onClose:
     () => void;
 
@@ -37,42 +37,38 @@ interface BarcodeScannerProps {
         string,
     ) => Promise<void>;
 
-  /*
-   * Kept for backward compatibility
-   * with App.tsx.
-   *
-   * We no longer show the Add button
-   * inside the camera area.
-   */
   onAddProductManually?:
     () => void;
 
   bottomContent?:
-    ReactNode;
-
-  title?:
-    string;
-
-  subtitle?:
-    string;
+    React.ReactNode;
 }
 
-const SAME_BARCODE_COOLDOWN_MS =
-  1600;
-
 export function BarcodeScanner({
+  title =
+    "Scan Product",
+
+  subtitle =
+    "Scan a barcode to continue.",
+
   onClose,
   onBarcodeDetected,
   onAddProductManually,
   bottomContent,
-  title = "Scan Product",
-  subtitle = "Scan a barcode to find a product in SmartStock.",
 }: BarcodeScannerProps) {
   const [
     permission,
     requestPermission,
   ] =
     useCameraPermissions();
+
+  const [
+    hasScanned,
+    setHasScanned,
+  ] =
+    useState(
+      false,
+    );
 
   const [
     isProcessing,
@@ -82,29 +78,12 @@ export function BarcodeScanner({
       false,
     );
 
-  const [
-    lastBarcode,
-    setLastBarcode,
-  ] =
-    useState(
-      "",
-    );
-
-  const lastProcessedBarcodeRef =
-    useRef(
-      "",
-    );
-
-  const lastProcessedAtRef =
-    useRef(
-      0,
-    );
-
   async function handleBarcodeScanned(
     result:
       BarcodeScanningResult,
   ): Promise<void> {
     if (
+      hasScanned ||
       isProcessing
     ) {
       return;
@@ -119,30 +98,8 @@ export function BarcodeScanner({
       return;
     }
 
-    const now =
-      Date.now();
-
-    const isSameRecentBarcode =
-      lastProcessedBarcodeRef.current ===
-        barcode &&
-      now -
-        lastProcessedAtRef.current <
-        SAME_BARCODE_COOLDOWN_MS;
-
-    if (
-      isSameRecentBarcode
-    ) {
-      return;
-    }
-
-    lastProcessedBarcodeRef.current =
-      barcode;
-
-    lastProcessedAtRef.current =
-      now;
-
-    setLastBarcode(
-      barcode,
+    setHasScanned(
+      true,
     );
 
     setIsProcessing(
@@ -153,6 +110,22 @@ export function BarcodeScanner({
       await onBarcodeDetected(
         barcode,
       );
+
+      /*
+       * Allow another barcode shortly
+       * after a successful scan so a
+       * different product can replace
+       * the current result.
+       */
+      setTimeout(
+        () => {
+          setHasScanned(
+            false,
+          );
+        },
+
+        850,
+      );
     } catch (
       error
     ) {
@@ -161,11 +134,9 @@ export function BarcodeScanner({
         error,
       );
 
-      lastProcessedBarcodeRef.current =
-        "";
-
-      lastProcessedAtRef.current =
-        0;
+      setHasScanned(
+        false,
+      );
     } finally {
       setIsProcessing(
         false,
@@ -177,35 +148,23 @@ export function BarcodeScanner({
     !permission
   ) {
     return (
-      <SafeAreaView
-        edges={[
-          "top",
-          "left",
-          "right",
-          "bottom",
-        ]}
+      <View
         style={
-          styles.permissionScreen
+          styles.centeredContainer
         }
       >
-        <View
+        <ActivityIndicator
+          size="large"
+        />
+
+        <Text
           style={
-            styles.centeredContainer
+            styles.statusText
           }
         >
-          <ActivityIndicator
-            size="large"
-          />
-
-          <Text
-            style={
-              styles.statusText
-            }
-          >
-            Checking camera permission…
-          </Text>
-        </View>
-      </SafeAreaView>
+          Checking camera permission…
+        </Text>
+      </View>
     );
   }
 
@@ -226,56 +185,9 @@ export function BarcodeScanner({
       >
         <View
           style={
-            styles.permissionHeader
-          }
-        >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            hitSlop={
-              10
-            }
-            onPress={
-              onClose
-            }
-            style={({
-              pressed,
-            }) => [
-              styles.backButton,
-
-              pressed &&
-                styles.buttonPressed,
-            ]}
-          >
-            <Ionicons
-              name="chevron-back"
-              size={
-                22
-              }
-              color="#111827"
-            />
-          </Pressable>
-        </View>
-
-        <View
-          style={
             styles.centeredContainer
           }
         >
-          <View
-            style={
-              styles.permissionIcon
-            }
-          >
-            <Ionicons
-              name="camera-outline"
-              size={
-                30
-              }
-              color="#2563EB"
-            />
-          </View>
-
           <Text
             style={
               styles.permissionTitle
@@ -286,7 +198,7 @@ export function BarcodeScanner({
 
           <Text
             style={
-              styles.description
+              styles.permissionDescription
             }
           >
             SmartStock needs camera access to scan product barcodes.
@@ -297,29 +209,16 @@ export function BarcodeScanner({
             onPress={() =>
               void requestPermission()
             }
-            style={({
-              pressed,
-            }) => [
-              styles.primaryButton,
-
-              pressed &&
-                styles.primaryButtonPressed,
-            ]}
+            style={
+              styles.primaryButton
+            }
           >
-            <Ionicons
-              name="camera-outline"
-              size={
-                19
-              }
-              color="#FFFFFF"
-            />
-
             <Text
               style={
                 styles.primaryButtonText
               }
             >
-              Allow Camera
+              Allow camera access
             </Text>
           </Pressable>
 
@@ -328,18 +227,13 @@ export function BarcodeScanner({
             onPress={
               onClose
             }
-            style={({
-              pressed,
-            }) => [
-              styles.permissionCancelButton,
-
-              pressed &&
-                styles.buttonPressed,
-            ]}
+            style={
+              styles.secondaryButton
+            }
           >
             <Text
               style={
-                styles.permissionCancelText
+                styles.secondaryButtonText
               }
             >
               Cancel
@@ -362,193 +256,137 @@ export function BarcodeScanner({
         styles.screen
       }
     >
-      <View
-        style={
-          styles.header
+      <ScrollView
+        contentContainerStyle={
+          styles.content
         }
-      >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={
-            10
-          }
-          onPress={
-            onClose
-          }
-          style={({
-            pressed,
-          }) => [
-            styles.backButton,
-
-            pressed &&
-              styles.buttonPressed,
-          ]}
-        >
-          <Ionicons
-            name="chevron-back"
-            size={
-              22
-            }
-            color="#111827"
-          />
-        </Pressable>
-
-        <View
-          style={
-            styles.headerTextContainer
-          }
-        >
-          <Text
-            style={
-              styles.title
-            }
-          >
-            {
-              title
-            }
-          </Text>
-
-          <Text
-            style={
-              styles.subtitle
-            }
-            numberOfLines={
-              2
-            }
-          >
-            {
-              subtitle
-            }
-          </Text>
-        </View>
-
-        <View
-          style={
-            styles.headerSpacer
-          }
-        />
-      </View>
-
-      <View
-        style={
-          styles.cameraCard
+        showsVerticalScrollIndicator={
+          false
         }
+        keyboardShouldPersistTaps="handled"
       >
-        <CameraView
-          barcodeScannerSettings={{
-            barcodeTypes: [
-              "ean13",
-              "ean8",
-              "upc_a",
-              "upc_e",
-              "code128",
-            ],
-          }}
-          facing="back"
-          onBarcodeScanned={(
-            result,
-          ) =>
-            void handleBarcodeScanned(
-              result,
-            )
-          }
-          style={
-            StyleSheet.absoluteFill
-          }
-        />
-
         <View
-          pointerEvents="none"
           style={
-            styles.cameraShade
-          }
-        />
-
-        <View
-          pointerEvents="none"
-          style={
-            styles.scanFrame
-          }
-        >
-          <View
-            style={[
-              styles.corner,
-              styles.cornerTopLeft,
-            ]}
-          />
-
-          <View
-            style={[
-              styles.corner,
-              styles.cornerTopRight,
-            ]}
-          />
-
-          <View
-            style={[
-              styles.corner,
-              styles.cornerBottomLeft,
-            ]}
-          />
-
-          <View
-            style={[
-              styles.corner,
-              styles.cornerBottomRight,
-            ]}
-          />
-
-          <View
-            style={
-              styles.scanLine
-            }
-          />
-        </View>
-
-        <View
-          pointerEvents="none"
-          style={
-            styles.cameraInstructionContainer
+            styles.header
           }
         >
           <View
             style={
-              styles.cameraInstructionPill
+              styles.headerText
             }
           >
-            <Ionicons
-              name="barcode-outline"
-              size={
-                15
+            <Text
+              style={
+                styles.title
               }
-              color="#FFFFFF"
-            />
+            >
+              {
+                title
+              }
+            </Text>
 
             <Text
               style={
-                styles.cameraInstructions
+                styles.subtitle
               }
             >
-              Position barcode inside the frame
+              {
+                subtitle
+              }
             </Text>
           </View>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={
+              onClose
+            }
+            style={({
+              pressed,
+            }) => [
+              styles.closeButton,
+
+              pressed &&
+                styles.buttonPressed,
+            ]}
+          >
+            <Text
+              style={
+                styles.closeButtonText
+              }
+            >
+              Back
+            </Text>
+          </Pressable>
         </View>
 
-        {isProcessing ? (
+        <View
+          style={
+            styles.cameraCard
+          }
+        >
+          <CameraView
+            barcodeScannerSettings={{
+              barcodeTypes: [
+                "ean13",
+                "ean8",
+                "upc_a",
+                "upc_e",
+                "code128",
+              ],
+            }}
+            facing="back"
+            /*
+             * A mild zoom helps small
+             * barcodes without forcing the
+             * phone too close to the item.
+             */
+            zoom={
+              0.12
+            }
+            onBarcodeScanned={
+              hasScanned
+                ? undefined
+                : (
+                    result,
+                  ) =>
+                    void handleBarcodeScanned(
+                      result,
+                    )
+            }
+            style={
+              styles.camera
+            }
+          />
+
           <View
             pointerEvents="none"
             style={
-              styles.processingOverlay
+              styles.cameraOverlay
             }
           >
             <View
               style={
-                styles.processingCard
+                styles.scanFrame
+              }
+            />
+
+            <Text
+              style={
+                styles.scanHint
+              }
+            >
+              Keep the barcode about 10–20 cm away and centered
+            </Text>
+          </View>
+
+          {isProcessing ? (
+            <View
+              style={
+                styles.processingOverlay
               }
             >
               <ActivityIndicator
-                size="small"
                 color="#FFFFFF"
               />
 
@@ -560,91 +398,10 @@ export function BarcodeScanner({
                 Looking up product…
               </Text>
             </View>
-          </View>
-        ) : null}
-      </View>
+          ) : null}
+        </View>
 
-      <ScrollView
-        style={
-          styles.resultScroll
-        }
-        contentContainerStyle={
-          styles.resultContent
-        }
-        showsVerticalScrollIndicator={
-          false
-        }
-        keyboardShouldPersistTaps="handled"
-      >
-        {bottomContent ? (
-          bottomContent
-        ) : (
-          <View
-            style={
-              styles.readyCard
-            }
-          >
-            <View
-              style={
-                styles.readyIcon
-              }
-            >
-              <Ionicons
-                name="barcode-outline"
-                size={
-                  25
-                }
-                color="#52606D"
-              />
-            </View>
-
-            <View
-              style={
-                styles.readyText
-              }
-            >
-              <Text
-                style={
-                  styles.readyTitle
-                }
-              >
-                Ready to scan
-              </Text>
-
-              <Text
-                style={
-                  styles.readyDescription
-                }
-              >
-                Scan an existing product to view stock and quick actions.
-              </Text>
-
-              {lastBarcode ? (
-                <Text
-                  style={
-                    styles.lastBarcode
-                  }
-                >
-                  Last scan:{" "}
-                  {
-                    lastBarcode
-                  }
-                </Text>
-              ) : null}
-            </View>
-          </View>
-        )}
-
-        {/*
-         * Keep manual product creation
-         * outside the camera area.
-         *
-         * This button only appears when
-         * App.tsx supplies the callback
-         * and no scanned result is shown.
-         */}
-        {onAddProductManually &&
-        !bottomContent ? (
+        {onAddProductManually ? (
           <Pressable
             accessibilityRole="button"
             onPress={
@@ -653,36 +410,32 @@ export function BarcodeScanner({
             style={({
               pressed,
             }) => [
-              styles.addProductButton,
+              styles.manualButton,
 
               pressed &&
-                styles.addProductButtonPressed,
+                styles.buttonPressed,
             ]}
           >
-            <Ionicons
-              name="add-circle-outline"
-              size={
-                19
-              }
-              color="#52606D"
-            />
-
             <Text
               style={
-                styles.addProductText
+                styles.manualButtonText
               }
             >
-              Add product manually
+              Add Product Manually
             </Text>
-
-            <Ionicons
-              name="chevron-forward"
-              size={
-                16
-              }
-              color="#94A3B8"
-            />
           </Pressable>
+        ) : null}
+
+        {bottomContent ? (
+          <View
+            style={
+              styles.bottomContent
+            }
+          >
+            {
+              bottomContent
+            }
+          </View>
         ) : null}
       </ScrollView>
     </SafeAreaView>
@@ -699,35 +452,70 @@ const styles =
         "#F4F6F8",
     },
 
-    header: {
-      minHeight:
-        62,
+    content: {
+      paddingHorizontal:
+        16,
 
+      paddingTop:
+        10,
+
+      paddingBottom:
+        24,
+    },
+
+    header: {
       flexDirection:
         "row",
 
       alignItems:
-        "center",
+        "flex-start",
 
-      paddingHorizontal:
-        16,
+      justifyContent:
+        "space-between",
 
-      paddingVertical:
-        5,
-
-      backgroundColor:
-        "#F4F6F8",
+      marginBottom:
+        14,
     },
 
-    backButton: {
-      width:
-        40,
+    headerText: {
+      flex:
+        1,
 
-      height:
-        40,
+      minWidth:
+        0,
 
-      alignItems:
-        "center",
+      marginRight:
+        12,
+    },
+
+    title: {
+      fontSize:
+        27,
+
+      fontWeight:
+        "800",
+
+      color:
+        "#111827",
+    },
+
+    subtitle: {
+      marginTop:
+        4,
+
+      fontSize:
+        13,
+
+      lineHeight:
+        18,
+
+      color:
+        "#6B7280",
+    },
+
+    closeButton: {
+      minHeight:
+        40,
 
       justifyContent:
         "center",
@@ -736,71 +524,37 @@ const styles =
         1,
 
       borderColor:
-        "#DCE1E7",
+        "#CBD2DA",
 
       borderRadius:
+        10,
+
+      paddingHorizontal:
         13,
 
       backgroundColor:
         "#FFFFFF",
     },
 
-    headerTextContainer: {
-      flex:
-        1,
-
-      minWidth:
-        0,
-
-      marginHorizontal:
-        10,
-    },
-
-    headerSpacer: {
-      width:
-        40,
-    },
-
-    title: {
+    closeButtonText: {
       fontSize:
-        18,
-
-      fontWeight:
-        "800",
-
-      textAlign:
-        "center",
-
-      color:
-        "#111827",
-    },
-
-    subtitle: {
-      marginTop:
-        2,
-
-      fontSize:
-        9,
-
-      lineHeight:
         13,
 
-      textAlign:
-        "center",
+      fontWeight:
+        "700",
 
       color:
-        "#6B7280",
+        "#20252B",
     },
 
-    /*
-     * Smaller camera section.
-     */
+    buttonPressed: {
+      opacity:
+        0.66,
+    },
+
     cameraCard: {
       height:
-        200,
-
-      marginHorizontal:
-        14,
+        220,
 
       overflow:
         "hidden",
@@ -812,184 +566,72 @@ const styles =
         "#111827",
     },
 
-    cameraShade: {
+    camera: {
+      ...StyleSheet.absoluteFillObject,
+    },
+
+    cameraOverlay: {
       ...StyleSheet.absoluteFillObject,
 
+      alignItems:
+        "center",
+
+      justifyContent:
+        "center",
+
+      paddingHorizontal:
+        24,
+
       backgroundColor:
-        "rgba(0,0,0,0.08)",
+        "rgba(0, 0, 0, 0.08)",
     },
 
     /*
-     * Centered barcode-sized guide.
+     * Smaller target area helps users
+     * position short / narrow barcodes
+     * more consistently.
      */
     scanFrame: {
-      position:
-        "absolute",
-
-      top:
-        "25%",
-
-      left:
-        "9%",
-
-      right:
-        "9%",
-
-      height:
-        90,
-    },
-
-    corner: {
-      position:
-        "absolute",
-
       width:
-        26,
+        "78%",
+
+      maxWidth:
+        285,
 
       height:
-        26,
+        96,
+
+      borderWidth:
+        2,
 
       borderColor:
         "#FFFFFF",
-    },
-
-    cornerTopLeft: {
-      top:
-        0,
-
-      left:
-        0,
-
-      borderTopWidth:
-        3,
-
-      borderLeftWidth:
-        3,
-
-      borderTopLeftRadius:
-        10,
-    },
-
-    cornerTopRight: {
-      top:
-        0,
-
-      right:
-        0,
-
-      borderTopWidth:
-        3,
-
-      borderRightWidth:
-        3,
-
-      borderTopRightRadius:
-        10,
-    },
-
-    cornerBottomLeft: {
-      bottom:
-        0,
-
-      left:
-        0,
-
-      borderBottomWidth:
-        3,
-
-      borderLeftWidth:
-        3,
-
-      borderBottomLeftRadius:
-        10,
-    },
-
-    cornerBottomRight: {
-      right:
-        0,
-
-      bottom:
-        0,
-
-      borderRightWidth:
-        3,
-
-      borderBottomWidth:
-        3,
-
-      borderBottomRightRadius:
-        10,
-    },
-
-    scanLine: {
-      position:
-        "absolute",
-
-      top:
-        "50%",
-
-      left:
-        10,
-
-      right:
-        10,
-
-      height:
-        2,
 
       borderRadius:
-        999,
+        14,
 
       backgroundColor:
-        "rgba(255,255,255,0.92)",
+        "transparent",
     },
 
-    cameraInstructionContainer: {
-      position:
-        "absolute",
+    scanHint: {
+      marginTop:
+        14,
 
-      left:
-        0,
+      maxWidth:
+        280,
 
-      right:
-        0,
-
-      bottom:
-        10,
-
-      alignItems:
-        "center",
-    },
-
-    cameraInstructionPill: {
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      gap:
-        6,
-
-      borderRadius:
-        999,
-
-      paddingHorizontal:
-        10,
-
-      paddingVertical:
-        6,
-
-      backgroundColor:
-        "rgba(17,24,39,0.70)",
-    },
-
-    cameraInstructions: {
       fontSize:
-        9,
+        12,
+
+      lineHeight:
+        17,
 
       fontWeight:
-        "700",
+        "600",
+
+      textAlign:
+        "center",
 
       color:
         "#FFFFFF",
@@ -998,9 +640,6 @@ const styles =
     processingOverlay: {
       ...StyleSheet.absoluteFillObject,
 
-      zIndex:
-        8,
-
       alignItems:
         "center",
 
@@ -1008,35 +647,15 @@ const styles =
         "center",
 
       backgroundColor:
-        "rgba(0,0,0,0.14)",
-    },
-
-    processingCard: {
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      borderRadius:
-        999,
-
-      paddingHorizontal:
-        14,
-
-      paddingVertical:
-        9,
-
-      backgroundColor:
-        "rgba(17,24,39,0.88)",
+        "rgba(0, 0, 0, 0.46)",
     },
 
     processingText: {
-      marginLeft:
-        8,
+      marginTop:
+        9,
 
       fontSize:
-        11,
+        13,
 
       fontWeight:
         "700",
@@ -1045,57 +664,12 @@ const styles =
         "#FFFFFF",
     },
 
-    resultScroll: {
-      flex:
-        1,
-
-      minHeight:
-        0,
-    },
-
-    resultContent: {
-      paddingHorizontal:
-        14,
-
-      paddingTop:
-        10,
-
-      paddingBottom:
-        28,
-    },
-
-    readyCard: {
-      minHeight:
-        72,
-
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      borderWidth:
-        1,
-
-      borderColor:
-        "#E0E4E8",
-
-      borderRadius:
-        16,
-
-      padding:
+    manualButton: {
+      marginTop:
         12,
 
-      backgroundColor:
-        "#FFFFFF",
-    },
-
-    readyIcon: {
-      width:
-        43,
-
-      height:
-        43,
+      minHeight:
+        44,
 
       alignItems:
         "center",
@@ -1103,25 +677,20 @@ const styles =
       justifyContent:
         "center",
 
-      borderRadius:
-        14,
-
-      backgroundColor:
-        "#F1F5F9",
-    },
-
-    readyText: {
-      flex:
+      borderWidth:
         1,
 
-      minWidth:
-        0,
+      borderColor:
+        "#D3DAE3",
 
-      marginLeft:
-        10,
+      borderRadius:
+        12,
+
+      backgroundColor:
+        "#FFFFFF",
     },
 
-    readyTitle: {
+    manualButtonText: {
       fontSize:
         13,
 
@@ -1129,83 +698,12 @@ const styles =
         "800",
 
       color:
-        "#111827",
+        "#20252B",
     },
 
-    readyDescription: {
+    bottomContent: {
       marginTop:
-        2,
-
-      fontSize:
-        9,
-
-      lineHeight:
-        14,
-
-      color:
-        "#64748B",
-    },
-
-    lastBarcode: {
-      marginTop:
-        4,
-
-      fontSize:
-        8,
-
-      color:
-        "#94A3B8",
-    },
-
-    addProductButton: {
-      marginTop:
-        9,
-
-      minHeight:
-        45,
-
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      borderWidth:
-        1,
-
-      borderColor:
-        "#E0E4E8",
-
-      borderRadius:
-        13,
-
-      paddingHorizontal:
         12,
-
-      backgroundColor:
-        "#FFFFFF",
-    },
-
-    addProductButtonPressed: {
-      backgroundColor:
-        "#F8FAFC",
-    },
-
-    addProductText: {
-      flex:
-        1,
-
-      marginLeft:
-        8,
-
-      fontSize:
-        11,
-
-      fontWeight:
-        "700",
-
-      color:
-        "#52606D",
     },
 
     permissionScreen: {
@@ -1214,14 +712,6 @@ const styles =
 
       backgroundColor:
         "#F4F6F8",
-    },
-
-    permissionHeader: {
-      paddingHorizontal:
-        16,
-
-      paddingTop:
-        8,
     },
 
     centeredContainer: {
@@ -1241,32 +731,9 @@ const styles =
         "#F4F6F8",
     },
 
-    permissionIcon: {
-      width:
-        64,
-
-      height:
-        64,
-
-      alignItems:
-        "center",
-
-      justifyContent:
-        "center",
-
-      borderRadius:
-        22,
-
-      backgroundColor:
-        "#EFF6FF",
-    },
-
     permissionTitle: {
-      marginTop:
-        17,
-
       fontSize:
-        22,
+        23,
 
       fontWeight:
         "800",
@@ -1278,18 +745,15 @@ const styles =
         "#111827",
     },
 
-    description: {
+    permissionDescription: {
       marginTop:
         10,
 
-      maxWidth:
-        320,
-
       fontSize:
-        14,
+        15,
 
       lineHeight:
-        21,
+        22,
 
       textAlign:
         "center",
@@ -1300,10 +764,10 @@ const styles =
 
     statusText: {
       marginTop:
-        14,
+        12,
 
       fontSize:
-        14,
+        15,
 
       color:
         "#5D6673",
@@ -1311,13 +775,10 @@ const styles =
 
     primaryButton: {
       marginTop:
-        24,
+        22,
 
       minHeight:
-        48,
-
-      flexDirection:
-        "row",
+        46,
 
       alignItems:
         "center",
@@ -1325,11 +786,8 @@ const styles =
       justifyContent:
         "center",
 
-      gap:
-        7,
-
       borderRadius:
-        12,
+        10,
 
       paddingHorizontal:
         18,
@@ -1338,22 +796,17 @@ const styles =
         "#20252B",
     },
 
-    primaryButtonPressed: {
-      backgroundColor:
-        "#111827",
-    },
-
     primaryButtonText: {
       fontWeight:
-        "800",
+        "700",
 
       color:
         "#FFFFFF",
     },
 
-    permissionCancelButton: {
+    secondaryButton: {
       marginTop:
-        10,
+        11,
 
       minHeight:
         44,
@@ -1364,23 +817,27 @@ const styles =
       justifyContent:
         "center",
 
+      borderWidth:
+        1,
+
+      borderColor:
+        "#C8CED6",
+
+      borderRadius:
+        10,
+
       paddingHorizontal:
         18,
+
+      backgroundColor:
+        "#FFFFFF",
     },
 
-    permissionCancelText: {
-      fontSize:
-        13,
-
+    secondaryButtonText: {
       fontWeight:
         "700",
 
       color:
-        "#64748B",
-    },
-
-    buttonPressed: {
-      opacity:
-        0.65,
+        "#20252B",
     },
   });

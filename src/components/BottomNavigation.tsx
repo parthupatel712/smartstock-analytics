@@ -14,52 +14,47 @@ import {
 } from "react-native-safe-area-context";
 
 export type BottomNavigationItem =
-  | "dashboard"
-  | "history"
+  | "home"
+  | "inventory"
   | "scan"
-  | "reorder"
-  | "analytics"
-  | "data";
+  | "orders"
+  | "analytics";
 
 interface BottomNavigationProps {
   activeItem?:
     BottomNavigationItem | null;
 
-  onDashboard:
+  onHome:
     () => void;
 
-  onHistory:
+  onInventory:
     () => void;
 
   onScan:
     () => void;
 
-  onReorder:
+  onOrders:
     () => void;
 
   onAnalytics:
-    () => void;
-
-  onData:
     () => void;
 }
 
 export function BottomNavigation({
   activeItem = null,
-  onDashboard,
-  onHistory,
+  onHome,
+  onInventory,
   onScan,
-  onReorder,
+  onOrders,
   onAnalytics,
-  onData,
 }: BottomNavigationProps) {
   const insets =
     useSafeAreaInsets();
 
   /*
-   * Keep enough space for the iPhone
-   * home indicator, but don't waste
-   * the entire safe-area height.
+   * Keep enough room for the iPhone
+   * home indicator without wasting
+   * too much vertical space.
    */
   const bottomPadding =
     Math.max(
@@ -84,28 +79,28 @@ export function BottomNavigation({
         }
       >
         <NavigationButton
-          icon="grid-outline"
-          activeIcon="grid"
-          label="Dashboard"
+          icon="home-outline"
+          activeIcon="home"
+          label="Home"
           active={
             activeItem ===
-            "dashboard"
+            "home"
           }
           onPress={
-            onDashboard
+            onHome
           }
         />
 
         <NavigationButton
-          icon="time-outline"
-          activeIcon="time"
-          label="History"
+          icon="cube-outline"
+          activeIcon="cube"
+          label="Inventory"
           active={
             activeItem ===
-            "history"
+            "inventory"
           }
           onPress={
-            onHistory
+            onInventory
           }
         />
 
@@ -124,15 +119,15 @@ export function BottomNavigation({
         />
 
         <NavigationButton
-          icon="cube-outline"
-          activeIcon="cube"
-          label="Reorder"
+          icon="cart-outline"
+          activeIcon="cart"
+          label="Orders"
           active={
             activeItem ===
-            "reorder"
+            "orders"
           }
           onPress={
-            onReorder
+            onOrders
           }
         />
 
@@ -146,19 +141,6 @@ export function BottomNavigation({
           }
           onPress={
             onAnalytics
-          }
-        />
-
-        <NavigationButton
-          icon="swap-vertical-outline"
-          activeIcon="swap-vertical"
-          label="Data"
-          active={
-            activeItem ===
-            "data"
-          }
-          onPress={
-            onData
           }
         />
       </View>
@@ -176,20 +158,18 @@ function NavigationButton({
   onPress,
 }: {
   icon:
-    | "grid-outline"
-    | "time-outline"
-    | "barcode-outline"
+    | "home-outline"
     | "cube-outline"
-    | "bar-chart-outline"
-    | "swap-vertical-outline";
+    | "barcode-outline"
+    | "cart-outline"
+    | "bar-chart-outline";
 
   activeIcon:
-    | "grid"
-    | "time"
-    | "barcode"
+    | "home"
     | "cube"
-    | "bar-chart"
-    | "swap-vertical";
+    | "barcode"
+    | "cart"
+    | "bar-chart";
 
   label:
     string;
@@ -256,7 +236,7 @@ function NavigationButton({
               : icon
           }
           size={
-            23
+            24
           }
           color={
             active
@@ -282,7 +262,7 @@ function NavigationButton({
         }
         adjustsFontSizeToFit
         minimumFontScale={
-          0.72
+          0.78
         }
       >
         {
@@ -295,14 +275,6 @@ function NavigationButton({
 
 const styles =
   StyleSheet.create({
-    /*
-     * Navigation stays in the normal
-     * page layout.
-     *
-     * No absolute positioning.
-     * No floating overlay.
-     * No blur.
-     */
     container: {
       flexShrink:
         0,
@@ -323,15 +295,9 @@ const styles =
         "#FFFFFF",
     },
 
-    /*
-     * Reduced from 69px.
-     *
-     * This gives the page noticeably
-     * more usable vertical space.
-     */
     bar: {
       minHeight:
-        56,
+        58,
 
       flexDirection:
         "row",
@@ -351,7 +317,7 @@ const styles =
         0,
 
       minHeight:
-        50,
+        52,
 
       alignItems:
         "center",
@@ -363,16 +329,12 @@ const styles =
         14,
 
       paddingHorizontal:
-        1,
+        2,
 
       paddingVertical:
         2,
     },
 
-    /*
-     * Selected tab remains subtle,
-     * similar to Apple's tab controls.
-     */
     navButtonActive: {
       backgroundColor:
         "#F3F5F7",
@@ -388,16 +350,12 @@ const styles =
         0.60,
     },
 
-    /*
-     * Smaller icon container allows
-     * the complete navbar to shrink.
-     */
     iconContainer: {
       width:
-        34,
+        36,
 
       height:
-        28,
+        30,
 
       alignItems:
         "center",
@@ -427,10 +385,10 @@ const styles =
         "100%",
 
       fontSize:
-        8,
+        8.5,
 
       lineHeight:
-        9,
+        10,
 
       fontWeight:
         "700",
