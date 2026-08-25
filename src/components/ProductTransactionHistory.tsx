@@ -11,8 +11,8 @@ import {
 } from "react-native";
 
 import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
+  ScreenContainer,
+} from "./ScreenContainer";
 
 import type {
   TransactionHistoryItem,
@@ -97,15 +97,18 @@ export function ProductTransactionHistory({
     );
 
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-        "bottom",
-      ]}
-      style={
-        styles.screen
+    <ScreenContainer
+      scrollable={
+        false
+      }
+      padded={
+        false
+      }
+      topSpacing={
+        0
+      }
+      bottomSpacing={
+        0
       }
     >
       <FlatList
@@ -286,7 +289,7 @@ export function ProductTransactionHistory({
           );
         }}
       />
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
@@ -918,14 +921,6 @@ function getTransactionDisplay(
 
 const styles =
   StyleSheet.create({
-    screen: {
-      flex:
-        1,
-
-      backgroundColor:
-        "#F4F6F8",
-    },
-
     content: {
       paddingHorizontal:
         18,

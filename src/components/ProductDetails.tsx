@@ -1,14 +1,13 @@
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
 import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
+  ScreenContainer,
+} from "./ScreenContainer";
 
 import type {
   Product,
@@ -67,401 +66,389 @@ export function ProductDetails({
     product.unitCost;
 
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-        "bottom",
-      ]}
-      style={
-        styles.screen
+    <ScreenContainer
+      topSpacing={
+        12
+      }
+      bottomSpacing={
+        48
       }
     >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
-        }
-        showsVerticalScrollIndicator={
-          false
+      <View
+        style={
+          styles.headerRow
         }
       >
         <View
           style={
-            styles.headerRow
+            styles.headerText
           }
         >
-          <View
+          <Text
             style={
-              styles.headerText
+              styles.title
             }
           >
+            {
+              product.name
+            }
+          </Text>
+
+          {product.brand.trim() ? (
             <Text
               style={
-                styles.title
+                styles.brand
               }
             >
               {
-                product.name
+                product.brand
               }
             </Text>
-
-            {product.brand.trim() ? (
-              <Text
-                style={
-                  styles.brand
-                }
-              >
-                {
-                  product.brand
-                }
-              </Text>
-            ) : null}
-          </View>
-
-          <Pressable
-            accessibilityRole="button"
-            hitSlop={
-              8
-            }
-            onPress={
-              onClose
-            }
-            style={({
-              pressed,
-            }) => [
-              styles.closeButton,
-
-              pressed &&
-                styles.buttonPressed,
-            ]}
-          >
-            <Text
-              style={
-                styles.closeButtonText
-              }
-            >
-              Close
-            </Text>
-          </Pressable>
-        </View>
-
-        <View
-          style={
-            styles.statusCard
-          }
-        >
-          <Text
-            style={
-              styles.statusLabel
-            }
-          >
-            Current Stock
-          </Text>
-
-          <Text
-            style={[
-              styles.stockValue,
-
-              product.currentStock ===
-                0 &&
-                styles.stockValueDanger,
-
-              product.currentStock >
-                0 &&
-                product.currentStock <=
-                  product.reorderLevel &&
-                styles.stockValueWarning,
-            ]}
-          >
-            {
-              product.currentStock
-            }
-          </Text>
-
-          <Text
-            style={
-              styles.stockUnit
-            }
-          >
-            units
-          </Text>
-
-          {product.currentStock ===
-          0 ? (
-            <Text
-              style={
-                styles.stockMessageDanger
-              }
-            >
-              Out of stock
-            </Text>
-          ) : product.currentStock <=
-            product.reorderLevel ? (
-            <Text
-              style={
-                styles.stockMessageWarning
-              }
-            >
-              Low stock
-            </Text>
-          ) : (
-            <Text
-              style={
-                styles.stockMessageGood
-              }
-            >
-              Stock level looks good
-            </Text>
-          )}
+          ) : null}
         </View>
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Update inventory for ${product.name}`}
-          onPress={() =>
-            onUpdateStock(
-              product,
-            )
+          hitSlop={
+            8
+          }
+          onPress={
+            onClose
           }
           style={({
             pressed,
           }) => [
-            styles.updateInventoryButton,
+            styles.closeButton,
 
             pressed &&
-              styles.updateInventoryButtonPressed,
+              styles.buttonPressed,
           ]}
         >
-          <View
+          <Text
             style={
-              styles.updateInventoryText
+              styles.closeButtonText
             }
           >
-            <Text
-              style={
-                styles.updateInventoryTitle
-              }
-            >
-              Update Inventory
-            </Text>
+            Close
+          </Text>
+        </Pressable>
+      </View>
 
-            <Text
-              style={
-                styles.updateInventoryDescription
-              }
-            >
-              Stock in · Sale · Return · Damage · Physical Count
-            </Text>
-          </View>
+      <View
+        style={
+          styles.statusCard
+        }
+      >
+        <Text
+          style={
+            styles.statusLabel
+          }
+        >
+          Current Stock
+        </Text>
+
+        <Text
+          style={[
+            styles.stockValue,
+
+            product.currentStock ===
+              0 &&
+              styles.stockValueDanger,
+
+            product.currentStock >
+              0 &&
+              product.currentStock <=
+                product.reorderLevel &&
+              styles.stockValueWarning,
+          ]}
+        >
+          {
+            product.currentStock
+          }
+        </Text>
+
+        <Text
+          style={
+            styles.stockUnit
+          }
+        >
+          units
+        </Text>
+
+        {product.currentStock ===
+        0 ? (
+          <Text
+            style={
+              styles.stockMessageDanger
+            }
+          >
+            Out of stock
+          </Text>
+        ) : product.currentStock <=
+          product.reorderLevel ? (
+          <Text
+            style={
+              styles.stockMessageWarning
+            }
+          >
+            Low stock
+          </Text>
+        ) : (
+          <Text
+            style={
+              styles.stockMessageGood
+            }
+          >
+            Stock level looks good
+          </Text>
+        )}
+      </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Update inventory for ${product.name}`}
+        onPress={() =>
+          onUpdateStock(
+            product,
+          )
+        }
+        style={({
+          pressed,
+        }) => [
+          styles.updateInventoryButton,
+
+          pressed &&
+            styles.updateInventoryButtonPressed,
+        ]}
+      >
+        <View
+          style={
+            styles.updateInventoryText
+          }
+        >
+          <Text
+            style={
+              styles.updateInventoryTitle
+            }
+          >
+            Update Inventory
+          </Text>
 
           <Text
             style={
-              styles.updateInventoryArrow
+              styles.updateInventoryDescription
             }
           >
-            ›
+            Stock in · Sale · Return · Damage · Physical Count
           </Text>
-        </Pressable>
+        </View>
 
         <Text
           style={
-            styles.sectionTitle
+            styles.updateInventoryArrow
           }
         >
-          Product Information
+          ›
         </Text>
+      </Pressable>
 
-        <View
-          style={
-            styles.infoCard
+      <Text
+        style={
+          styles.sectionTitle
+        }
+      >
+        Product Information
+      </Text>
+
+      <View
+        style={
+          styles.infoCard
+        }
+      >
+        <InfoRow
+          label="Barcode"
+          value={
+            product.barcode
           }
-        >
-          <InfoRow
-            label="Barcode"
-            value={
-              product.barcode
+        />
+
+        <InfoRow
+          label="Department"
+          value={
+            product.department
+          }
+        />
+
+        <InfoRow
+          label="Category"
+          value={
+            product.category
+          }
+        />
+
+        <InfoRow
+          label="Unit Cost"
+          value={
+            formatCurrency(
+              product.unitCost,
+            )
+          }
+        />
+
+        <InfoRow
+          label="Selling Price"
+          value={
+            formatCurrency(
+              product.unitPrice,
+            )
+          }
+        />
+
+        <InfoRow
+          label="Estimated Profit / Unit"
+          value={
+            formatCurrency(
+              estimatedProfitPerUnit,
+            )
+          }
+        />
+
+        <InfoRow
+          label="Reorder Level"
+          value={`${product.reorderLevel} units`}
+          isLast
+        />
+      </View>
+
+      {latestDelivery ? (
+        <>
+          <Text
+            style={
+              styles.sectionTitle
             }
-          />
+          >
+            Last Stock Added
+          </Text>
 
-          <InfoRow
-            label="Department"
-            value={
-              product.department
+          <View
+            style={
+              styles.deliveryCard
             }
-          />
-
-          <InfoRow
-            label="Category"
-            value={
-              product.category
-            }
-          />
-
-          <InfoRow
-            label="Unit Cost"
-            value={
-              formatCurrency(
-                product.unitCost,
-              )
-            }
-          />
-
-          <InfoRow
-            label="Selling Price"
-            value={
-              formatCurrency(
-                product.unitPrice,
-              )
-            }
-          />
-
-          <InfoRow
-            label="Estimated Profit / Unit"
-            value={
-              formatCurrency(
-                estimatedProfitPerUnit,
-              )
-            }
-          />
-
-          <InfoRow
-            label="Reorder Level"
-            value={`${product.reorderLevel} units`}
-            isLast
-          />
-        </View>
-
-        {latestDelivery ? (
-          <>
-            <Text
-              style={
-                styles.sectionTitle
-              }
-            >
-              Last Stock Added
-            </Text>
-
+          >
             <View
               style={
-                styles.deliveryCard
+                styles.deliveryTopRow
               }
             >
-              <View
-                style={
-                  styles.deliveryTopRow
-                }
-              >
-                <View>
-                  <Text
-                    style={
-                      styles.deliveryLabel
-                    }
-                  >
-                    Added
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.deliveryQuantity
-                    }
-                  >
-                    +
-                    {
-                      latestDelivery.quantityReceived
-                    }
-                  </Text>
-                </View>
+              <View>
+                <Text
+                  style={
+                    styles.deliveryLabel
+                  }
+                >
+                  Added
+                </Text>
 
                 <Text
                   style={
-                    styles.deliveryDate
+                    styles.deliveryQuantity
                   }
                 >
-                  {formatDateTime(
-                    latestDelivery.receivedAt,
-                  )}
+                  +
+                  {
+                    latestDelivery.quantityReceived
+                  }
                 </Text>
               </View>
 
-              <View
+              <Text
                 style={
-                  styles.deliveryMetrics
+                  styles.deliveryDate
                 }
               >
-                <SmallMetric
-                  label="Before"
-                  value={
-                    latestDelivery.stockBefore.toString()
-                  }
-                />
-
-                <SmallMetric
-                  label="After"
-                  value={
-                    latestDelivery.stockAfter.toString()
-                  }
-                />
-
-                <SmallMetric
-                  label="Value"
-                  value={
-                    formatCurrency(
-                      latestDelivery.deliveryValue,
-                    )
-                  }
-                />
-              </View>
+                {formatDateTime(
+                  latestDelivery.receivedAt,
+                )}
+              </Text>
             </View>
-          </>
-        ) : null}
 
-        <Text
-          style={
-            styles.sectionTitle
+            <View
+              style={
+                styles.deliveryMetrics
+              }
+            >
+              <SmallMetric
+                label="Before"
+                value={
+                  latestDelivery.stockBefore.toString()
+                }
+              />
+
+              <SmallMetric
+                label="After"
+                value={
+                  latestDelivery.stockAfter.toString()
+                }
+              />
+
+              <SmallMetric
+                label="Value"
+                value={
+                  formatCurrency(
+                    latestDelivery.deliveryValue,
+                  )
+                }
+              />
+            </View>
+          </View>
+        </>
+      ) : null}
+
+      <Text
+        style={
+          styles.sectionTitle
+        }
+      >
+        Product Management
+      </Text>
+
+      <View
+        style={
+          styles.actions
+        }
+      >
+        <ActionButton
+          label="Stock History"
+          description="See all stock changes for this product"
+          onPress={() =>
+            onViewHistory(
+              product,
+            )
           }
-        >
-          Product Management
-        </Text>
+        />
 
-        <View
-          style={
-            styles.actions
+        <ActionButton
+          label="Edit Product"
+          description="Change product details, price or reorder level"
+          onPress={() =>
+            onEdit(
+              product,
+            )
           }
-        >
-          <ActionButton
-            label="Stock History"
-            description="See all stock changes for this product"
-            onPress={() =>
-              onViewHistory(
-                product,
-              )
-            }
-          />
+        />
 
-          <ActionButton
-            label="Edit Product"
-            description="Change product details, price or reorder level"
-            onPress={() =>
-              onEdit(
-                product,
-              )
-            }
-          />
-
-          <ActionButton
-            label="Hide Product"
-            description="Remove this product from active inventory"
-            onPress={() =>
-              onArchive(
-                product,
-              )
-            }
-            danger
-          />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        <ActionButton
+          label="Hide Product"
+          description="Remove this product from active inventory"
+          onPress={() =>
+            onArchive(
+              product,
+            )
+          }
+          danger
+        />
+      </View>
+    </ScreenContainer>
   );
 }
 
@@ -695,25 +682,6 @@ function formatDateTime(
 
 const styles =
   StyleSheet.create({
-    screen: {
-      flex:
-        1,
-
-      backgroundColor:
-        "#F4F6F8",
-    },
-
-    content: {
-      paddingHorizontal:
-        18,
-
-      paddingTop:
-        12,
-
-      paddingBottom:
-        48,
-    },
-
     headerRow: {
       flexDirection:
         "row",

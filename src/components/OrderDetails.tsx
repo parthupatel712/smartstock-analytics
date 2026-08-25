@@ -3,22 +3,17 @@ import {
 } from "@expo/vector-icons";
 
 import {
-  useState,
-} from "react";
-
-import {
   ActivityIndicator,
   Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
 import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
+  ScreenContainer,
+} from "./ScreenContainer";
 
 import {
   exportPurchaseOrderExcel,
@@ -31,6 +26,10 @@ import {
 import {
   shareExportedReport,
 } from "../services/reportSharingService";
+
+import {
+  useState,
+} from "react";
 
 import type {
   PurchaseOrderStatus,
@@ -277,1620 +276,1611 @@ export function OrderDetails({
   }
 
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-        "bottom",
-      ]}
-      style={
-        styles.screen
+    <ScreenContainer
+      topSpacing={
+        8
+      }
+      bottomSpacing={
+        50
       }
     >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
-        }
-        showsVerticalScrollIndicator={
-          false
+      <View
+        style={
+          styles.header
         }
       >
         <View
           style={
-            styles.header
+            styles.headerText
+          }
+        >
+          <Text
+            style={
+              styles.title
+            }
+          >
+            Order Details
+          </Text>
+
+          <Text
+            style={
+              styles.subtitle
+            }
+          >
+            Review, receive, export, or share this purchase order.
+          </Text>
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          hitSlop={
+            8
+          }
+          onPress={
+            onClose
+          }
+          style={({
+            pressed,
+          }) => [
+            styles.closeButton,
+
+            pressed &&
+              styles.buttonPressed,
+          ]}
+        >
+          <Text
+            style={
+              styles.closeButtonText
+            }
+          >
+            Close
+          </Text>
+        </Pressable>
+      </View>
+
+      <View
+        style={
+          styles.orderHeaderCard
+        }
+      >
+        <View
+          style={
+            styles.orderNumberRow
           }
         >
           <View
             style={
-              styles.headerText
+              styles.orderNumberContainer
             }
           >
             <Text
               style={
-                styles.title
+                styles.orderNumberLabel
               }
             >
-              Order Details
+              Purchase Order
             </Text>
 
             <Text
               style={
-                styles.subtitle
-              }
-            >
-              Review, receive, export, or share this purchase order.
-            </Text>
-          </View>
-
-          <Pressable
-            accessibilityRole="button"
-            hitSlop={
-              8
-            }
-            onPress={
-              onClose
-            }
-            style={({
-              pressed,
-            }) => [
-              styles.closeButton,
-
-              pressed &&
-                styles.buttonPressed,
-            ]}
-          >
-            <Text
-              style={
-                styles.closeButtonText
-              }
-            >
-              Close
-            </Text>
-          </Pressable>
-        </View>
-
-        <View
-          style={
-            styles.orderHeaderCard
-          }
-        >
-          <View
-            style={
-              styles.orderNumberRow
-            }
-          >
-            <View
-              style={
-                styles.orderNumberContainer
-              }
-            >
-              <Text
-                style={
-                  styles.orderNumberLabel
-                }
-              >
-                Purchase Order
-              </Text>
-
-              <Text
-                style={
-                  styles.orderNumber
-                }
-              >
-                {
-                  order.orderNumber
-                }
-              </Text>
-            </View>
-
-            <View
-              style={[
-                styles.statusBadge,
-
-                {
-                  backgroundColor:
-                    statusDisplay.background,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.statusText,
-
-                  {
-                    color:
-                      statusDisplay.color,
-                  },
-                ]}
-              >
-                {
-                  statusDisplay.label
-                }
-              </Text>
-            </View>
-          </View>
-
-          <View
-            style={
-              styles.vendorSection
-            }
-          >
-            <View
-              style={
-                styles.vendorIcon
-              }
-            >
-              <Ionicons
-                name="business-outline"
-                size={
-                  20
-                }
-                color="#52606D"
-              />
-            </View>
-
-            <View
-              style={
-                styles.vendorTextContainer
-              }
-            >
-              <Text
-                style={
-                  styles.detailLabel
-                }
-              >
-                Vendor / Supplier
-              </Text>
-
-              <Text
-                style={
-                  styles.vendorName
-                }
-              >
-                {order.vendorName.trim()
-                  ? order.vendorName
-                  : "Not specified"}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View
-          style={
-            styles.infoGrid
-          }
-        >
-          <InfoCard
-            label="Products"
-            value={
-              items.length.toString()
-            }
-            icon="cube-outline"
-          />
-
-          <InfoCard
-            label="Ordered Units"
-            value={
-              totalUnits.toString()
-            }
-            icon="layers-outline"
-          />
-
-          {isReceived ? (
-            <>
-              <InfoCard
-                label="Received Units"
-                value={
-                  totalReceivedUnits.toString()
-                }
-                icon="checkmark-circle-outline"
-              />
-
-              <InfoCard
-                label="Missing Units"
-                value={
-                  totalMissingUnits.toString()
-                }
-                icon="warning-outline"
-              />
-            </>
-          ) : null}
-
-          <InfoCard
-            label="Created"
-            value={
-              formatDate(
-                order.createdAt,
-              )
-            }
-            icon="calendar-outline"
-            compact
-          />
-
-          <InfoCard
-            label={
-              isReceived
-                ? "Received"
-                : "Ordered"
-            }
-            value={
-              formatDate(
-                isReceived
-                  ? order.receivedAt
-                  : order.orderedAt,
-              )
-            }
-            icon="time-outline"
-            compact
-          />
-        </View>
-
-        {isReceivingAvailable ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={
-              onReceiveOrder
-            }
-            style={({
-              pressed,
-            }) => [
-              styles.receiveButton,
-
-              pressed &&
-                styles.receiveButtonPressed,
-            ]}
-          >
-            <Ionicons
-              name="cube-outline"
-              size={
-                19
-              }
-              color="#FFFFFF"
-            />
-
-            <View
-              style={
-                styles.receiveButtonTextContainer
-              }
-            >
-              <Text
-                style={
-                  styles.receiveButtonTitle
-                }
-              >
-                Receive Order
-              </Text>
-
-              <Text
-                style={
-                  styles.receiveButtonSubtitle
-                }
-              >
-                Scan invoice, upload a file, or review delivery manually.
-              </Text>
-            </View>
-
-            <Ionicons
-              name="chevron-forward"
-              size={
-                19
-              }
-              color="#FFFFFF"
-            />
-          </Pressable>
-        ) : null}
-
-        {isFullyReceived ? (
-          <View
-            style={
-              styles.completedBanner
-            }
-          >
-            <Ionicons
-              name="checkmark-circle"
-              size={
-                25
-              }
-              color="#15803D"
-            />
-
-            <View
-              style={
-                styles.completedBannerContent
-              }
-            >
-              <Text
-                style={
-                  styles.completedBannerTitle
-                }
-              >
-                Fully Received
-              </Text>
-
-              <Text
-                style={
-                  styles.completedBannerText
-                }
-              >
-                All {totalUnits} ordered units were delivered and recorded in inventory.
-              </Text>
-            </View>
-          </View>
-        ) : null}
-
-        {isReceivedWithShortage ? (
-          <View
-            style={
-              styles.shortageBanner
-            }
-          >
-            <Ionicons
-              name="checkmark-circle"
-              size={
-                25
-              }
-              color="#15803D"
-            />
-
-            <View
-              style={
-                styles.completedBannerContent
-              }
-            >
-              <Text
-                style={
-                  styles.completedBannerTitle
-                }
-              >
-                Received
-              </Text>
-
-              <Text
-                style={
-                  styles.completedBannerText
-                }
-              >
-                {totalReceivedUnits} of {totalUnits} units were received.
-              </Text>
-
-              <View
-                style={
-                  styles.shortageBannerWarning
-                }
-              >
-                <Ionicons
-                  name="warning-outline"
-                  size={
-                    14
-                  }
-                  color="#B45309"
-                />
-
-                <Text
-                  style={
-                    styles.shortageBannerWarningText
-                  }
-                >
-                  {totalMissingUnits}{" "}
-                  {totalMissingUnits ===
-                  1
-                    ? "unit was"
-                    : "units were"} not delivered.
-                </Text>
-              </View>
-            </View>
-          </View>
-        ) : null}
-
-        <View
-          style={
-            styles.exportCard
-          }
-        >
-          <View
-            style={
-              styles.exportHeader
-            }
-          >
-            <View
-              style={
-                styles.exportIcon
-              }
-            >
-              <Ionicons
-                name="share-outline"
-                size={
-                  20
-                }
-                color="#2563EB"
-              />
-            </View>
-
-            <View
-              style={
-                styles.exportHeaderText
-              }
-            >
-              <Text
-                style={
-                  styles.exportTitle
-                }
-              >
-                Export & Share
-              </Text>
-
-              <Text
-                style={
-                  styles.exportSubtitle
-                }
-              >
-                Generate this purchase order again anytime and share it through Mail, Messages, Files, or another app.
-              </Text>
-            </View>
-          </View>
-
-          <View
-            style={
-              styles.exportButtons
-            }
-          >
-            <Pressable
-              accessibilityRole="button"
-              disabled={
-                exporting !==
-                null
-              }
-              onPress={() =>
-                void exportPdf()
-              }
-              style={({
-                pressed,
-              }) => [
-                styles.pdfButton,
-
-                pressed &&
-                  styles.exportButtonPressed,
-
-                exporting !==
-                  null &&
-                  styles.exportButtonDisabled,
-              ]}
-            >
-              {exporting ===
-              "pdf" ? (
-                <ActivityIndicator
-                  size="small"
-                  color="#FFFFFF"
-                />
-              ) : (
-                <Ionicons
-                  name="document-text-outline"
-                  size={
-                    18
-                  }
-                  color="#FFFFFF"
-                />
-              )}
-
-              <Text
-                style={
-                  styles.pdfButtonText
-                }
-              >
-                {exporting ===
-                "pdf"
-                  ? "Creating PDF…"
-                  : "PDF / Share"}
-              </Text>
-            </Pressable>
-
-            <Pressable
-              accessibilityRole="button"
-              disabled={
-                exporting !==
-                null
-              }
-              onPress={() =>
-                void exportExcel()
-              }
-              style={({
-                pressed,
-              }) => [
-                styles.excelButton,
-
-                pressed &&
-                  styles.exportButtonPressed,
-
-                exporting !==
-                  null &&
-                  styles.exportButtonDisabled,
-              ]}
-            >
-              {exporting ===
-              "xlsx" ? (
-                <ActivityIndicator
-                  size="small"
-                  color="#15803D"
-                />
-              ) : (
-                <Ionicons
-                  name="grid-outline"
-                  size={
-                    18
-                  }
-                  color="#15803D"
-                />
-              )}
-
-              <Text
-                style={
-                  styles.excelButtonText
-                }
-              >
-                {exporting ===
-                "xlsx"
-                  ? "Creating Excel…"
-                  : "Excel / Share"}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {order.notes.trim() ? (
-          <View
-            style={
-              styles.notesCard
-            }
-          >
-            <View
-              style={
-                styles.notesHeader
-              }
-            >
-              <Ionicons
-                name="document-text-outline"
-                size={
-                  17
-                }
-                color="#52606D"
-              />
-
-              <Text
-                style={
-                  styles.notesTitle
-                }
-              >
-                Order Notes
-              </Text>
-            </View>
-
-            <Text
-              style={
-                styles.notesText
+                styles.orderNumber
               }
             >
               {
-                order.notes
+                order.orderNumber
               }
             </Text>
           </View>
-        ) : null}
 
-        {isReceived ? (
           <View
-            style={
-              styles.deliverySummaryCard
-            }
+            style={[
+              styles.statusBadge,
+
+              {
+                backgroundColor:
+                  statusDisplay.background,
+              },
+            ]}
           >
-            <View
-              style={
-                styles.deliverySummaryHeader
-              }
+            <Text
+              style={[
+                styles.statusText,
+
+                {
+                  color:
+                    statusDisplay.color,
+                },
+              ]}
             >
-              <View
-                style={
-                  styles.deliverySummaryIcon
-                }
-              >
-                <Ionicons
-                  name={
-                    isFullyReceived
-                      ? "checkmark-done-outline"
-                      : "receipt-outline"
-                  }
-                  size={
-                    21
-                  }
-                  color="#15803D"
-                />
-              </View>
-
-              <View
-                style={
-                  styles.deliverySummaryHeaderText
-                }
-              >
-                <Text
-                  style={
-                    styles.deliverySummaryTitle
-                  }
-                >
-                  {isFullyReceived
-                    ? "Full Delivery"
-                    : "Delivery Summary"}
-                </Text>
-
-                <Text
-                  style={
-                    styles.deliverySummarySubtitle
-                  }
-                >
-                  {isFullyReceived
-                    ? "Everything ordered was physically received."
-                    : "The order is complete, with missing quantities preserved in history."}
-                </Text>
-              </View>
-            </View>
-
-            <View
-              style={
-                styles.deliverySummaryStats
+              {
+                statusDisplay.label
               }
-            >
-              <ReceivingValue
-                label="Ordered"
-                value={
-                  totalUnits
-                }
-              />
-
-              <ReceivingValue
-                label="Received"
-                value={
-                  totalReceivedUnits
-                }
-                success
-              />
-
-              <ReceivingValue
-                label="Missing"
-                value={
-                  totalMissingUnits
-                }
-                warning={
-                  totalMissingUnits >
-                  0
-                }
-              />
-            </View>
+            </Text>
           </View>
-        ) : null}
-
-        <View
-          style={
-            styles.sectionHeader
-          }
-        >
-          <Text
-            style={
-              styles.sectionTitle
-            }
-          >
-            Products
-          </Text>
-
-          <Text
-            style={
-              styles.sectionSubtitle
-            }
-          >
-            Product details are preserved as a snapshot from when this purchase order was created.
-          </Text>
         </View>
 
-        {items.map(
-          (
-            item,
-          ) => {
-            const missingQuantity =
-              Math.max(
-                item.quantity -
-                  item.receivedQuantity,
-                0,
-              );
+        <View
+          style={
+            styles.vendorSection
+          }
+        >
+          <View
+            style={
+              styles.vendorIcon
+            }
+          >
+            <Ionicons
+              name="business-outline"
+              size={
+                20
+              }
+              color="#52606D"
+            />
+          </View>
 
-            const receivedLineValue =
-              item.receivedQuantity *
-              item.unitCost;
+          <View
+            style={
+              styles.vendorTextContainer
+            }
+          >
+            <Text
+              style={
+                styles.detailLabel
+              }
+            >
+              Vendor / Supplier
+            </Text>
 
-            const wasNotDelivered =
-              isReceived &&
-              item.receivedQuantity ===
-                0 &&
-              item.quantity >
-                0;
+            <Text
+              style={
+                styles.vendorName
+              }
+              numberOfLines={
+                2
+              }
+            >
+              {order.vendorName.trim()
+                ? order.vendorName
+                : "Not specified"}
+            </Text>
+          </View>
+        </View>
+      </View>
 
-            const wasPartiallyDelivered =
-              isReceived &&
-              item.receivedQuantity >
-                0 &&
-              missingQuantity >
-                0;
+      <View
+        style={
+          styles.infoGrid
+        }
+      >
+        <InfoCard
+          label="Products"
+          value={
+            items.length.toString()
+          }
+          icon="cube-outline"
+        />
 
-            const wasFullyDelivered =
-              isReceived &&
-              missingQuantity ===
-                0;
+        <InfoCard
+          label="Ordered Units"
+          value={
+            totalUnits.toString()
+          }
+          icon="layers-outline"
+        />
 
-            return (
-              <View
-                key={
-                  item.id
+        {isReceived ? (
+          <>
+            <InfoCard
+              label="Received Units"
+              value={
+                totalReceivedUnits.toString()
+              }
+              icon="checkmark-circle-outline"
+            />
+
+            <InfoCard
+              label="Missing Units"
+              value={
+                totalMissingUnits.toString()
+              }
+              icon="warning-outline"
+            />
+          </>
+        ) : null}
+
+        <InfoCard
+          label="Created"
+          value={
+            formatDate(
+              order.createdAt,
+            )
+          }
+          icon="calendar-outline"
+          compact
+        />
+
+        <InfoCard
+          label={
+            isReceived
+              ? "Received"
+              : "Ordered"
+          }
+          value={
+            formatDate(
+              isReceived
+                ? order.receivedAt
+                : order.orderedAt,
+            )
+          }
+          icon="time-outline"
+          compact
+        />
+      </View>
+
+      {isReceivingAvailable ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={
+            onReceiveOrder
+          }
+          style={({
+            pressed,
+          }) => [
+            styles.receiveButton,
+
+            pressed &&
+              styles.receiveButtonPressed,
+          ]}
+        >
+          <Ionicons
+            name="cube-outline"
+            size={
+              19
+            }
+            color="#FFFFFF"
+          />
+
+          <View
+            style={
+              styles.receiveButtonTextContainer
+            }
+          >
+            <Text
+              style={
+                styles.receiveButtonTitle
+              }
+            >
+              Receive Order
+            </Text>
+
+            <Text
+              style={
+                styles.receiveButtonSubtitle
+              }
+            >
+              Scan invoice, upload a file, or review delivery manually.
+            </Text>
+          </View>
+
+          <Ionicons
+            name="chevron-forward"
+            size={
+              19
+            }
+            color="#FFFFFF"
+          />
+        </Pressable>
+      ) : null}
+
+      {isFullyReceived ? (
+        <View
+          style={
+            styles.completedBanner
+          }
+        >
+          <Ionicons
+            name="checkmark-circle"
+            size={
+              25
+            }
+            color="#15803D"
+          />
+
+          <View
+            style={
+              styles.completedBannerContent
+            }
+          >
+            <Text
+              style={
+                styles.completedBannerTitle
+              }
+            >
+              Fully Received
+            </Text>
+
+            <Text
+              style={
+                styles.completedBannerText
+              }
+            >
+              All {totalUnits} ordered units were delivered and recorded in inventory.
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
+      {isReceivedWithShortage ? (
+        <View
+          style={
+            styles.shortageBanner
+          }
+        >
+          <Ionicons
+            name="checkmark-circle"
+            size={
+              25
+            }
+            color="#15803D"
+          />
+
+          <View
+            style={
+              styles.completedBannerContent
+            }
+          >
+            <Text
+              style={
+                styles.completedBannerTitle
+              }
+            >
+              Received
+            </Text>
+
+            <Text
+              style={
+                styles.completedBannerText
+              }
+            >
+              {totalReceivedUnits} of {totalUnits} units were received.
+            </Text>
+
+            <View
+              style={
+                styles.shortageBannerWarning
+              }
+            >
+              <Ionicons
+                name="warning-outline"
+                size={
+                  14
                 }
-                style={[
-                  styles.productCard,
+                color="#B45309"
+              />
 
-                  isReceived &&
-                    missingQuantity >
-                      0 &&
-                    styles.productCardMissing,
-                ]}
+              <Text
+                style={
+                  styles.shortageBannerWarningText
+                }
               >
-                <View
-                  style={
-                    styles.productHeader
-                  }
-                >
-                  <View
-                    style={
-                      styles.productIdentity
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.productName
-                      }
-                      numberOfLines={
-                        2
-                      }
-                    >
-                      {
-                        item.productName
-                      }
-                    </Text>
+                {totalMissingUnits}{" "}
+                {totalMissingUnits ===
+                1
+                  ? "unit was"
+                  : "units were"} not delivered.
+              </Text>
+            </View>
+          </View>
+        </View>
+      ) : null}
 
-                    {item.brand.trim() ? (
-                      <Text
-                        style={
-                          styles.productBrand
-                        }
-                      >
-                        {
-                          item.brand
-                        }
-                      </Text>
-                    ) : null}
-                  </View>
+      <View
+        style={
+          styles.exportCard
+        }
+      >
+        <View
+          style={
+            styles.exportHeader
+          }
+        >
+          <View
+            style={
+              styles.exportIcon
+            }
+          >
+            <Ionicons
+              name="share-outline"
+              size={
+                20
+              }
+              color="#2563EB"
+            />
+          </View>
 
-                  {wasFullyDelivered ? (
-                    <View
-                      style={
-                        styles.deliveredBadge
-                      }
-                    >
-                      <Ionicons
-                        name="checkmark"
-                        size={
-                          13
-                        }
-                        color="#15803D"
-                      />
+          <View
+            style={
+              styles.exportHeaderText
+            }
+          >
+            <Text
+              style={
+                styles.exportTitle
+              }
+            >
+              Export & Share
+            </Text>
 
-                      <Text
-                        style={
-                          styles.deliveredBadgeText
-                        }
-                      >
-                        Received
-                      </Text>
-                    </View>
-                  ) : (
-                    <View
-                      style={
-                        styles.quantityBadge
-                      }
-                    >
-                      <Text
-                        style={
-                          styles.quantityBadgeText
-                        }
-                      >
-                        Qty{" "}
-                        {
-                          item.quantity
-                        }
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                <Text
-                  style={
-                    styles.productClassification
-                  }
-                  numberOfLines={
-                    2
-                  }
-                >
-                  {[
-                    item.department,
-                    item.category,
-                  ]
-                    .filter(
-                      Boolean,
-                    )
-                    .join(
-                      " · ",
-                    )}
-                </Text>
-
-                <Text
-                  style={
-                    styles.barcode
-                  }
-                >
-                  Barcode:{" "}
-                  {item.barcode.trim()
-                    ? item.barcode
-                    : "Not available"}
-                </Text>
-
-                {isReceived ? (
-                  <View
-                    style={
-                      styles.receivingSummary
-                    }
-                  >
-                    <ReceivingValue
-                      label="Ordered"
-                      value={
-                        item.quantity
-                      }
-                    />
-
-                    <ReceivingValue
-                      label="Received"
-                      value={
-                        item.receivedQuantity
-                      }
-                      success={
-                        item.receivedQuantity >
-                        0
-                      }
-                    />
-
-                    <ReceivingValue
-                      label="Missing"
-                      value={
-                        missingQuantity
-                      }
-                      warning={
-                        missingQuantity >
-                        0
-                      }
-                    />
-                  </View>
-                ) : null}
-
-                {wasNotDelivered ? (
-                  <View
-                    style={
-                      styles.notDeliveredCard
-                    }
-                  >
-                    <Ionicons
-                      name="warning-outline"
-                      size={
-                        16
-                      }
-                      color="#B45309"
-                    />
-
-                    <View
-                      style={
-                        styles.deliveryWarningContent
-                      }
-                    >
-                      <Text
-                        style={
-                          styles.deliveryWarningTitle
-                        }
-                      >
-                        Not Delivered
-                      </Text>
-
-                      <Text
-                        style={
-                          styles.notDeliveredText
-                        }
-                      >
-                        0 of {item.quantity} units were received. Inventory stock was left unchanged.
-                      </Text>
-                    </View>
-                  </View>
-                ) : null}
-
-                {wasPartiallyDelivered ? (
-                  <View
-                    style={
-                      styles.partiallyDeliveredCard
-                    }
-                  >
-                    <Ionicons
-                      name="warning-outline"
-                      size={
-                        16
-                      }
-                      color="#B45309"
-                    />
-
-                    <View
-                      style={
-                        styles.deliveryWarningContent
-                      }
-                    >
-                      <Text
-                        style={
-                          styles.deliveryWarningTitle
-                        }
-                      >
-                        Partially Delivered
-                      </Text>
-
-                      <Text
-                        style={
-                          styles.notDeliveredText
-                        }
-                      >
-                        {item.receivedQuantity} of {item.quantity} units were received. {missingQuantity}{" "}
-                        {missingQuantity ===
-                        1
-                          ? "unit was"
-                          : "units were"} missing.
-                      </Text>
-                    </View>
-                  </View>
-                ) : null}
-
-                <View
-                  style={
-                    styles.productPricing
-                  }
-                >
-                  <View>
-                    <Text
-                      style={
-                        styles.priceLabel
-                      }
-                    >
-                      Unit Cost
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.priceValue
-                      }
-                    >
-                      {
-                        formatCurrency(
-                          item.unitCost,
-                        )
-                      }
-                    </Text>
-                  </View>
-
-                  <View
-                    style={
-                      styles.calculationContainer
-                    }
-                  >
-                    {isReceived ? (
-                      <>
-                        <Text
-                          style={
-                            styles.calculation
-                          }
-                        >
-                          Received{" "}
-                          {
-                            item.receivedQuantity
-                          }{" "}
-                          ×{" "}
-                          {
-                            formatCurrency(
-                              item.unitCost,
-                            )
-                          }
-                        </Text>
-
-                        <Text
-                          style={[
-                            styles.lineTotal,
-
-                            item.receivedQuantity ===
-                              0 &&
-                              styles.zeroLineTotal,
-                          ]}
-                        >
-                          {
-                            formatCurrency(
-                              receivedLineValue,
-                            )
-                          }
-                        </Text>
-
-                        <Text
-                          style={
-                            styles.originalLineTotal
-                          }
-                        >
-                          Ordered value:{" "}
-                          {
-                            formatCurrency(
-                              item.lineTotal,
-                            )
-                          }
-                        </Text>
-                      </>
-                    ) : (
-                      <>
-                        <Text
-                          style={
-                            styles.calculation
-                          }
-                        >
-                          {formatCurrency(
-                            item.unitCost,
-                          )}{" "}
-                          ×{" "}
-                          {
-                            item.quantity
-                          }
-                        </Text>
-
-                        <Text
-                          style={
-                            styles.lineTotal
-                          }
-                        >
-                          {
-                            formatCurrency(
-                              item.lineTotal,
-                            )
-                          }
-                        </Text>
-                      </>
-                    )}
-                  </View>
-                </View>
-              </View>
-            );
-          },
-        )}
+            <Text
+              style={
+                styles.exportSubtitle
+              }
+            >
+              Generate this purchase order again anytime and share it through Mail, Messages, Files, or another app.
+            </Text>
+          </View>
+        </View>
 
         <View
           style={
-            styles.totalCard
+            styles.exportButtons
           }
         >
-          {isReceived ? (
-            <>
-              <View
-                style={
-                  styles.totalSectionTitleRow
-                }
-              >
-                <Text
-                  style={
-                    styles.totalSectionTitle
-                  }
-                >
-                  Delivery Financial Summary
-                </Text>
-              </View>
+          <Pressable
+            accessibilityRole="button"
+            disabled={
+              exporting !==
+              null
+            }
+            onPress={() =>
+              void exportPdf()
+            }
+            style={({
+              pressed,
+            }) => [
+              styles.pdfButton,
 
-              <View
-                style={
-                  styles.totalRow
-                }
-              >
-                <Text
-                  style={
-                    styles.totalLabel
-                  }
-                >
-                  Original Subtotal
-                </Text>
+              pressed &&
+                styles.exportButtonPressed,
 
-                <Text
-                  style={
-                    styles.totalValue
-                  }
-                >
-                  {
-                    formatCurrency(
-                      order.subtotal,
-                    )
-                  }
-                </Text>
-              </View>
-
-              <View
-                style={
-                  styles.totalRow
-                }
-              >
-                <Text
-                  style={
-                    styles.totalLabel
-                  }
-                >
-                  Received Merchandise
-                </Text>
-
-                <Text
-                  style={
-                    styles.receivedValue
-                  }
-                >
-                  {
-                    formatCurrency(
-                      receivedSubtotal,
-                    )
-                  }
-                </Text>
-              </View>
-
-              <View
-                style={
-                  styles.totalRow
-                }
-              >
-                <Text
-                  style={[
-                    styles.totalLabel,
-
-                    totalMissingUnits >
-                      0 &&
-                      styles.notReceivedTotalLabel,
-                  ]}
-                >
-                  Not Received Value
-                </Text>
-
-                <Text
-                  style={[
-                    styles.totalValue,
-
-                    totalMissingUnits >
-                      0 &&
-                      styles.notReceivedTotalValue,
-                  ]}
-                >
-                  {
-                    formatCurrency(
-                      notReceivedValue,
-                    )
-                  }
-                </Text>
-              </View>
-
-              <View
-                style={
-                  styles.totalRow
-                }
-              >
-                <Text
-                  style={
-                    styles.totalLabel
-                  }
-                >
-                  Estimated Received Tax
-                </Text>
-
-                <Text
-                  style={
-                    styles.totalValue
-                  }
-                >
-                  {
-                    formatCurrency(
-                      receivedTax,
-                    )
-                  }
-                </Text>
-              </View>
-
-              <View
-                style={
-                  styles.originalOrderTotalRow
-                }
-              >
-                <Text
-                  style={
-                    styles.originalOrderTotalLabel
-                  }
-                >
-                  Original Order Total
-                </Text>
-
-                <Text
-                  style={
-                    styles.originalOrderTotalValue
-                  }
-                >
-                  {
-                    formatCurrency(
-                      order.total,
-                    )
-                  }
-                </Text>
-              </View>
-
-              <View
-                style={
-                  styles.totalDivider
-                }
+              exporting !==
+                null &&
+                styles.exportButtonDisabled,
+            ]}
+          >
+            {exporting ===
+            "pdf" ? (
+              <ActivityIndicator
+                size="small"
+                color="#FFFFFF"
               />
+            ) : (
+              <Ionicons
+                name="document-text-outline"
+                size={
+                  18
+                }
+                color="#FFFFFF"
+              />
+            )}
 
-              <View
+            <Text
+              style={
+                styles.pdfButtonText
+              }
+            >
+              {exporting ===
+              "pdf"
+                ? "Creating PDF…"
+                : "PDF / Share"}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            disabled={
+              exporting !==
+              null
+            }
+            onPress={() =>
+              void exportExcel()
+            }
+            style={({
+              pressed,
+            }) => [
+              styles.excelButton,
+
+              pressed &&
+                styles.exportButtonPressed,
+
+              exporting !==
+                null &&
+                styles.exportButtonDisabled,
+            ]}
+          >
+            {exporting ===
+            "xlsx" ? (
+              <ActivityIndicator
+                size="small"
+                color="#15803D"
+              />
+            ) : (
+              <Ionicons
+                name="grid-outline"
+                size={
+                  18
+                }
+                color="#15803D"
+              />
+            )}
+
+            <Text
+              style={
+                styles.excelButtonText
+              }
+            >
+              {exporting ===
+              "xlsx"
+                ? "Creating Excel…"
+                : "Excel / Share"}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {order.notes.trim() ? (
+        <View
+          style={
+            styles.notesCard
+          }
+        >
+          <View
+            style={
+              styles.notesHeader
+            }
+          >
+            <Ionicons
+              name="document-text-outline"
+              size={
+                17
+              }
+              color="#52606D"
+            />
+
+            <Text
+              style={
+                styles.notesTitle
+              }
+            >
+              Order Notes
+            </Text>
+          </View>
+
+          <Text
+            style={
+              styles.notesText
+            }
+          >
+            {
+              order.notes
+            }
+          </Text>
+        </View>
+      ) : null}
+
+      {isReceived ? (
+        <View
+          style={
+            styles.deliverySummaryCard
+          }
+        >
+          <View
+            style={
+              styles.deliverySummaryHeader
+            }
+          >
+            <View
+              style={
+                styles.deliverySummaryIcon
+              }
+            >
+              <Ionicons
+                name={
+                  isFullyReceived
+                    ? "checkmark-done-outline"
+                    : "receipt-outline"
+                }
+                size={
+                  21
+                }
+                color="#15803D"
+              />
+            </View>
+
+            <View
+              style={
+                styles.deliverySummaryHeaderText
+              }
+            >
+              <Text
                 style={
-                  styles.finalTotalRow
+                  styles.deliverySummaryTitle
                 }
               >
-                <Text
-                  style={
-                    styles.finalTotalLabel
-                  }
-                >
-                  Received Total
-                </Text>
+                {isFullyReceived
+                  ? "Full Delivery"
+                  : "Delivery Summary"}
+              </Text>
 
-                <Text
-                  style={
-                    styles.finalTotalValue
-                  }
-                >
-                  {
-                    formatCurrency(
-                      receivedTotal,
-                    )
-                  }
-                </Text>
-              </View>
+              <Text
+                style={
+                  styles.deliverySummarySubtitle
+                }
+              >
+                {isFullyReceived
+                  ? "Everything ordered was physically received."
+                  : "Received quantities and missing quantities remain preserved in order history."}
+              </Text>
+            </View>
+          </View>
 
-              {totalMissingUnits >
-              0 ? (
+          <View
+            style={
+              styles.deliverySummaryStats
+            }
+          >
+            <ReceivingValue
+              label="Ordered"
+              value={
+                totalUnits
+              }
+            />
+
+            <ReceivingValue
+              label="Received"
+              value={
+                totalReceivedUnits
+              }
+              success
+            />
+
+            <ReceivingValue
+              label="Missing"
+              value={
+                totalMissingUnits
+              }
+              warning={
+                totalMissingUnits >
+                0
+              }
+            />
+          </View>
+        </View>
+      ) : null}
+
+      <View
+        style={
+          styles.sectionHeader
+        }
+      >
+        <Text
+          style={
+            styles.sectionTitle
+          }
+        >
+          Products
+        </Text>
+
+        <Text
+          style={
+            styles.sectionSubtitle
+          }
+        >
+          Product details are preserved as a snapshot from when this purchase order was created.
+        </Text>
+      </View>
+
+      {items.map(
+        (
+          item,
+        ) => {
+          const missingQuantity =
+            Math.max(
+              item.quantity -
+                item.receivedQuantity,
+              0,
+            );
+
+          const receivedLineValue =
+            item.receivedQuantity *
+            item.unitCost;
+
+          const wasNotDelivered =
+            isReceived &&
+            item.receivedQuantity ===
+              0 &&
+            item.quantity >
+              0;
+
+          const wasPartiallyDelivered =
+            isReceived &&
+            item.receivedQuantity >
+              0 &&
+            missingQuantity >
+              0;
+
+          const wasFullyDelivered =
+            isReceived &&
+            missingQuantity ===
+              0;
+
+          return (
+            <View
+              key={
+                item.id
+              }
+              style={[
+                styles.productCard,
+
+                isReceived &&
+                  missingQuantity >
+                    0 &&
+                  styles.productCardMissing,
+              ]}
+            >
+              <View
+                style={
+                  styles.productHeader
+                }
+              >
                 <View
                   style={
-                    styles.shortageSummary
+                    styles.productIdentity
+                  }
+                >
+                  <Text
+                    style={
+                      styles.productName
+                    }
+                    numberOfLines={
+                      2
+                    }
+                  >
+                    {
+                      item.productName
+                    }
+                  </Text>
+
+                  {item.brand.trim() ? (
+                    <Text
+                      style={
+                        styles.productBrand
+                      }
+                    >
+                      {
+                        item.brand
+                      }
+                    </Text>
+                  ) : null}
+                </View>
+
+                {wasFullyDelivered ? (
+                  <View
+                    style={
+                      styles.deliveredBadge
+                    }
+                  >
+                    <Ionicons
+                      name="checkmark"
+                      size={
+                        13
+                      }
+                      color="#15803D"
+                    />
+
+                    <Text
+                      style={
+                        styles.deliveredBadgeText
+                      }
+                    >
+                      Received
+                    </Text>
+                  </View>
+                ) : (
+                  <View
+                    style={
+                      styles.quantityBadge
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.quantityBadgeText
+                      }
+                    >
+                      Qty{" "}
+                      {
+                        item.quantity
+                      }
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <Text
+                style={
+                  styles.productClassification
+                }
+                numberOfLines={
+                  2
+                }
+              >
+                {[
+                  item.department,
+                  item.category,
+                ]
+                  .filter(
+                    Boolean,
+                  )
+                  .join(
+                    " · ",
+                  )}
+              </Text>
+
+              <Text
+                style={
+                  styles.barcode
+                }
+              >
+                Barcode:{" "}
+                {item.barcode.trim()
+                  ? item.barcode
+                  : "Not available"}
+              </Text>
+
+              {isReceived ? (
+                <View
+                  style={
+                    styles.receivingSummary
+                  }
+                >
+                  <ReceivingValue
+                    label="Ordered"
+                    value={
+                      item.quantity
+                    }
+                  />
+
+                  <ReceivingValue
+                    label="Received"
+                    value={
+                      item.receivedQuantity
+                    }
+                    success={
+                      item.receivedQuantity >
+                      0
+                    }
+                  />
+
+                  <ReceivingValue
+                    label="Missing"
+                    value={
+                      missingQuantity
+                    }
+                    warning={
+                      missingQuantity >
+                      0
+                    }
+                  />
+                </View>
+              ) : null}
+
+              {wasNotDelivered ? (
+                <View
+                  style={
+                    styles.notDeliveredCard
                   }
                 >
                   <Ionicons
                     name="warning-outline"
                     size={
-                      17
+                      16
                     }
                     color="#B45309"
                   />
 
-                  <Text
+                  <View
                     style={
-                      styles.shortageSummaryText
+                      styles.deliveryWarningContent
                     }
                   >
-                    {totalMissingUnits}{" "}
-                    {totalMissingUnits ===
-                    1
-                      ? "unit was"
-                      : "units were"} not received. Missing merchandise has been excluded from the received total.
-                  </Text>
+                    <Text
+                      style={
+                        styles.deliveryWarningTitle
+                      }
+                    >
+                      Not Delivered
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.notDeliveredText
+                      }
+                    >
+                      0 of {item.quantity} units were received. Inventory stock was left unchanged.
+                    </Text>
+                  </View>
                 </View>
-              ) : (
+              ) : null}
+
+              {wasPartiallyDelivered ? (
                 <View
                   style={
-                    styles.fullDeliverySummary
+                    styles.partiallyDeliveredCard
                   }
                 >
                   <Ionicons
-                    name="checkmark-circle-outline"
+                    name="warning-outline"
                     size={
-                      17
+                      16
                     }
-                    color="#15803D"
+                    color="#B45309"
                   />
+
+                  <View
+                    style={
+                      styles.deliveryWarningContent
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.deliveryWarningTitle
+                      }
+                    >
+                      Partially Delivered
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.notDeliveredText
+                      }
+                    >
+                      {item.receivedQuantity} of {item.quantity} units were received. {missingQuantity}{" "}
+                      {missingQuantity ===
+                      1
+                        ? "unit was"
+                        : "units were"} missing.
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
+              <View
+                style={
+                  styles.productPricing
+                }
+              >
+                <View>
+                  <Text
+                    style={
+                      styles.priceLabel
+                    }
+                  >
+                    Unit Cost
+                  </Text>
 
                   <Text
                     style={
-                      styles.fullDeliverySummaryText
+                      styles.priceValue
                     }
                   >
-                    Full delivery received. No merchandise value is missing.
+                    {
+                      formatCurrency(
+                        item.unitCost,
+                      )
+                    }
                   </Text>
                 </View>
-              )}
-            </>
-          ) : (
-            <>
-              <View
-                style={
-                  styles.totalRow
-                }
-              >
-                <Text
-                  style={
-                    styles.totalLabel
-                  }
-                >
-                  Subtotal
-                </Text>
 
-                <Text
+                <View
                   style={
-                    styles.totalValue
+                    styles.calculationContainer
                   }
                 >
-                  {
-                    formatCurrency(
-                      order.subtotal,
-                    )
-                  }
-                </Text>
+                  {isReceived ? (
+                    <>
+                      <Text
+                        style={
+                          styles.calculation
+                        }
+                      >
+                        Received{" "}
+                        {
+                          item.receivedQuantity
+                        }{" "}
+                        ×{" "}
+                        {
+                          formatCurrency(
+                            item.unitCost,
+                          )
+                        }
+                      </Text>
+
+                      <Text
+                        style={[
+                          styles.lineTotal,
+
+                          item.receivedQuantity ===
+                            0 &&
+                            styles.zeroLineTotal,
+                        ]}
+                      >
+                        {
+                          formatCurrency(
+                            receivedLineValue,
+                          )
+                        }
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.originalLineTotal
+                        }
+                      >
+                        Ordered value:{" "}
+                        {
+                          formatCurrency(
+                            item.lineTotal,
+                          )
+                        }
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text
+                        style={
+                          styles.calculation
+                        }
+                      >
+                        {formatCurrency(
+                          item.unitCost,
+                        )}{" "}
+                        ×{" "}
+                        {
+                          item.quantity
+                        }
+                      </Text>
+
+                      <Text
+                        style={
+                          styles.lineTotal
+                        }
+                      >
+                        {
+                          formatCurrency(
+                            item.lineTotal,
+                          )
+                        }
+                      </Text>
+                    </>
+                  )}
+                </View>
               </View>
+            </View>
+          );
+        },
+      )}
 
-              <View
-                style={
-                  styles.totalRow
-                }
-              >
-                <Text
-                  style={
-                    styles.totalLabel
-                  }
-                >
-                  Tax
-                </Text>
-
-                <Text
-                  style={
-                    styles.totalValue
-                  }
-                >
-                  {
-                    formatCurrency(
-                      order.tax,
-                    )
-                  }
-                </Text>
-              </View>
-
-              <View
-                style={
-                  styles.totalDivider
-                }
-              />
-
-              <View
-                style={
-                  styles.finalTotalRow
-                }
-              >
-                <Text
-                  style={
-                    styles.finalTotalLabel
-                  }
-                >
-                  Order Total
-                </Text>
-
-                <Text
-                  style={
-                    styles.finalTotalValue
-                  }
-                >
-                  {
-                    formatCurrency(
-                      order.total,
-                    )
-                  }
-                </Text>
-              </View>
-            </>
-          )}
-        </View>
-
-        {order.status ===
-        "ordered" ? (
-          <View
-            style={
-              styles.pendingCard
-            }
-          >
-            <Ionicons
-              name="cube-outline"
-              size={
-                18
-              }
-              color="#B45309"
-            />
-
+      <View
+        style={
+          styles.totalCard
+        }
+      >
+        {isReceived ? (
+          <>
             <View
               style={
-                styles.pendingTextContainer
+                styles.totalSectionTitleRow
               }
             >
               <Text
                 style={
-                  styles.pendingTitle
+                  styles.totalSectionTitle
                 }
               >
-                Waiting to be received
-              </Text>
-
-              <Text
-                style={
-                  styles.pendingText
-                }
-              >
-                This purchase order has been placed, but its quantities have not been added to physical inventory yet.
+                Delivery Financial Summary
               </Text>
             </View>
-          </View>
-        ) : null}
-
-        {order.status ===
-        "partially_received" ? (
-          <View
-            style={
-              styles.partialCard
-            }
-          >
-            <Ionicons
-              name="time-outline"
-              size={
-                18
-              }
-              color="#2563EB"
-            />
 
             <View
               style={
-                styles.pendingTextContainer
+                styles.totalRow
               }
             >
               <Text
                 style={
-                  styles.partialTitle
+                  styles.totalLabel
                 }
               >
-                Order partially received
+                Original Subtotal
               </Text>
 
               <Text
                 style={
-                  styles.partialText
+                  styles.totalValue
                 }
               >
-                Some quantities have been received, but this purchase order still has outstanding merchandise.
+                {
+                  formatCurrency(
+                    order.subtotal,
+                  )
+                }
               </Text>
             </View>
-          </View>
-        ) : null}
-
-        {isFullyReceived ? (
-          <View
-            style={
-              styles.receivedCard
-            }
-          >
-            <Ionicons
-              name="checkmark-circle"
-              size={
-                20
-              }
-              color="#15803D"
-            />
 
             <View
               style={
-                styles.pendingTextContainer
+                styles.totalRow
               }
             >
               <Text
                 style={
-                  styles.receivedTitle
+                  styles.totalLabel
                 }
               >
-                Fully Received
+                Received Merchandise
               </Text>
 
               <Text
                 style={
-                  styles.receivedText
+                  styles.receivedValue
                 }
               >
-                Every ordered quantity was received and added to inventory.
+                {
+                  formatCurrency(
+                    receivedSubtotal,
+                  )
+                }
               </Text>
             </View>
-          </View>
-        ) : null}
-
-        {isReceivedWithShortage ? (
-          <View
-            style={
-              styles.receivedWithShortageCard
-            }
-          >
-            <Ionicons
-              name="checkmark-circle"
-              size={
-                20
-              }
-              color="#15803D"
-            />
 
             <View
               style={
-                styles.pendingTextContainer
+                styles.totalRow
+              }
+            >
+              <Text
+                style={[
+                  styles.totalLabel,
+
+                  totalMissingUnits >
+                    0 &&
+                    styles.notReceivedTotalLabel,
+                ]}
+              >
+                Not Received Value
+              </Text>
+
+              <Text
+                style={[
+                  styles.totalValue,
+
+                  totalMissingUnits >
+                    0 &&
+                    styles.notReceivedTotalValue,
+                ]}
+              >
+                {
+                  formatCurrency(
+                    notReceivedValue,
+                  )
+                }
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.totalRow
               }
             >
               <Text
                 style={
-                  styles.receivedTitle
+                  styles.totalLabel
                 }
               >
-                Receiving Completed
+                Estimated Received Tax
               </Text>
 
               <Text
                 style={
-                  styles.receivedText
+                  styles.totalValue
                 }
               >
-                Received quantities were added to inventory. Missing quantities remain recorded in this purchase order history.
+                {
+                  formatCurrency(
+                    receivedTax,
+                  )
+                }
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.originalOrderTotalRow
+              }
+            >
+              <Text
+                style={
+                  styles.originalOrderTotalLabel
+                }
+              >
+                Original Order Total
               </Text>
 
+              <Text
+                style={
+                  styles.originalOrderTotalValue
+                }
+              >
+                {
+                  formatCurrency(
+                    order.total,
+                  )
+                }
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.totalDivider
+              }
+            />
+
+            <View
+              style={
+                styles.finalTotalRow
+              }
+            >
+              <Text
+                style={
+                  styles.finalTotalLabel
+                }
+              >
+                Received Total
+              </Text>
+
+              <Text
+                style={
+                  styles.finalTotalValue
+                }
+              >
+                {
+                  formatCurrency(
+                    receivedTotal,
+                  )
+                }
+              </Text>
+            </View>
+
+            {totalMissingUnits >
+            0 ? (
               <View
                 style={
-                  styles.receivedMissingFooter
+                  styles.shortageSummary
                 }
               >
                 <Ionicons
                   name="warning-outline"
                   size={
-                    14
+                    17
                   }
                   color="#B45309"
                 />
 
                 <Text
                   style={
-                    styles.receivedMissingFooterText
+                    styles.shortageSummaryText
                   }
                 >
                   {totalMissingUnits}{" "}
                   {totalMissingUnits ===
                   1
                     ? "unit was"
-                    : "units were"} missing from the delivery.
+                    : "units were"} not received. Missing merchandise has been excluded from the received total.
                 </Text>
               </View>
+            ) : (
+              <View
+                style={
+                  styles.fullDeliverySummary
+                }
+              >
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={
+                    17
+                  }
+                  color="#15803D"
+                />
+
+                <Text
+                  style={
+                    styles.fullDeliverySummaryText
+                  }
+                >
+                  Full delivery received. No merchandise value is missing.
+                </Text>
+              </View>
+            )}
+          </>
+        ) : (
+          <>
+            <View
+              style={
+                styles.totalRow
+              }
+            >
+              <Text
+                style={
+                  styles.totalLabel
+                }
+              >
+                Subtotal
+              </Text>
+
+              <Text
+                style={
+                  styles.totalValue
+                }
+              >
+                {
+                  formatCurrency(
+                    order.subtotal,
+                  )
+                }
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.totalRow
+              }
+            >
+              <Text
+                style={
+                  styles.totalLabel
+                }
+              >
+                Tax
+              </Text>
+
+              <Text
+                style={
+                  styles.totalValue
+                }
+              >
+                {
+                  formatCurrency(
+                    order.tax,
+                  )
+                }
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.totalDivider
+              }
+            />
+
+            <View
+              style={
+                styles.finalTotalRow
+              }
+            >
+              <Text
+                style={
+                  styles.finalTotalLabel
+                }
+              >
+                Order Total
+              </Text>
+
+              <Text
+                style={
+                  styles.finalTotalValue
+                }
+              >
+                {
+                  formatCurrency(
+                    order.total,
+                  )
+                }
+              </Text>
+            </View>
+          </>
+        )}
+      </View>
+
+      {order.status ===
+      "ordered" ? (
+        <View
+          style={
+            styles.pendingCard
+          }
+        >
+          <Ionicons
+            name="cube-outline"
+            size={
+              18
+            }
+            color="#B45309"
+          />
+
+          <View
+            style={
+              styles.pendingTextContainer
+            }
+          >
+            <Text
+              style={
+                styles.pendingTitle
+              }
+            >
+              Waiting to be received
+            </Text>
+
+            <Text
+              style={
+                styles.pendingText
+              }
+            >
+              This purchase order has been placed, but its quantities have not been added to physical inventory yet.
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
+      {order.status ===
+      "partially_received" ? (
+        <View
+          style={
+            styles.partialCard
+          }
+        >
+          <Ionicons
+            name="time-outline"
+            size={
+              18
+            }
+            color="#2563EB"
+          />
+
+          <View
+            style={
+              styles.pendingTextContainer
+            }
+          >
+            <Text
+              style={
+                styles.partialTitle
+              }
+            >
+              Order partially received
+            </Text>
+
+            <Text
+              style={
+                styles.partialText
+              }
+            >
+              Some quantities have been received, but this purchase order still has outstanding merchandise.
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
+      {isFullyReceived ? (
+        <View
+          style={
+            styles.receivedCard
+          }
+        >
+          <Ionicons
+            name="checkmark-circle"
+            size={
+              20
+            }
+            color="#15803D"
+          />
+
+          <View
+            style={
+              styles.pendingTextContainer
+            }
+          >
+            <Text
+              style={
+                styles.receivedTitle
+              }
+            >
+              Fully Received
+            </Text>
+
+            <Text
+              style={
+                styles.receivedText
+              }
+            >
+              Every ordered quantity was received and added to inventory.
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
+      {isReceivedWithShortage ? (
+        <View
+          style={
+            styles.receivedWithShortageCard
+          }
+        >
+          <Ionicons
+            name="checkmark-circle"
+            size={
+              20
+            }
+            color="#15803D"
+          />
+
+          <View
+            style={
+              styles.pendingTextContainer
+            }
+          >
+            <Text
+              style={
+                styles.receivedTitle
+              }
+            >
+              Receiving Completed
+            </Text>
+
+            <Text
+              style={
+                styles.receivedText
+              }
+            >
+              Received quantities were added to inventory. Missing quantities remain recorded in this purchase order history.
+            </Text>
+
+            <View
+              style={
+                styles.receivedMissingFooter
+              }
+            >
+              <Ionicons
+                name="warning-outline"
+                size={
+                  14
+                }
+                color="#B45309"
+              />
+
+              <Text
+                style={
+                  styles.receivedMissingFooterText
+                }
+              >
+                {totalMissingUnits}{" "}
+                {totalMissingUnits ===
+                1
+                  ? "unit was"
+                  : "units were"} missing from the delivery.
+              </Text>
             </View>
           </View>
-        ) : null}
-      </ScrollView>
-    </SafeAreaView>
+        </View>
+      ) : null}
+    </ScreenContainer>
   );
 }
 
@@ -2176,25 +2166,6 @@ function formatDate(
 
 const styles =
   StyleSheet.create({
-    screen: {
-      flex:
-        1,
-
-      backgroundColor:
-        "#F4F6F8",
-    },
-
-    content: {
-      paddingHorizontal:
-        18,
-
-      paddingTop:
-        12,
-
-      paddingBottom:
-        50,
-    },
-
     header: {
       flexDirection:
         "row",

@@ -20,6 +20,10 @@ import {
 } from "react-native-safe-area-context";
 
 import {
+  ScreenContainer,
+} from "./ScreenContainer";
+
+import {
   getCategoriesForDepartment,
   PRODUCT_DEPARTMENTS,
   type ProductDepartment,
@@ -269,14 +273,14 @@ export function ProductForm({
         styles.keyboardContainer
       }
     >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
+      <ScreenContainer
+        topSpacing={
+          10
+        }
+        bottomSpacing={
+          50
         }
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={
-          false
-        }
       >
         <Text
           style={
@@ -652,7 +656,7 @@ export function ProductForm({
               : "Save Product"}
           </Text>
         </Pressable>
-      </ScrollView>
+      </ScreenContainer>
 
       <Modal
         animationType="slide"
@@ -1113,17 +1117,6 @@ const styles =
 
       backgroundColor:
         "#F4F6F8",
-    },
-
-    content: {
-      paddingHorizontal:
-        20,
-
-      paddingTop:
-        10,
-
-      paddingBottom:
-        50,
     },
 
     title: {
