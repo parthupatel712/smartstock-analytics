@@ -6,19 +6,14 @@ import {
   ActivityIndicator,
   Alert,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
 import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
-
-import type {
-  ImportDocument,
-} from "../types/importDocument";
+  ScreenContainer,
+} from "./ScreenContainer";
 
 import type {
   PurchaseOrderWithItems,
@@ -113,457 +108,455 @@ export function ReceiveOrder({
   }
 
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-        "bottom",
-      ]}
-      style={
-        styles.screen
+    <ScreenContainer
+      topSpacing={
+        8
+      }
+      bottomSpacing={
+        50
       }
     >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
-        }
-        showsVerticalScrollIndicator={
-          false
+      <View
+        style={
+          styles.header
         }
       >
         <View
           style={
-            styles.header
+            styles.headerText
           }
         >
-          <View
+          <Text
             style={
-              styles.headerText
+              styles.title
             }
           >
-            <Text
-              style={
-                styles.title
-              }
-            >
-              Receive Order
-            </Text>
+            Receive Order
+          </Text>
 
-            <Text
-              style={
-                styles.subtitle
-              }
-            >
-              Scan or import the vendor invoice, then verify what actually arrived.
-            </Text>
-          </View>
-
-          <Pressable
-            accessibilityRole="button"
-            hitSlop={
-              8
+          <Text
+            style={
+              styles.subtitle
             }
-            disabled={
-              isProcessing
-            }
-            onPress={
-              onClose
-            }
-            style={({
-              pressed,
-            }) => [
-              styles.closeButton,
-
-              pressed &&
-                styles.buttonPressed,
-            ]}
           >
-            <Text
-              style={
-                styles.closeButtonText
-              }
-            >
-              Close
-            </Text>
-          </Pressable>
+            Scan or import the vendor invoice, then verify what actually arrived.
+          </Text>
         </View>
 
+        <Pressable
+          accessibilityRole="button"
+          hitSlop={
+            8
+          }
+          disabled={
+            isProcessing
+          }
+          onPress={
+            onClose
+          }
+          style={({
+            pressed,
+          }) => [
+            styles.closeButton,
+
+            pressed &&
+              styles.buttonPressed,
+
+            isProcessing &&
+              styles.disabled,
+          ]}
+        >
+          <Text
+            style={
+              styles.closeButtonText
+            }
+          >
+            Close
+          </Text>
+        </Pressable>
+      </View>
+
+      <View
+        style={
+          styles.orderCard
+        }
+      >
         <View
           style={
-            styles.orderCard
+            styles.orderTop
           }
         >
           <View
             style={
-              styles.orderTop
+              styles.orderIcon
             }
           >
-            <View
-              style={
-                styles.orderIcon
+            <Ionicons
+              name="cube-outline"
+              size={
+                22
               }
-            >
-              <Ionicons
-                name="cube-outline"
-                size={
-                  22
-                }
-                color="#2563EB"
-              />
-            </View>
-
-            <View
-              style={
-                styles.orderIdentity
-              }
-            >
-              <Text
-                style={
-                  styles.orderLabel
-                }
-              >
-                PURCHASE ORDER
-              </Text>
-
-              <Text
-                style={
-                  styles.orderNumber
-                }
-              >
-                {
-                  order.orderNumber
-                }
-              </Text>
-
-              <Text
-                style={
-                  styles.vendorName
-                }
-              >
-                {
-                  order.vendorName
-                }
-              </Text>
-            </View>
-
-            <View
-              style={
-                styles.statusBadge
-              }
-            >
-              <Text
-                style={
-                  styles.statusText
-                }
-              >
-                {
-                  order.status ===
-                  "partially_received"
-                    ? "Partial"
-                    : "Ordered"
-                }
-              </Text>
-            </View>
+              color="#2563EB"
+            />
           </View>
 
           <View
             style={
-              styles.summaryRow
+              styles.orderIdentity
             }
           >
-            <SummaryValue
-              label="Products"
-              value={
-                items.length.toString()
+            <Text
+              style={
+                styles.orderLabel
               }
-            />
+            >
+              PURCHASE ORDER
+            </Text>
 
-            <SummaryValue
-              label="Ordered Units"
-              value={
-                totalUnits.toString()
+            <Text
+              style={
+                styles.orderNumber
               }
-            />
+            >
+              {
+                order.orderNumber
+              }
+            </Text>
 
-            <SummaryValue
-              label="PO Total"
-              value={
-                formatCurrency(
-                  order.total,
-                )
+            <Text
+              style={
+                styles.vendorName
               }
-              right
-            />
+              numberOfLines={
+                1
+              }
+            >
+              {
+                order.vendorName
+              }
+            </Text>
+          </View>
+
+          <View
+            style={
+              styles.statusBadge
+            }
+          >
+            <Text
+              style={
+                styles.statusText
+              }
+            >
+              {order.status ===
+              "partially_received"
+                ? "Partial"
+                : "Ordered"}
+            </Text>
           </View>
         </View>
 
         <View
           style={
-            styles.infoCard
+            styles.summaryRow
           }
         >
-          <Ionicons
-            name="shield-checkmark-outline"
-            size={
-              20
+          <SummaryValue
+            label="Products"
+            value={
+              items.length.toString()
             }
-            color="#15803D"
+          />
+
+          <SummaryValue
+            label="Ordered Units"
+            value={
+              totalUnits.toString()
+            }
+          />
+
+          <SummaryValue
+            label="PO Total"
+            value={
+              formatCurrency(
+                order.total,
+              )
+            }
+            right
+          />
+        </View>
+      </View>
+
+      <View
+        style={
+          styles.infoCard
+        }
+      >
+        <Ionicons
+          name="shield-checkmark-outline"
+          size={
+            20
+          }
+          color="#15803D"
+        />
+
+        <View
+          style={
+            styles.infoText
+          }
+        >
+          <Text
+            style={
+              styles.infoTitle
+            }
+          >
+            Inventory remains unchanged
+          </Text>
+
+          <Text
+            style={
+              styles.infoDescription
+            }
+          >
+            SmartStock will first read and compare the delivery against this purchase order. Stock changes happen only after your final confirmation.
+          </Text>
+        </View>
+      </View>
+
+      <View
+        style={
+          styles.sectionHeader
+        }
+      >
+        <Text
+          style={
+            styles.sectionTitle
+          }
+        >
+          How did you receive the invoice?
+        </Text>
+
+        <Text
+          style={
+            styles.sectionSubtitle
+          }
+        >
+          Choose the fastest option available. All methods lead to the same review process.
+        </Text>
+      </View>
+
+      <ReceiveMethod
+        title="Scan Invoice"
+        description="Take a clear photo of the invoice or delivery slip."
+        icon="camera-outline"
+        primary
+        disabled={
+          isProcessing
+        }
+        onPress={
+          onTakePhoto
+        }
+      />
+
+      <ReceiveMethod
+        title="Import Invoice"
+        description="Choose a photo, PDF, Excel sheet, or another supported document."
+        icon="document-attach-outline"
+        disabled={
+          isProcessing
+        }
+        onPress={
+          showImportOptions
+        }
+      />
+
+      <ReceiveMethod
+        title="Manual Review"
+        description="No invoice available? Review the ordered products and enter what arrived manually."
+        icon="create-outline"
+        disabled={
+          isProcessing
+        }
+        onPress={
+          onManualReview
+        }
+      />
+
+      {isProcessing ? (
+        <View
+          style={
+            styles.processingCard
+          }
+        >
+          <ActivityIndicator
+            size="small"
+            color="#2563EB"
           />
 
           <View
             style={
-              styles.infoText
+              styles.processingText
             }
           >
             <Text
               style={
-                styles.infoTitle
+                styles.processingTitle
               }
             >
-              Inventory remains unchanged
+              Preparing invoice…
             </Text>
 
             <Text
               style={
-                styles.infoDescription
+                styles.processingDescription
               }
             >
-              SmartStock will first read and compare the delivery against this purchase order. Stock changes happen only after your final confirmation.
+              Reading the selected document and preparing the review screen.
             </Text>
           </View>
         </View>
+      ) : null}
 
-        <View
+      <View
+        style={
+          styles.sectionHeader
+        }
+      >
+        <Text
           style={
-            styles.sectionHeader
+            styles.sectionTitle
           }
         >
-          <Text
-            style={
-              styles.sectionTitle
-            }
-          >
-            How did you receive the invoice?
-          </Text>
+          Expected Products
+        </Text>
 
-          <Text
-            style={
-              styles.sectionSubtitle
-            }
-          >
-            Choose the fastest option available. All methods lead to the same review process.
-          </Text>
-        </View>
+        <Text
+          style={
+            styles.sectionSubtitle
+          }
+        >
+          These are the products SmartStock will compare against the invoice.
+        </Text>
+      </View>
 
-        <ReceiveMethod
-          title="Scan Invoice"
-          description="Take a clear photo of the invoice or delivery slip."
-          icon="camera-outline"
-          primary
-          disabled={
-            isProcessing
-          }
-          onPress={
-            onTakePhoto
-          }
-        />
-
-        <ReceiveMethod
-          title="Import Invoice"
-          description="Choose a photo, PDF, Excel sheet, or another supported document."
-          icon="document-attach-outline"
-          disabled={
-            isProcessing
-          }
-          onPress={
-            showImportOptions
-          }
-        />
-
-        <ReceiveMethod
-          title="Manual Review"
-          description="No invoice available? Review the ordered products and enter what arrived manually."
-          icon="create-outline"
-          disabled={
-            isProcessing
-          }
-          onPress={
-            onManualReview
-          }
-        />
-
-        {isProcessing ? (
+      {items.map(
+        (
+          item,
+        ) => (
           <View
+            key={
+              item.id
+            }
             style={
-              styles.processingCard
+              styles.productCard
             }
           >
-            <ActivityIndicator
-              size="small"
-              color="#2563EB"
-            />
-
             <View
               style={
-                styles.processingText
-              }
-            >
-              <Text
-                style={
-                  styles.processingTitle
-                }
-              >
-                Preparing invoice…
-              </Text>
-
-              <Text
-                style={
-                  styles.processingDescription
-                }
-              >
-                Reading the selected document and preparing the review screen.
-              </Text>
-            </View>
-          </View>
-        ) : null}
-
-        <View
-          style={
-            styles.sectionHeader
-          }
-        >
-          <Text
-            style={
-              styles.sectionTitle
-            }
-          >
-            Expected Products
-          </Text>
-
-          <Text
-            style={
-              styles.sectionSubtitle
-            }
-          >
-            These are the products SmartStock will compare against the invoice.
-          </Text>
-        </View>
-
-        {items.map(
-          (
-            item,
-          ) => (
-            <View
-              key={
-                item.id
-              }
-              style={
-                styles.productCard
+                styles.productTop
               }
             >
               <View
                 style={
-                  styles.productTop
-                }
-              >
-                <View
-                  style={
-                    styles.productIdentity
-                  }
-                >
-                  <Text
-                    style={
-                      styles.productName
-                    }
-                    numberOfLines={
-                      2
-                    }
-                  >
-                    {
-                      item.productName
-                    }
-                  </Text>
-
-                  {item.brand.trim() ? (
-                    <Text
-                      style={
-                        styles.productBrand
-                      }
-                    >
-                      {
-                        item.brand
-                      }
-                    </Text>
-                  ) : null}
-
-                  <Text
-                    style={
-                      styles.barcode
-                    }
-                  >
-                    Barcode:{" "}
-                    {item.barcode.trim()
-                      ? item.barcode
-                      : "Not available"}
-                  </Text>
-                </View>
-
-                <View
-                  style={
-                    styles.quantityBadge
-                  }
-                >
-                  <Text
-                    style={
-                      styles.quantityBadgeLabel
-                    }
-                  >
-                    Expected
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.quantityBadgeValue
-                    }
-                  >
-                    {
-                      item.quantity
-                    }
-                  </Text>
-                </View>
-              </View>
-
-              <View
-                style={
-                  styles.productFooter
+                  styles.productIdentity
                 }
               >
                 <Text
                   style={
-                    styles.productCostLabel
+                    styles.productName
                   }
-                >
-                  Ordered unit cost
-                </Text>
-
-                <Text
-                  style={
-                    styles.productCost
+                  numberOfLines={
+                    2
                   }
                 >
                   {
-                    formatCurrency(
-                      item.unitCost,
-                    )
+                    item.productName
+                  }
+                </Text>
+
+                {item.brand.trim() ? (
+                  <Text
+                    style={
+                      styles.productBrand
+                    }
+                    numberOfLines={
+                      1
+                    }
+                  >
+                    {
+                      item.brand
+                    }
+                  </Text>
+                ) : null}
+
+                <Text
+                  style={
+                    styles.barcode
+                  }
+                  numberOfLines={
+                    1
+                  }
+                >
+                  Barcode:{" "}
+                  {item.barcode.trim()
+                    ? item.barcode
+                    : "Not available"}
+                </Text>
+              </View>
+
+              <View
+                style={
+                  styles.quantityBadge
+                }
+              >
+                <Text
+                  style={
+                    styles.quantityBadgeLabel
+                  }
+                >
+                  Expected
+                </Text>
+
+                <Text
+                  style={
+                    styles.quantityBadgeValue
+                  }
+                >
+                  {
+                    item.quantity
                   }
                 </Text>
               </View>
             </View>
-          ),
-        )}
-      </ScrollView>
-    </SafeAreaView>
+
+            <View
+              style={
+                styles.productFooter
+              }
+            >
+              <Text
+                style={
+                  styles.productCostLabel
+                }
+              >
+                Ordered unit cost
+              </Text>
+
+              <Text
+                style={
+                  styles.productCost
+                }
+              >
+                {
+                  formatCurrency(
+                    item.unitCost,
+                  )
+                }
+              </Text>
+            </View>
+          </View>
+        ),
+      )}
+    </ScreenContainer>
   );
 }
 
@@ -722,6 +715,9 @@ function SummaryValue({
           1
         }
         adjustsFontSizeToFit
+        minimumFontScale={
+          0.7
+        }
       >
         {
           value
@@ -757,25 +753,6 @@ function formatCurrency(
 
 const styles =
   StyleSheet.create({
-    screen: {
-      flex:
-        1,
-
-      backgroundColor:
-        "#F4F6F8",
-    },
-
-    content: {
-      paddingHorizontal:
-        18,
-
-      paddingTop:
-        12,
-
-      paddingBottom:
-        50,
-    },
-
     header: {
       flexDirection:
         "row",
@@ -961,6 +938,9 @@ const styles =
     },
 
     statusBadge: {
+      flexShrink:
+        0,
+
       borderRadius:
         999,
 
@@ -1008,6 +988,9 @@ const styles =
     summaryValue: {
       flex:
         1,
+
+      minWidth:
+        0,
     },
 
     summaryValueRight: {
@@ -1371,6 +1354,9 @@ const styles =
     quantityBadge: {
       minWidth:
         61,
+
+      flexShrink:
+        0,
 
       alignItems:
         "center",

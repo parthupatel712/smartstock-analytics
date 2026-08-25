@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,12 +13,12 @@ import {
 } from "react-native";
 
 import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
-
-import {
   OrderProductCard,
 } from "./OrderProductCard";
+
+import {
+  ScreenContainer,
+} from "./ScreenContainer";
 
 import type {
   OrderDraftItem,
@@ -123,7 +122,6 @@ export function OrderPreview({
       ) =>
         total +
         item.quantity,
-
       0,
     );
 
@@ -136,7 +134,6 @@ export function OrderPreview({
         total +
         item.quantity *
           item.product.unitCost,
-
       0,
     );
 
@@ -167,461 +164,479 @@ export function OrderPreview({
     !isSaving;
 
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-        "bottom",
-      ]}
+    <KeyboardAvoidingView
+      behavior={
+        Platform.OS ===
+        "ios"
+          ? "padding"
+          : undefined
+      }
       style={
-        styles.screen
+        styles.keyboardContainer
       }
     >
-      <KeyboardAvoidingView
-        behavior={
-          Platform.OS ===
-          "ios"
-            ? "padding"
-            : undefined
+      <ScreenContainer
+        topSpacing={
+          8
         }
-        style={
-          styles.keyboardContainer
+        bottomSpacing={
+          50
         }
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView
-          contentContainerStyle={
-            styles.content
+        <View
+          style={
+            styles.header
           }
-          showsVerticalScrollIndicator={
-            false
-          }
-          keyboardShouldPersistTaps="handled"
         >
           <View
             style={
-              styles.header
+              styles.headerText
             }
           >
+            <Text
+              style={
+                styles.title
+              }
+            >
+              Purchase Order
+            </Text>
+
+            <Text
+              style={
+                styles.subtitle
+              }
+            >
+              Review products, supplier information, and totals before placing the order.
+            </Text>
+          </View>
+
+          <Pressable
+            accessibilityRole="button"
+            hitSlop={
+              8
+            }
+            onPress={
+              onClose
+            }
+            style={({
+              pressed,
+            }) => [
+              styles.closeButton,
+
+              pressed &&
+                styles.buttonPressed,
+            ]}
+          >
+            <Text
+              style={
+                styles.closeButtonText
+              }
+            >
+              Close
+            </Text>
+          </Pressable>
+        </View>
+
+        {items.length >
+        0 ? (
+          <>
             <View
               style={
-                styles.headerText
+                styles.orderInfoCard
+              }
+            >
+              <View
+                style={
+                  styles.orderInfoRow
+                }
+              >
+                <View
+                  style={
+                    styles.orderInfoBlock
+                  }
+                >
+                  <Text
+                    style={
+                      styles.orderInfoLabel
+                    }
+                  >
+                    Purchase Order
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.orderInfoValue
+                    }
+                  >
+                    {
+                      orderNumber ||
+                      "Draft"
+                    }
+                  </Text>
+                </View>
+
+                <View
+                  style={[
+                    styles.orderInfoBlock,
+                    styles.orderInfoBlockRight,
+                  ]}
+                >
+                  <Text
+                    style={
+                      styles.orderInfoLabel
+                    }
+                  >
+                    Order Date
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.orderInfoValue
+                    }
+                  >
+                    {
+                      formatOrderDate()
+                    }
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View
+              style={
+                styles.formCard
               }
             >
               <Text
                 style={
-                  styles.title
+                  styles.formSectionTitle
                 }
               >
-                Purchase Order
+                Supplier Details
               </Text>
 
               <Text
                 style={
-                  styles.subtitle
+                  styles.label
                 }
               >
-                Review products, supplier information, and totals before placing the order.
+                Vendor / Supplier
+              </Text>
+
+              <TextInput
+                value={
+                  vendorName
+                }
+                onChangeText={
+                  onVendorNameChange
+                }
+                placeholder="Example: Coca-Cola, PepsiCo, Walmart"
+                placeholderTextColor="#9CA3AF"
+                autoCapitalize="words"
+                autoCorrect={
+                  false
+                }
+                style={
+                  styles.input
+                }
+              />
+
+              <Text
+                style={
+                  styles.fieldHint
+                }
+              >
+                Vendor is required before placing the order.
+              </Text>
+
+              <Text
+                style={[
+                  styles.label,
+                  styles.notesLabel,
+                ]}
+              >
+                Notes (Optional)
+              </Text>
+
+              <TextInput
+                value={
+                  notes
+                }
+                onChangeText={
+                  onNotesChange
+                }
+                placeholder="Example: Weekly beverage order"
+                placeholderTextColor="#9CA3AF"
+                multiline
+                textAlignVertical="top"
+                style={[
+                  styles.input,
+                  styles.notesInput,
+                ]}
+              />
+            </View>
+
+            <View
+              style={
+                styles.summaryCard
+              }
+            >
+              <View
+                style={
+                  styles.summaryItem
+                }
+              >
+                <Text
+                  style={
+                    styles.summaryLabel
+                  }
+                >
+                  Products
+                </Text>
+
+                <Text
+                  style={
+                    styles.summaryValue
+                  }
+                >
+                  {
+                    items.length
+                  }
+                </Text>
+              </View>
+
+              <View
+                style={
+                  styles.summaryDivider
+                }
+              />
+
+              <View
+                style={
+                  styles.summaryItem
+                }
+              >
+                <Text
+                  style={
+                    styles.summaryLabel
+                  }
+                >
+                  Units
+                </Text>
+
+                <Text
+                  style={
+                    styles.summaryValue
+                  }
+                >
+                  {
+                    totalUnits
+                  }
+                </Text>
+              </View>
+
+              <View
+                style={
+                  styles.summaryDivider
+                }
+              />
+
+              <View
+                style={
+                  styles.summaryItem
+                }
+              >
+                <Text
+                  style={
+                    styles.summaryLabel
+                  }
+                >
+                  Subtotal
+                </Text>
+
+                <Text
+                  style={
+                    styles.summaryCost
+                  }
+                  numberOfLines={
+                    1
+                  }
+                  adjustsFontSizeToFit
+                  minimumFontScale={
+                    0.75
+                  }
+                >
+                  {
+                    formatCurrency(
+                      subtotal,
+                    )
+                  }
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={
+                styles.sectionHeader
+              }
+            >
+              <Text
+                style={
+                  styles.sectionTitle
+                }
+              >
+                Order Items
+              </Text>
+
+              <Text
+                style={
+                  styles.sectionSubtitle
+                }
+              >
+                Adjust quantity or remove products before saving.
               </Text>
             </View>
 
+            {items.map(
+              (
+                item,
+              ) => (
+                <View
+                  key={
+                    item.product.id
+                  }
+                >
+                  <OrderProductCard
+                    product={
+                      item.product
+                    }
+                    quantity={
+                      item.quantity
+                    }
+                    onIncrease={() =>
+                      onIncrease(
+                        item.product.id,
+                      )
+                    }
+                    onDecrease={() =>
+                      onDecrease(
+                        item.product.id,
+                      )
+                    }
+                    onRemove={() =>
+                      onRemove(
+                        item.product.id,
+                      )
+                    }
+                  />
+
+                  <View
+                    style={
+                      styles.lineTotalRow
+                    }
+                  >
+                    <Text
+                      style={
+                        styles.lineTotalLabel
+                      }
+                    >
+                      {formatCurrency(
+                        item.product.unitCost,
+                      )}{" "}
+                      ×{" "}
+                      {
+                        item.quantity
+                      }
+                    </Text>
+
+                    <Text
+                      style={
+                        styles.lineTotalValue
+                      }
+                    >
+                      {
+                        formatCurrency(
+                          item.product.unitCost *
+                            item.quantity,
+                        )
+                      }
+                    </Text>
+                  </View>
+                </View>
+              ),
+            )}
+
             <Pressable
               accessibilityRole="button"
-              hitSlop={
-                8
-              }
               onPress={
-                onClose
+                onAddMore
               }
               style={({
                 pressed,
               }) => [
-                styles.closeButton,
+                styles.addMoreButton,
 
                 pressed &&
-                  styles.buttonPressed,
+                  styles.addMoreButtonPressed,
               ]}
             >
+              <Ionicons
+                name="add-circle-outline"
+                size={
+                  19
+                }
+                color="#20252B"
+              />
+
               <Text
                 style={
-                  styles.closeButtonText
+                  styles.addMoreButtonText
                 }
               >
-                Close
+                Add More Products
               </Text>
             </Pressable>
-          </View>
 
-          {items.length >
-          0 ? (
-            <>
+            <View
+              style={
+                styles.totalCard
+              }
+            >
               <View
                 style={
-                  styles.orderInfoCard
+                  styles.totalRow
                 }
               >
-                <View
+                <Text
                   style={
-                    styles.orderInfoRow
+                    styles.totalLabel
                   }
                 >
-                  <View
-                    style={
-                      styles.orderInfoBlock
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.orderInfoLabel
-                      }
-                    >
-                      Purchase Order
-                    </Text>
+                  Subtotal
+                </Text>
 
-                    <Text
-                      style={
-                        styles.orderInfoValue
-                      }
-                    >
-                      {
-                        orderNumber ||
-                        "Draft"
-                      }
-                    </Text>
-                  </View>
-
-                  <View
-                    style={[
-                      styles.orderInfoBlock,
-                      styles.orderInfoBlockRight,
-                    ]}
-                  >
-                    <Text
-                      style={
-                        styles.orderInfoLabel
-                      }
-                    >
-                      Order Date
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.orderInfoValue
-                      }
-                    >
-                      {
-                        formatOrderDate()
-                      }
-                    </Text>
-                  </View>
-                </View>
+                <Text
+                  style={
+                    styles.totalValue
+                  }
+                >
+                  {
+                    formatCurrency(
+                      subtotal,
+                    )
+                  }
+                </Text>
               </View>
 
               <View
                 style={
-                  styles.formCard
-                }
-              >
-                <Text
-                  style={
-                    styles.formSectionTitle
-                  }
-                >
-                  Supplier Details
-                </Text>
-
-                <Text
-                  style={
-                    styles.label
-                  }
-                >
-                  Vendor / Supplier
-                </Text>
-
-                <TextInput
-                  value={
-                    vendorName
-                  }
-                  onChangeText={
-                    onVendorNameChange
-                  }
-                  placeholder="Example: Coca-Cola, PepsiCo, Walmart"
-                  placeholderTextColor="#9CA3AF"
-                  autoCapitalize="words"
-                  autoCorrect={
-                    false
-                  }
-                  style={
-                    styles.input
-                  }
-                />
-
-                <Text
-                  style={
-                    styles.fieldHint
-                  }
-                >
-                  Vendor is required before placing the order.
-                </Text>
-
-                <Text
-                  style={[
-                    styles.label,
-                    styles.notesLabel,
-                  ]}
-                >
-                  Notes (Optional)
-                </Text>
-
-                <TextInput
-                  value={
-                    notes
-                  }
-                  onChangeText={
-                    onNotesChange
-                  }
-                  placeholder="Example: Weekly beverage order"
-                  placeholderTextColor="#9CA3AF"
-                  multiline
-                  textAlignVertical="top"
-                  style={[
-                    styles.input,
-                    styles.notesInput,
-                  ]}
-                />
-              </View>
-
-              <View
-                style={
-                  styles.summaryCard
+                  styles.taxSection
                 }
               >
                 <View
                   style={
-                    styles.summaryItem
-                  }
-                >
-                  <Text
-                    style={
-                      styles.summaryLabel
-                    }
-                  >
-                    Products
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.summaryValue
-                    }
-                  >
-                    {
-                      items.length
-                    }
-                  </Text>
-                </View>
-
-                <View
-                  style={
-                    styles.summaryDivider
-                  }
-                />
-
-                <View
-                  style={
-                    styles.summaryItem
-                  }
-                >
-                  <Text
-                    style={
-                      styles.summaryLabel
-                    }
-                  >
-                    Units
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.summaryValue
-                    }
-                  >
-                    {
-                      totalUnits
-                    }
-                  </Text>
-                </View>
-
-                <View
-                  style={
-                    styles.summaryDivider
-                  }
-                />
-
-                <View
-                  style={
-                    styles.summaryItem
-                  }
-                >
-                  <Text
-                    style={
-                      styles.summaryLabel
-                    }
-                  >
-                    Subtotal
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.summaryCost
-                    }
-                    numberOfLines={
-                      1
-                    }
-                    adjustsFontSizeToFit
-                    minimumFontScale={
-                      0.75
-                    }
-                  >
-                    {
-                      formatCurrency(
-                        subtotal,
-                      )
-                    }
-                  </Text>
-                </View>
-              </View>
-
-              <View
-                style={
-                  styles.sectionHeader
-                }
-              >
-                <View>
-                  <Text
-                    style={
-                      styles.sectionTitle
-                    }
-                  >
-                    Order Items
-                  </Text>
-
-                  <Text
-                    style={
-                      styles.sectionSubtitle
-                    }
-                  >
-                    Adjust quantity or remove products before saving.
-                  </Text>
-                </View>
-              </View>
-
-              {items.map(
-                (
-                  item,
-                ) => (
-                  <View
-                    key={
-                      item.product.id
-                    }
-                  >
-                    <OrderProductCard
-                      product={
-                        item.product
-                      }
-                      quantity={
-                        item.quantity
-                      }
-                      onIncrease={() =>
-                        onIncrease(
-                          item.product.id,
-                        )
-                      }
-                      onDecrease={() =>
-                        onDecrease(
-                          item.product.id,
-                        )
-                      }
-                      onRemove={() =>
-                        onRemove(
-                          item.product.id,
-                        )
-                      }
-                    />
-
-                    <View
-                      style={
-                        styles.lineTotalRow
-                      }
-                    >
-                      <Text
-                        style={
-                          styles.lineTotalLabel
-                        }
-                      >
-                        {formatCurrency(
-                          item.product.unitCost,
-                        )}{" "}
-                        ×{" "}
-                        {
-                          item.quantity
-                        }
-                      </Text>
-
-                      <Text
-                        style={
-                          styles.lineTotalValue
-                        }
-                      >
-                        {
-                          formatCurrency(
-                            item.product.unitCost *
-                              item.quantity,
-                          )
-                        }
-                      </Text>
-                    </View>
-                  </View>
-                ),
-              )}
-
-              <Pressable
-                accessibilityRole="button"
-                onPress={
-                  onAddMore
-                }
-                style={({
-                  pressed,
-                }) => [
-                  styles.addMoreButton,
-
-                  pressed &&
-                    styles.addMoreButtonPressed,
-                ]}
-              >
-                <Ionicons
-                  name="add-circle-outline"
-                  size={
-                    19
-                  }
-                  color="#20252B"
-                />
-
-                <Text
-                  style={
-                    styles.addMoreButtonText
-                  }
-                >
-                  Add More Products
-                </Text>
-              </Pressable>
-
-              <View
-                style={
-                  styles.totalCard
-                }
-              >
-                <View
-                  style={
-                    styles.totalRow
+                    styles.taxTextContainer
                   }
                 >
                   <Text
@@ -629,259 +644,238 @@ export function OrderPreview({
                       styles.totalLabel
                     }
                   >
-                    Subtotal
+                    Tax
                   </Text>
 
                   <Text
                     style={
-                      styles.totalValue
+                      styles.taxHint
                     }
                   >
-                    {
-                      formatCurrency(
-                        subtotal,
-                      )
-                    }
+                    Optional estimated tax amount
                   </Text>
                 </View>
 
                 <View
                   style={
-                    styles.taxSection
+                    styles.taxInputWrapper
                   }
                 >
-                  <View
-                    style={
-                      styles.taxTextContainer
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.totalLabel
-                      }
-                    >
-                      Tax
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.taxHint
-                      }
-                    >
-                      Optional estimated tax amount
-                    </Text>
-                  </View>
-
-                  <View
-                    style={
-                      styles.taxInputWrapper
-                    }
-                  >
-                    <Text
-                      style={
-                        styles.currencyPrefix
-                      }
-                    >
-                      $
-                    </Text>
-
-                    <TextInput
-                      value={
-                        tax
-                      }
-                      onChangeText={
-                        onTaxChange
-                      }
-                      placeholder="0.00"
-                      placeholderTextColor="#9CA3AF"
-                      keyboardType="decimal-pad"
-                      style={
-                        styles.taxInput
-                      }
-                    />
-                  </View>
-                </View>
-
-                <View
-                  style={
-                    styles.finalTotalDivider
-                  }
-                />
-
-                <View
-                  style={
-                    styles.finalTotalRow
-                  }
-                >
-                  <View>
-                    <Text
-                      style={
-                        styles.finalTotalLabel
-                      }
-                    >
-                      Estimated Total
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.finalTotalHint
-                      }
-                    >
-                      Final amount may differ from vendor invoice.
-                    </Text>
-                  </View>
-
                   <Text
                     style={
-                      styles.finalTotalValue
+                      styles.currencyPrefix
                     }
                   >
-                    {
-                      formatCurrency(
-                        finalTotal,
-                      )
-                    }
+                    $
                   </Text>
+
+                  <TextInput
+                    value={
+                      tax
+                    }
+                    onChangeText={
+                      onTaxChange
+                    }
+                    placeholder="0.00"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="decimal-pad"
+                    style={
+                      styles.taxInput
+                    }
+                  />
                 </View>
               </View>
 
-              <Pressable
-                accessibilityRole="button"
-                disabled={
+              <View
+                style={
+                  styles.finalTotalDivider
+                }
+              />
+
+              <View
+                style={
+                  styles.finalTotalRow
+                }
+              >
+                <View
+                  style={
+                    styles.finalTotalText
+                  }
+                >
+                  <Text
+                    style={
+                      styles.finalTotalLabel
+                    }
+                  >
+                    Estimated Total
+                  </Text>
+
+                  <Text
+                    style={
+                      styles.finalTotalHint
+                    }
+                  >
+                    Final amount may differ from vendor invoice.
+                  </Text>
+                </View>
+
+                <Text
+                  style={
+                    styles.finalTotalValue
+                  }
+                  numberOfLines={
+                    1
+                  }
+                  adjustsFontSizeToFit
+                  minimumFontScale={
+                    0.75
+                  }
+                >
+                  {
+                    formatCurrency(
+                      finalTotal,
+                    )
+                  }
+                </Text>
+              </View>
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              disabled={
+                isSaving ||
+                isPlacing
+              }
+              onPress={
+                onSaveDraft
+              }
+              style={({
+                pressed,
+              }) => [
+                styles.saveDraftButton,
+
+                pressed &&
+                  !isSaving &&
+                  !isPlacing &&
+                  styles.saveDraftButtonPressed,
+
+                (
                   isSaving ||
                   isPlacing
-                }
-                onPress={
-                  onSaveDraft
-                }
-                style={({
-                  pressed,
-                }) => [
-                  styles.saveDraftButton,
-
-                  pressed &&
-                    !isSaving &&
-                    !isPlacing &&
-                    styles.saveDraftButtonPressed,
-
-                  (
-                    isSaving ||
-                    isPlacing
-                  ) &&
-                    styles.disabledButton,
-                ]}
-              >
-                <Ionicons
-                  name="save-outline"
-                  size={
-                    18
-                  }
-                  color="#20252B"
-                />
-
-                <Text
-                  style={
-                    styles.saveDraftButtonText
-                  }
-                >
-                  {isSaving
-                    ? "Saving Draft…"
-                    : "Save Draft"}
-                </Text>
-              </Pressable>
-
-              <Pressable
-                accessibilityRole="button"
-                disabled={
-                  !canPlaceOrder
-                }
-                onPress={
-                  onPlaceOrder
-                }
-                style={({
-                  pressed,
-                }) => [
-                  styles.placeOrderButton,
-
-                  pressed &&
-                    canPlaceOrder &&
-                    styles.placeOrderButtonPressed,
-
-                  !canPlaceOrder &&
-                    styles.disabledButton,
-                ]}
-              >
-                <Text
-                  style={
-                    styles.placeOrderButtonText
-                  }
-                >
-                  {isPlacing
-                    ? "Placing Order…"
-                    : "Place Order"}
-                </Text>
-
-                <Ionicons
-                  name="checkmark-circle-outline"
-                  size={
-                    19
-                  }
-                  color="#FFFFFF"
-                />
-              </Pressable>
-            </>
-          ) : (
-            <View
-              style={
-                styles.emptyCard
-              }
+                ) &&
+                  styles.disabledButton,
+              ]}
             >
               <Ionicons
-                name="cart-outline"
+                name="save-outline"
                 size={
-                  44
+                  18
                 }
-                color="#9CA3AF"
+                color="#20252B"
               />
 
               <Text
                 style={
-                  styles.emptyTitle
+                  styles.saveDraftButtonText
                 }
               >
-                Order is empty
+                {isSaving
+                  ? "Saving Draft…"
+                  : "Save Draft"}
               </Text>
+            </Pressable>
 
+            <Pressable
+              accessibilityRole="button"
+              disabled={
+                !canPlaceOrder
+              }
+              onPress={
+                onPlaceOrder
+              }
+              style={({
+                pressed,
+              }) => [
+                styles.placeOrderButton,
+
+                pressed &&
+                  canPlaceOrder &&
+                  styles.placeOrderButtonPressed,
+
+                !canPlaceOrder &&
+                  styles.disabledButton,
+              ]}
+            >
               <Text
                 style={
-                  styles.emptyText
+                  styles.placeOrderButtonText
                 }
               >
-                Add products before preparing the purchase order.
+                {isPlacing
+                  ? "Placing Order…"
+                  : "Place Order"}
               </Text>
 
-              <Pressable
-                accessibilityRole="button"
-                onPress={
-                  onAddMore
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={
+                  19
                 }
+                color="#FFFFFF"
+              />
+            </Pressable>
+          </>
+        ) : (
+          <View
+            style={
+              styles.emptyCard
+            }
+          >
+            <Ionicons
+              name="cart-outline"
+              size={
+                44
+              }
+              color="#9CA3AF"
+            />
+
+            <Text
+              style={
+                styles.emptyTitle
+              }
+            >
+              Order is empty
+            </Text>
+
+            <Text
+              style={
+                styles.emptyText
+              }
+            >
+              Add products before preparing the purchase order.
+            </Text>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={
+                onAddMore
+              }
+              style={
+                styles.emptyButton
+              }
+            >
+              <Text
                 style={
-                  styles.emptyButton
+                  styles.emptyButtonText
                 }
               >
-                <Text
-                  style={
-                    styles.emptyButtonText
-                  }
-                >
-                  Add Products
-                </Text>
-              </Pressable>
-            </View>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+                Add Products
+              </Text>
+            </Pressable>
+          </View>
+        )}
+      </ScreenContainer>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -928,28 +922,12 @@ function formatOrderDate():
 
 const styles =
   StyleSheet.create({
-    screen: {
+    keyboardContainer: {
       flex:
         1,
 
       backgroundColor:
         "#F4F6F8",
-    },
-
-    keyboardContainer: {
-      flex:
-        1,
-    },
-
-    content: {
-      paddingHorizontal:
-        18,
-
-      paddingTop:
-        12,
-
-      paddingBottom:
-        50,
     },
 
     header: {
@@ -1589,6 +1567,14 @@ const styles =
         12,
     },
 
+    finalTotalText: {
+      flex:
+        1,
+
+      minWidth:
+        0,
+    },
+
     finalTotalLabel: {
       fontSize:
         15,
@@ -1604,9 +1590,6 @@ const styles =
       marginTop:
         3,
 
-      maxWidth:
-        210,
-
       fontSize:
         9,
 
@@ -1619,13 +1602,19 @@ const styles =
 
     finalTotalValue: {
       flexShrink:
-        0,
+        1,
+
+      maxWidth:
+        "46%",
 
       fontSize:
         20,
 
       fontWeight:
         "800",
+
+      textAlign:
+        "right",
 
       color:
         "#15803D",

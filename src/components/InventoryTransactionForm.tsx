@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,8 +14,8 @@ import {
 } from "react-native";
 
 import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
+  ScreenContainer,
+} from "./ScreenContainer";
 
 import type {
   Product,
@@ -344,544 +343,531 @@ export function InventoryTransactionForm({
   }
 
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-        "bottom",
-      ]}
+    <KeyboardAvoidingView
+      behavior={
+        Platform.OS ===
+        "ios"
+          ? "padding"
+          : undefined
+      }
+      keyboardVerticalOffset={
+        Platform.OS ===
+        "ios"
+          ? 0
+          : undefined
+      }
       style={
-        styles.safeArea
+        styles.keyboardContainer
       }
     >
-      <KeyboardAvoidingView
-        behavior={
-          Platform.OS ===
-          "ios"
-            ? "padding"
-            : undefined
+      <ScreenContainer
+        topSpacing={
+          10
         }
-        keyboardVerticalOffset={
-          Platform.OS ===
-          "ios"
-            ? 0
-            : undefined
+        bottomSpacing={
+          48
         }
-        style={
-          styles.screen
-        }
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView
-          contentContainerStyle={
-            styles.content
-          }
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
-          showsVerticalScrollIndicator={
-            false
+        <View
+          style={
+            styles.headerRow
           }
         >
           <View
             style={
-              styles.headerRow
-            }
-          >
-            <View
-              style={
-                styles.headerTextContainer
-              }
-            >
-              <Text
-                style={
-                  styles.title
-                }
-              >
-                Update Inventory
-              </Text>
-
-              <Text
-                style={
-                  styles.productName
-                }
-                numberOfLines={
-                  2
-                }
-              >
-                {
-                  product.name
-                }
-              </Text>
-
-              <Text
-                style={
-                  styles.productDetails
-                }
-              >
-                {product.brand.trim()
-                  ? `${product.brand} · `
-                  : ""}
-                {
-                  product.department
-                }
-                {" · "}
-                {
-                  product.category
-                }
-              </Text>
-            </View>
-
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Cancel inventory update"
-              hitSlop={
-                14
-              }
-              disabled={
-                isSubmitting
-              }
-              onPress={
-                onCancel
-              }
-              style={({
-                pressed,
-              }) => [
-                styles.cancelButton,
-
-                pressed &&
-                  styles.cancelButtonPressed,
-
-                isSubmitting &&
-                  styles.cancelButtonDisabled,
-              ]}
-            >
-              <Text
-                style={
-                  styles.cancelButtonText
-                }
-              >
-                Cancel
-              </Text>
-            </Pressable>
-          </View>
-
-          <View
-            style={
-              styles.stockCard
-            }
-          >
-            <View
-              style={
-                styles.stockPrimaryRow
-              }
-            >
-              <View>
-                <Text
-                  style={
-                    styles.stockLabel
-                  }
-                >
-                  Current stock
-                </Text>
-
-                <Text
-                  style={
-                    styles.stockValue
-                  }
-                >
-                  {
-                    product.currentStock
-                  }
-                </Text>
-
-                <Text
-                  style={
-                    styles.stockUnit
-                  }
-                >
-                  units
-                </Text>
-              </View>
-
-              <View
-                style={
-                  styles.stockRightColumn
-                }
-              >
-                <Text
-                  style={
-                    styles.stockMetaLabel
-                  }
-                >
-                  Reorder level
-                </Text>
-
-                <Text
-                  style={
-                    styles.stockMetaValue
-                  }
-                >
-                  {
-                    product.reorderLevel
-                  }
-                </Text>
-
-                <Text
-                  style={[
-                    styles.stockMetaLabel,
-                    styles.targetStockLabel,
-                  ]}
-                >
-                  Target stock
-                </Text>
-
-                <Text
-                  style={
-                    styles.stockMetaValue
-                  }
-                >
-                  {
-                    product.reorderLevel *
-                    2
-                  }
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {isReorderPrefill &&
-          transactionType ===
-            "stock_in" ? (
-            <View
-              style={
-                styles.reorderSuggestionCard
-              }
-            >
-              <Text
-                style={
-                  styles.reorderSuggestionTitle
-                }
-              >
-                Suggested quantity applied
-              </Text>
-
-              <Text
-                style={
-                  styles.reorderSuggestionText
-                }
-              >
-                {
-                  initialQuantity
-                }{" "}
-                units were prefilled to move this product toward its target stock.
-              </Text>
-            </View>
-          ) : null}
-
-          <View
-            style={
-              styles.section
+              styles.headerTextContainer
             }
           >
             <Text
               style={
-                styles.sectionTitle
+                styles.title
               }
             >
-              What happened?
+              Update Inventory
             </Text>
 
             <Text
               style={
-                styles.sectionDescription
+                styles.productName
               }
-            >
-              Choose one inventory action.
-            </Text>
-
-            <View
-              style={
-                styles.transactionGrid
-              }
-            >
-              {TRANSACTION_OPTIONS.map(
-                (
-                  option,
-                ) => {
-                  const isSelected =
-                    option.type ===
-                    transactionType;
-
-                  return (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityState={{
-                        selected:
-                          isSelected,
-                      }}
-                      key={
-                        option.type
-                      }
-                      onPress={() =>
-                        changeTransactionType(
-                          option.type,
-                        )
-                      }
-                      style={({
-                        pressed,
-                      }) => [
-                        styles.transactionOption,
-
-                        isSelected &&
-                          styles.transactionOptionSelected,
-
-                        pressed &&
-                          !isSelected &&
-                          styles.transactionOptionPressed,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.transactionOptionLabel,
-
-                          isSelected &&
-                            styles.transactionOptionLabelSelected,
-                        ]}
-                      >
-                        {
-                          option.label
-                        }
-                      </Text>
-
-                      <Text
-                        style={[
-                          styles.transactionOptionDescription,
-
-                          isSelected &&
-                            styles.transactionOptionDescriptionSelected,
-                        ]}
-                      >
-                        {
-                          option.shortDescription
-                        }
-                      </Text>
-                    </Pressable>
-                  );
-                },
-              )}
-            </View>
-          </View>
-
-          <View
-            style={
-              styles.selectedActionCard
-            }
-          >
-            <Text
-              style={
-                styles.selectedActionLabel
-              }
-            >
-              Selected
-            </Text>
-
-            <Text
-              style={
-                styles.selectedActionValue
-              }
-            >
-              {
-                selectedOption.label
-              }
-            </Text>
-
-            <Text
-              style={
-                styles.selectedActionDescription
-              }
-            >
-              {
-                getTransactionExplanation(
-                  transactionType,
-                )
-              }
-            </Text>
-          </View>
-
-          <View
-            style={
-              styles.fieldContainer
-            }
-          >
-            <Text
-              style={
-                styles.label
-              }
-            >
-              {
-                quantityLabel
-              }
-            </Text>
-
-            <TextInput
-              value={
-                quantity
-              }
-              onChangeText={(
-                value,
-              ) => {
-                setQuantity(
-                  value,
-                );
-
-                setErrorMessage(
-                  "",
-                );
-              }}
-              placeholder={
-                quantityPlaceholder
-              }
-              keyboardType="number-pad"
-              returnKeyType="done"
-              selectTextOnFocus
-              style={[
-                styles.input,
-
-                errorMessage
-                  ? styles.inputError
-                  : undefined,
-              ]}
-            />
-
-            {errorMessage ? (
-              <Text
-                style={
-                  styles.errorText
-                }
-              >
-                {
-                  errorMessage
-                }
-              </Text>
-            ) : null}
-          </View>
-
-          <View
-            style={[
-              styles.previewCard,
-
-              stockImpact.isInvalid &&
-                styles.previewCardWarning,
-            ]}
-          >
-            <Text
-              style={
-                styles.previewLabel
-              }
-            >
-              Stock after this update
-            </Text>
-
-            <Text
-              style={[
-                styles.previewValue,
-
-                stockImpact.isInvalid &&
-                  styles.previewValueWarning,
-              ]}
-            >
-              {
-                stockImpact.message
-              }
-            </Text>
-          </View>
-
-          <View
-            style={
-              styles.fieldContainer
-            }
-          >
-            <Text
-              style={
-                styles.label
-              }
-            >
-              Notes
-            </Text>
-
-            <Text
-              style={
-                styles.optionalLabel
-              }
-            >
-              Optional
-            </Text>
-
-            <TextInput
-              value={
-                notes
-              }
-              onChangeText={
-                setNotes
-              }
-              placeholder={
-                getNotesPlaceholder(
-                  transactionType,
-                )
-              }
-              multiline
               numberOfLines={
-                3
+                2
               }
-              textAlignVertical="top"
-              style={[
-                styles.input,
-                styles.notesInput,
-              ]}
-            />
+            >
+              {
+                product.name
+              }
+            </Text>
+
+            <Text
+              style={
+                styles.productDetails
+              }
+            >
+              {product.brand.trim()
+                ? `${product.brand} · `
+                : ""}
+              {
+                product.department
+              }
+              {" · "}
+              {
+                product.category
+              }
+            </Text>
           </View>
 
           <Pressable
             accessibilityRole="button"
-            disabled={
-              isSubmitting ||
-              stockImpact.isInvalid
+            accessibilityLabel="Cancel inventory update"
+            hitSlop={
+              14
             }
-            onPress={() =>
-              void handleSubmit()
+            disabled={
+              isSubmitting
+            }
+            onPress={
+              onCancel
             }
             style={({
               pressed,
             }) => [
-              styles.submitButton,
+              styles.cancelButton,
 
               pressed &&
-                !isSubmitting &&
-                !stockImpact.isInvalid &&
-                styles.submitButtonPressed,
+                styles.cancelButtonPressed,
 
-              (
-                isSubmitting ||
-                stockImpact.isInvalid
-              ) &&
-                styles.submitButtonDisabled,
+              isSubmitting &&
+                styles.cancelButtonDisabled,
             ]}
           >
             <Text
               style={
-                styles.submitButtonText
+                styles.cancelButtonText
               }
             >
-              {isSubmitting
-                ? "Saving…"
-                : getSubmitButtonLabel(
-                    transactionType,
-                  )}
+              Cancel
             </Text>
           </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </View>
+
+        <View
+          style={
+            styles.stockCard
+          }
+        >
+          <View
+            style={
+              styles.stockPrimaryRow
+            }
+          >
+            <View>
+              <Text
+                style={
+                  styles.stockLabel
+                }
+              >
+                Current stock
+              </Text>
+
+              <Text
+                style={
+                  styles.stockValue
+                }
+              >
+                {
+                  product.currentStock
+                }
+              </Text>
+
+              <Text
+                style={
+                  styles.stockUnit
+                }
+              >
+                units
+              </Text>
+            </View>
+
+            <View
+              style={
+                styles.stockRightColumn
+              }
+            >
+              <Text
+                style={
+                  styles.stockMetaLabel
+                }
+              >
+                Reorder level
+              </Text>
+
+              <Text
+                style={
+                  styles.stockMetaValue
+                }
+              >
+                {
+                  product.reorderLevel
+                }
+              </Text>
+
+              <Text
+                style={[
+                  styles.stockMetaLabel,
+                  styles.targetStockLabel,
+                ]}
+              >
+                Target stock
+              </Text>
+
+              <Text
+                style={
+                  styles.stockMetaValue
+                }
+              >
+                {
+                  product.reorderLevel *
+                  2
+                }
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {isReorderPrefill &&
+        transactionType ===
+          "stock_in" ? (
+          <View
+            style={
+              styles.reorderSuggestionCard
+            }
+          >
+            <Text
+              style={
+                styles.reorderSuggestionTitle
+              }
+            >
+              Suggested quantity applied
+            </Text>
+
+            <Text
+              style={
+                styles.reorderSuggestionText
+              }
+            >
+              {
+                initialQuantity
+              }{" "}
+              units were prefilled to move this product toward its target stock.
+            </Text>
+          </View>
+        ) : null}
+
+        <View
+          style={
+            styles.section
+          }
+        >
+          <Text
+            style={
+              styles.sectionTitle
+            }
+          >
+            What happened?
+          </Text>
+
+          <Text
+            style={
+              styles.sectionDescription
+            }
+          >
+            Choose one inventory action.
+          </Text>
+
+          <View
+            style={
+              styles.transactionGrid
+            }
+          >
+            {TRANSACTION_OPTIONS.map(
+              (
+                option,
+              ) => {
+                const isSelected =
+                  option.type ===
+                  transactionType;
+
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{
+                      selected:
+                        isSelected,
+                    }}
+                    key={
+                      option.type
+                    }
+                    onPress={() =>
+                      changeTransactionType(
+                        option.type,
+                      )
+                    }
+                    style={({
+                      pressed,
+                    }) => [
+                      styles.transactionOption,
+
+                      isSelected &&
+                        styles.transactionOptionSelected,
+
+                      pressed &&
+                        !isSelected &&
+                        styles.transactionOptionPressed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.transactionOptionLabel,
+
+                        isSelected &&
+                          styles.transactionOptionLabelSelected,
+                      ]}
+                    >
+                      {
+                        option.label
+                      }
+                    </Text>
+
+                    <Text
+                      style={[
+                        styles.transactionOptionDescription,
+
+                        isSelected &&
+                          styles.transactionOptionDescriptionSelected,
+                      ]}
+                    >
+                      {
+                        option.shortDescription
+                      }
+                    </Text>
+                  </Pressable>
+                );
+              },
+            )}
+          </View>
+        </View>
+
+        <View
+          style={
+            styles.selectedActionCard
+          }
+        >
+          <Text
+            style={
+              styles.selectedActionLabel
+            }
+          >
+            Selected
+          </Text>
+
+          <Text
+            style={
+              styles.selectedActionValue
+            }
+          >
+            {
+              selectedOption.label
+            }
+          </Text>
+
+          <Text
+            style={
+              styles.selectedActionDescription
+            }
+          >
+            {
+              getTransactionExplanation(
+                transactionType,
+              )
+            }
+          </Text>
+        </View>
+
+        <View
+          style={
+            styles.fieldContainer
+          }
+        >
+          <Text
+            style={
+              styles.label
+            }
+          >
+            {
+              quantityLabel
+            }
+          </Text>
+
+          <TextInput
+            value={
+              quantity
+            }
+            onChangeText={(
+              value,
+            ) => {
+              setQuantity(
+                value,
+              );
+
+              setErrorMessage(
+                "",
+              );
+            }}
+            placeholder={
+              quantityPlaceholder
+            }
+            keyboardType="number-pad"
+            returnKeyType="done"
+            selectTextOnFocus
+            style={[
+              styles.input,
+
+              errorMessage
+                ? styles.inputError
+                : undefined,
+            ]}
+          />
+
+          {errorMessage ? (
+            <Text
+              style={
+                styles.errorText
+              }
+            >
+              {
+                errorMessage
+              }
+            </Text>
+          ) : null}
+        </View>
+
+        <View
+          style={[
+            styles.previewCard,
+
+            stockImpact.isInvalid &&
+              styles.previewCardWarning,
+          ]}
+        >
+          <Text
+            style={
+              styles.previewLabel
+            }
+          >
+            Stock after this update
+          </Text>
+
+          <Text
+            style={[
+              styles.previewValue,
+
+              stockImpact.isInvalid &&
+                styles.previewValueWarning,
+            ]}
+          >
+            {
+              stockImpact.message
+            }
+          </Text>
+        </View>
+
+        <View
+          style={
+            styles.fieldContainer
+          }
+        >
+          <Text
+            style={
+              styles.label
+            }
+          >
+            Notes
+          </Text>
+
+          <Text
+            style={
+              styles.optionalLabel
+            }
+          >
+            Optional
+          </Text>
+
+          <TextInput
+            value={
+              notes
+            }
+            onChangeText={
+              setNotes
+            }
+            placeholder={
+              getNotesPlaceholder(
+                transactionType,
+              )
+            }
+            multiline
+            numberOfLines={
+              3
+            }
+            textAlignVertical="top"
+            style={[
+              styles.input,
+              styles.notesInput,
+            ]}
+          />
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          disabled={
+            isSubmitting ||
+            stockImpact.isInvalid
+          }
+          onPress={() =>
+            void handleSubmit()
+          }
+          style={({
+            pressed,
+          }) => [
+            styles.submitButton,
+
+            pressed &&
+              !isSubmitting &&
+              !stockImpact.isInvalid &&
+              styles.submitButtonPressed,
+
+            (
+              isSubmitting ||
+              stockImpact.isInvalid
+            ) &&
+              styles.submitButtonDisabled,
+          ]}
+        >
+          <Text
+            style={
+              styles.submitButtonText
+            }
+          >
+            {isSubmitting
+              ? "Saving…"
+              : getSubmitButtonLabel(
+                  transactionType,
+                )}
+          </Text>
+        </Pressable>
+      </ScreenContainer>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -1099,31 +1085,12 @@ function getStockImpact(
 
 const styles =
   StyleSheet.create({
-    safeArea: {
+    keyboardContainer: {
       flex:
         1,
 
       backgroundColor:
         "#F4F6F8",
-    },
-
-    screen: {
-      flex:
-        1,
-
-      backgroundColor:
-        "#F4F6F8",
-    },
-
-    content: {
-      paddingHorizontal:
-        20,
-
-      paddingTop:
-        10,
-
-      paddingBottom:
-        48,
     },
 
     headerRow: {

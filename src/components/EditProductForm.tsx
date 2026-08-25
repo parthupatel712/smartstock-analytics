@@ -19,6 +19,10 @@ import {
 } from "react-native-safe-area-context";
 
 import {
+  ScreenContainer,
+} from "./ScreenContainer";
+
+import {
   getCategoriesForDepartment,
   PRODUCT_DEPARTMENTS,
   type ProductCategory,
@@ -322,25 +326,15 @@ export function EditProductForm({
   }
 
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-        "bottom",
-      ]}
-      style={
-        styles.screen
-      }
-    >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
+    <>
+      <ScreenContainer
+        topSpacing={
+          12
+        }
+        bottomSpacing={
+          50
         }
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={
-          false
-        }
       >
         <View
           style={
@@ -696,7 +690,7 @@ export function EditProductForm({
               : "Save Changes"}
           </Text>
         </Pressable>
-      </ScrollView>
+      </ScreenContainer>
 
       <Modal
         animationType="slide"
@@ -835,7 +829,7 @@ export function EditProductForm({
           </View>
         </SafeAreaView>
       </Modal>
-    </SafeAreaView>
+    </>
   );
 }
 
@@ -1002,25 +996,6 @@ function PickerOption({
 
 const styles =
   StyleSheet.create({
-    screen: {
-      flex:
-        1,
-
-      backgroundColor:
-        "#F4F6F8",
-    },
-
-    content: {
-      paddingHorizontal:
-        18,
-
-      paddingTop:
-        12,
-
-      paddingBottom:
-        50,
-    },
-
     headerRow: {
       flexDirection:
         "row",
