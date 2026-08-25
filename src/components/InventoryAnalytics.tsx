@@ -119,7 +119,6 @@ export function InventoryAnalytics({
   return (
     <SafeAreaView
       edges={[
-        "top",
         "left",
         "right",
       ]}
@@ -1505,7 +1504,7 @@ const styles =
         18,
 
       paddingTop:
-        12,
+        8,
 
       paddingBottom:
         50,

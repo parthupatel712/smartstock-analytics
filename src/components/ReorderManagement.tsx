@@ -10,14 +10,11 @@ import {
   View,
 } from "react-native";
 
-import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
-
 import type {
   ReorderItem,
   ReorderPriority,
 } from "../types/reorderItem";
+import { ScreenContainer } from "./ScreenContainer";
 
 interface ReorderManagementProps {
   items:
@@ -99,25 +96,10 @@ export function ReorderManagement({
         0,
     ).length;
 
+  void lowStockCount;
+
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-      ]}
-      style={
-        styles.screen
-      }
-    >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
-        }
-        showsVerticalScrollIndicator={
-          false
-        }
-      >
+   <ScreenContainer>
         <View
           style={
             styles.headerRow
@@ -481,8 +463,7 @@ export function ReorderManagement({
             ),
           )
         )}
-      </ScrollView>
-    </SafeAreaView>
+     </ScreenContainer>
   );
 }
 
@@ -940,24 +921,6 @@ function formatCurrency(
 
 const styles =
   StyleSheet.create({
-    screen: {
-      flex:
-        1,
-
-      backgroundColor:
-        "#F4F6F8",
-    },
-
-    content: {
-      paddingHorizontal:
-        18,
-
-      paddingTop:
-        12,
-
-      paddingBottom:
-        50,
-    },
 
     headerRow: {
       flexDirection:

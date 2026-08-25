@@ -11,15 +11,14 @@ import {
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
 import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
+  ScreenContainer,
+} from "./ScreenContainer";
 
 interface BarcodeScannerProps {
   title?:
@@ -111,12 +110,6 @@ export function BarcodeScanner({
         barcode,
       );
 
-      /*
-       * Allow another barcode shortly
-       * after a successful scan so a
-       * different product can replace
-       * the current result.
-       */
       setTimeout(
         () => {
           setHasScanned(
@@ -148,23 +141,38 @@ export function BarcodeScanner({
     !permission
   ) {
     return (
-      <View
-        style={
-          styles.centeredContainer
+      <ScreenContainer
+        scrollable={
+          false
+        }
+        padded={
+          false
+        }
+        topSpacing={
+          0
+        }
+        bottomSpacing={
+          0
         }
       >
-        <ActivityIndicator
-          size="large"
-        />
-
-        <Text
+        <View
           style={
-            styles.statusText
+            styles.centeredContainer
           }
         >
-          Checking camera permission…
-        </Text>
-      </View>
+          <ActivityIndicator
+            size="large"
+          />
+
+          <Text
+            style={
+              styles.statusText
+            }
+          >
+            Checking camera permission…
+          </Text>
+        </View>
+      </ScreenContainer>
     );
   }
 
@@ -172,15 +180,15 @@ export function BarcodeScanner({
     !permission.granted
   ) {
     return (
-      <SafeAreaView
-        edges={[
-          "top",
-          "left",
-          "right",
-          "bottom",
-        ]}
-        style={
-          styles.permissionScreen
+      <ScreenContainer
+        scrollable={
+          false
+        }
+        topSpacing={
+          8
+        }
+        bottomSpacing={
+          24
         }
       >
         <View
@@ -240,227 +248,199 @@ export function BarcodeScanner({
             </Text>
           </Pressable>
         </View>
-      </SafeAreaView>
+      </ScreenContainer>
     );
   }
 
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-        "bottom",
-      ]}
-      style={
-        styles.screen
+    <ScreenContainer
+      topSpacing={
+        8
+      }
+      bottomSpacing={
+        24
+      }
+      keyboardShouldPersistTaps="handled"
+      contentStyle={
+        styles.content
       }
     >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
+      <View
+        style={
+          styles.header
         }
-        showsVerticalScrollIndicator={
-          false
-        }
-        keyboardShouldPersistTaps="handled"
       >
         <View
           style={
-            styles.header
+            styles.headerText
+          }
+        >
+          <Text
+            style={
+              styles.title
+            }
+          >
+            {
+              title
+            }
+          </Text>
+
+          <Text
+            style={
+              styles.subtitle
+            }
+          >
+            {
+              subtitle
+            }
+          </Text>
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={
+            onClose
+          }
+          style={({
+            pressed,
+          }) => [
+            styles.closeButton,
+
+            pressed &&
+              styles.buttonPressed,
+          ]}
+        >
+          <Text
+            style={
+              styles.closeButtonText
+            }
+          >
+            Back
+          </Text>
+        </Pressable>
+      </View>
+
+      <View
+        style={
+          styles.cameraCard
+        }
+      >
+        <CameraView
+          barcodeScannerSettings={{
+            barcodeTypes: [
+              "ean13",
+              "ean8",
+              "upc_a",
+              "upc_e",
+              "code128",
+            ],
+          }}
+          facing="back"
+          zoom={
+            0.12
+          }
+          onBarcodeScanned={
+            hasScanned
+              ? undefined
+              : (
+                  result,
+                ) =>
+                  void handleBarcodeScanned(
+                    result,
+                  )
+          }
+          style={
+            styles.camera
+          }
+        />
+
+        <View
+          pointerEvents="none"
+          style={
+            styles.cameraOverlay
           }
         >
           <View
             style={
-              styles.headerText
-            }
-          >
-            <Text
-              style={
-                styles.title
-              }
-            >
-              {
-                title
-              }
-            </Text>
-
-            <Text
-              style={
-                styles.subtitle
-              }
-            >
-              {
-                subtitle
-              }
-            </Text>
-          </View>
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={
-              onClose
-            }
-            style={({
-              pressed,
-            }) => [
-              styles.closeButton,
-
-              pressed &&
-                styles.buttonPressed,
-            ]}
-          >
-            <Text
-              style={
-                styles.closeButtonText
-              }
-            >
-              Back
-            </Text>
-          </Pressable>
-        </View>
-
-        <View
-          style={
-            styles.cameraCard
-          }
-        >
-          <CameraView
-            barcodeScannerSettings={{
-              barcodeTypes: [
-                "ean13",
-                "ean8",
-                "upc_a",
-                "upc_e",
-                "code128",
-              ],
-            }}
-            facing="back"
-            /*
-             * A mild zoom helps small
-             * barcodes without forcing the
-             * phone too close to the item.
-             */
-            zoom={
-              0.12
-            }
-            onBarcodeScanned={
-              hasScanned
-                ? undefined
-                : (
-                    result,
-                  ) =>
-                    void handleBarcodeScanned(
-                      result,
-                    )
-            }
-            style={
-              styles.camera
+              styles.scanFrame
             }
           />
 
-          <View
-            pointerEvents="none"
+          <Text
             style={
-              styles.cameraOverlay
+              styles.scanHint
             }
           >
-            <View
-              style={
-                styles.scanFrame
-              }
+            Keep the barcode about 10–20 cm away and centered
+          </Text>
+        </View>
+
+        {isProcessing ? (
+          <View
+            style={
+              styles.processingOverlay
+            }
+          >
+            <ActivityIndicator
+              color="#FFFFFF"
             />
 
             <Text
               style={
-                styles.scanHint
+                styles.processingText
               }
             >
-              Keep the barcode about 10–20 cm away and centered
+              Looking up product…
             </Text>
           </View>
-
-          {isProcessing ? (
-            <View
-              style={
-                styles.processingOverlay
-              }
-            >
-              <ActivityIndicator
-                color="#FFFFFF"
-              />
-
-              <Text
-                style={
-                  styles.processingText
-                }
-              >
-                Looking up product…
-              </Text>
-            </View>
-          ) : null}
-        </View>
-
-        {onAddProductManually ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={
-              onAddProductManually
-            }
-            style={({
-              pressed,
-            }) => [
-              styles.manualButton,
-
-              pressed &&
-                styles.buttonPressed,
-            ]}
-          >
-            <Text
-              style={
-                styles.manualButtonText
-              }
-            >
-              Add Product Manually
-            </Text>
-          </Pressable>
         ) : null}
+      </View>
 
-        {bottomContent ? (
-          <View
+      {onAddProductManually ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={
+            onAddProductManually
+          }
+          style={({
+            pressed,
+          }) => [
+            styles.manualButton,
+
+            pressed &&
+              styles.buttonPressed,
+          ]}
+        >
+          <Text
             style={
-              styles.bottomContent
+              styles.manualButtonText
             }
           >
-            {
-              bottomContent
-            }
-          </View>
-        ) : null}
-      </ScrollView>
-    </SafeAreaView>
+            Add Product Manually
+          </Text>
+        </Pressable>
+      ) : null}
+
+      {bottomContent ? (
+        <View
+          style={
+            styles.bottomContent
+          }
+        >
+          {
+            bottomContent
+          }
+        </View>
+      ) : null}
+    </ScreenContainer>
   );
 }
 
 const styles =
   StyleSheet.create({
-    screen: {
-      flex:
-        1,
-
-      backgroundColor:
-        "#F4F6F8",
-    },
-
     content: {
       paddingHorizontal:
         16,
-
-      paddingTop:
-        10,
-
-      paddingBottom:
-        24,
     },
 
     header: {
@@ -586,11 +566,6 @@ const styles =
         "rgba(0, 0, 0, 0.08)",
     },
 
-    /*
-     * Smaller target area helps users
-     * position short / narrow barcodes
-     * more consistently.
-     */
     scanFrame: {
       width:
         "78%",
@@ -704,14 +679,6 @@ const styles =
     bottomContent: {
       marginTop:
         12,
-    },
-
-    permissionScreen: {
-      flex:
-        1,
-
-      backgroundColor:
-        "#F4F6F8",
     },
 
     centeredContainer: {

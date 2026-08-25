@@ -6,8 +6,8 @@ import {
 } from "react-native";
 
 import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
+  ScreenContainer,
+} from "./ScreenContainer";
 
 interface ImportInventoryProps {
   onClose:
@@ -18,80 +18,30 @@ export function ImportInventory({
   onClose,
 }: ImportInventoryProps) {
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-      ]}
-      style={
-        styles.screen
+    <ScreenContainer
+      scrollable={
+        false
+      }
+      topSpacing={
+        8
+      }
+      bottomSpacing={
+        24
       }
     >
       <View
         style={
-          styles.content
+          styles.headerRow
         }
       >
         <View
           style={
-            styles.headerRow
-          }
-        >
-          <View
-            style={
-              styles.headerTextContainer
-            }
-          >
-            <Text
-              style={
-                styles.title
-              }
-            >
-              Import Inventory
-            </Text>
-
-            <Text
-              style={
-                styles.subtitle
-              }
-            >
-              Import stock and product information from external sources.
-            </Text>
-          </View>
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={
-              onClose
-            }
-            style={({
-              pressed,
-            }) => [
-              styles.closeButton,
-
-              pressed &&
-                styles.buttonPressed,
-            ]}
-          >
-            <Text
-              style={
-                styles.closeButtonText
-              }
-            >
-              Close
-            </Text>
-          </Pressable>
-        </View>
-
-        <View
-          style={
-            styles.placeholderCard
+            styles.headerTextContainer
           }
         >
           <Text
             style={
-              styles.placeholderTitle
+              styles.title
             }
           >
             Import Inventory
@@ -99,43 +49,72 @@ export function ImportInventory({
 
           <Text
             style={
-              styles.placeholderText
+              styles.subtitle
             }
           >
-            This V2 workspace will support Excel, CSV, PDF, images, and receipt scanning.
-          </Text>
-
-          <Text
-            style={
-              styles.placeholderHint
-            }
-          >
-            We will build the shared import engine in a later V2 branch.
+            Import stock and product information from external sources.
           </Text>
         </View>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={
+            onClose
+          }
+          style={({
+            pressed,
+          }) => [
+            styles.closeButton,
+
+            pressed &&
+              styles.buttonPressed,
+          ]}
+        >
+          <Text
+            style={
+              styles.closeButtonText
+            }
+          >
+            Close
+          </Text>
+        </Pressable>
       </View>
-    </SafeAreaView>
+
+      <View
+        style={
+          styles.placeholderCard
+        }
+      >
+        <Text
+          style={
+            styles.placeholderTitle
+          }
+        >
+          Import Inventory
+        </Text>
+
+        <Text
+          style={
+            styles.placeholderText
+          }
+        >
+          This V2 workspace will support Excel, CSV, PDF, images, and receipt scanning.
+        </Text>
+
+        <Text
+          style={
+            styles.placeholderHint
+          }
+        >
+          We will build the shared import engine in a later V2 branch.
+        </Text>
+      </View>
+    </ScreenContainer>
   );
 }
 
 const styles =
   StyleSheet.create({
-    screen: {
-      flex:
-        1,
-
-      backgroundColor:
-        "#F4F6F8",
-    },
-
-    content: {
-      flex:
-        1,
-
-      padding:
-        18,
-    },
-
     headerRow: {
       flexDirection:
         "row",
@@ -151,13 +130,16 @@ const styles =
       flex:
         1,
 
+      minWidth:
+        0,
+
       marginRight:
         16,
     },
 
     title: {
       fontSize:
-        30,
+        28,
 
       fontWeight:
         "800",
@@ -170,17 +152,26 @@ const styles =
       marginTop:
         6,
 
+      maxWidth:
+        320,
+
       fontSize:
-        14,
+        13,
 
       lineHeight:
-        20,
+        19,
 
       color:
         "#6B7280",
     },
 
     closeButton: {
+      minHeight:
+        42,
+
+      justifyContent:
+        "center",
+
       borderWidth:
         1,
 
@@ -192,9 +183,6 @@ const styles =
 
       paddingHorizontal:
         14,
-
-      paddingVertical:
-        9,
 
       backgroundColor:
         "#FFFFFF",
@@ -218,7 +206,7 @@ const styles =
 
     placeholderCard: {
       marginTop:
-        28,
+        24,
 
       borderWidth:
         1,
