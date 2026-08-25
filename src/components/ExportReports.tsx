@@ -1,14 +1,13 @@
 import {
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 
 import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
+  ScreenContainer,
+} from "./ScreenContainer";
 
 import type {
   ExportFileFormat,
@@ -155,393 +154,363 @@ export function ExportReports({
     FORMAT_OPTIONS[0];
 
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-      ]}
-      style={
-        styles.screen
+    <ScreenContainer
+      topSpacing={
+        8
+      }
+      bottomSpacing={
+        50
       }
     >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
-        }
-        showsVerticalScrollIndicator={
-          false
+      <View
+        style={
+          styles.headerRow
         }
       >
         <View
           style={
-            styles.headerRow
+            styles.headerTextContainer
           }
         >
-          <View
+          <Text
             style={
-              styles.headerTextContainer
+              styles.title
             }
           >
-            <Text
-              style={
-                styles.title
-              }
-            >
-              Export Reports
-            </Text>
+            Export Reports
+          </Text>
 
-            <Text
-              style={
-                styles.subtitle
-              }
-            >
-              Create a report from your SmartStock data and share it from your device.
-            </Text>
-          </View>
-
-          <Pressable
-            accessibilityRole="button"
-            hitSlop={
-              10
+          <Text
+            style={
+              styles.subtitle
             }
-            onPress={
-              onClose
-            }
-            style={({
-              pressed,
-            }) => [
-              styles.closeButton,
-
-              pressed &&
-                styles.buttonPressed,
-            ]}
           >
-            <Text
-              style={
-                styles.closeButtonText
-              }
-            >
-              Close
-            </Text>
-          </Pressable>
+            Create a report from your SmartStock data and share it from your device.
+          </Text>
         </View>
 
-        <Text
-          style={
-            styles.sectionTitle
+        <Pressable
+          accessibilityRole="button"
+          hitSlop={
+            10
           }
-        >
-          Report
-        </Text>
-
-        <Text
-          style={
-            styles.sectionDescription
+          onPress={
+            onClose
           }
-        >
-          Choose the information you want to export.
-        </Text>
+          style={({
+            pressed,
+          }) => [
+            styles.closeButton,
 
-        <View
-          style={
-            styles.optionList
-          }
+            pressed &&
+              styles.buttonPressed,
+          ]}
         >
-          {REPORT_OPTIONS.map(
-            (
-              option,
-            ) => {
-              const selected =
-                selectedReportType ===
-                option.value;
+          <Text
+            style={
+              styles.closeButtonText
+            }
+          >
+            Close
+          </Text>
+        </Pressable>
+      </View>
 
-              return (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{
-                    selected,
-                  }}
-                  key={
-                    option.value
+      <Text
+        style={
+          styles.sectionTitle
+        }
+      >
+        Report
+      </Text>
+
+      <Text
+        style={
+          styles.sectionDescription
+        }
+      >
+        Choose the information you want to export.
+      </Text>
+
+      <View
+        style={
+          styles.optionList
+        }
+      >
+        {REPORT_OPTIONS.map(
+          (
+            option,
+          ) => {
+            const selected =
+              selectedReportType ===
+              option.value;
+
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{
+                  selected,
+                }}
+                key={
+                  option.value
+                }
+                onPress={() =>
+                  onReportTypeChange(
+                    option.value,
+                  )
+                }
+                style={({
+                  pressed,
+                }) => [
+                  styles.optionCard,
+
+                  selected &&
+                    styles.optionCardSelected,
+
+                  pressed &&
+                    styles.buttonPressed,
+                ]}
+              >
+                <View
+                  style={
+                    styles.optionTextContainer
                   }
-                  onPress={() =>
-                    onReportTypeChange(
-                      option.value,
-                    )
-                  }
-                  style={({
-                    pressed,
-                  }) => [
-                    styles.optionCard,
-
-                    selected &&
-                      styles.optionCardSelected,
-
-                    pressed &&
-                      styles.buttonPressed,
-                  ]}
                 >
-                  <View
-                    style={
-                      styles.optionTextContainer
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.optionTitle,
-
-                        selected &&
-                          styles.optionTitleSelected,
-                      ]}
-                    >
-                      {
-                        option.label
-                      }
-                    </Text>
-
-                    <Text
-                      style={
-                        styles.optionDescription
-                      }
-                    >
-                      {
-                        option.description
-                      }
-                    </Text>
-                  </View>
-
-                  <View
+                  <Text
                     style={[
-                      styles.selectionIndicator,
+                      styles.optionTitle,
 
                       selected &&
-                        styles.selectionIndicatorSelected,
+                        styles.optionTitleSelected,
                     ]}
                   >
-                    {selected ? (
-                      <Text
-                        style={
-                          styles.checkText
-                        }
-                      >
-                        ✓
-                      </Text>
-                    ) : null}
-                  </View>
-                </Pressable>
-              );
-            },
-          )}
-        </View>
-
-        <Text
-          style={
-            styles.sectionTitle
-          }
-        >
-          File Format
-        </Text>
-
-        <Text
-          style={
-            styles.sectionDescription
-          }
-        >
-          Choose how you want the report saved.
-        </Text>
-
-        <View
-          style={
-            styles.formatList
-          }
-        >
-          {FORMAT_OPTIONS.map(
-            (
-              option,
-            ) => {
-              const selected =
-                selectedFormat ===
-                option.value;
-
-              return (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{
-                    selected,
-                  }}
-                  key={
-                    option.value
-                  }
-                  onPress={() =>
-                    onFormatChange(
-                      option.value,
-                    )
-                  }
-                  style={({
-                    pressed,
-                  }) => [
-                    styles.formatCard,
-
-                    selected &&
-                      styles.formatCardSelected,
-
-                    pressed &&
-                      styles.buttonPressed,
-                  ]}
-                >
-                  <View
-                    style={
-                      styles.formatHeader
+                    {
+                      option.label
                     }
-                  >
-                    <Text
-                      style={[
-                        styles.formatTitle,
-
-                        selected &&
-                          styles.formatTitleSelected,
-                      ]}
-                    >
-                      {
-                        option.label
-                      }
-                    </Text>
-
-                    <View
-                      style={[
-                        styles.formatIndicator,
-
-                        selected &&
-                          styles.formatIndicatorSelected,
-                      ]}
-                    >
-                      {selected ? (
-                        <Text
-                          style={
-                            styles.formatCheckText
-                          }
-                        >
-                          ✓
-                        </Text>
-                      ) : null}
-                    </View>
-                  </View>
+                  </Text>
 
                   <Text
                     style={
-                      styles.formatDescription
+                      styles.optionDescription
                     }
                   >
                     {
                       option.description
                     }
                   </Text>
-                </Pressable>
-              );
-            },
-          )}
-        </View>
+                </View>
 
-        <View
+                <View
+                  style={[
+                    styles.selectionIndicator,
+
+                    selected &&
+                      styles.selectionIndicatorSelected,
+                  ]}
+                >
+                  {selected ? (
+                    <Text
+                      style={
+                        styles.checkText
+                      }
+                    >
+                      ✓
+                    </Text>
+                  ) : null}
+                </View>
+              </Pressable>
+            );
+          },
+        )}
+      </View>
+
+      <Text
+        style={
+          styles.sectionTitle
+        }
+      >
+        File Format
+      </Text>
+
+      <Text
+        style={
+          styles.sectionDescription
+        }
+      >
+        Choose how you want the report saved.
+      </Text>
+
+      <View
+        style={
+          styles.formatList
+        }
+      >
+        {FORMAT_OPTIONS.map(
+          (
+            option,
+          ) => {
+            const selected =
+              selectedFormat ===
+              option.value;
+
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{
+                  selected,
+                }}
+                key={
+                  option.value
+                }
+                onPress={() =>
+                  onFormatChange(
+                    option.value,
+                  )
+                }
+                style={({
+                  pressed,
+                }) => [
+                  styles.formatCard,
+
+                  selected &&
+                    styles.formatCardSelected,
+
+                  pressed &&
+                    styles.buttonPressed,
+                ]}
+              >
+                <View
+                  style={
+                    styles.formatHeader
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.formatTitle,
+
+                      selected &&
+                        styles.formatTitleSelected,
+                    ]}
+                  >
+                    {
+                      option.label
+                    }
+                  </Text>
+
+                  <View
+                    style={[
+                      styles.formatIndicator,
+
+                      selected &&
+                        styles.formatIndicatorSelected,
+                    ]}
+                  >
+                    {selected ? (
+                      <Text
+                        style={
+                          styles.formatCheckText
+                        }
+                      >
+                        ✓
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+
+                <Text
+                  style={
+                    styles.formatDescription
+                  }
+                >
+                  {
+                    option.description
+                  }
+                </Text>
+              </Pressable>
+            );
+          },
+        )}
+      </View>
+
+      <View
+        style={
+          styles.previewCard
+        }
+      >
+        <Text
           style={
-            styles.previewCard
+            styles.previewLabel
           }
         >
-          <Text
-            style={
-              styles.previewLabel
-            }
-          >
-            Ready to Export
-          </Text>
+          Ready to Export
+        </Text>
 
-          <Text
-            style={
-              styles.previewTitle
-            }
-            numberOfLines={
-              2
-            }
-          >
-            {
-              selectedReport.label
-            }{" "}
-            ·{" "}
-            {
-              selectedFormatOption.label
-            }
-          </Text>
-
-          <Text
-            style={
-              styles.previewDescription
-            }
-          >
-            {
-              selectedReport.description
-            }
-          </Text>
-        </View>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`Export ${selectedReport.label} as ${selectedFormatOption.label}`}
-          disabled={
-            isExporting
+        <Text
+          style={
+            styles.previewTitle
           }
-          onPress={
-            onExport
+          numberOfLines={
+            2
           }
-          style={({
-            pressed,
-          }) => [
-            styles.exportButton,
-
-            pressed &&
-              !isExporting &&
-              styles.exportButtonPressed,
-
-            isExporting &&
-              styles.exportButtonDisabled,
-          ]}
         >
-          <Text
-            style={
-              styles.exportButtonText
-            }
-          >
-            {isExporting
-              ? "Generating…"
-              : "Generate & Share"}
-          </Text>
-        </Pressable>
-      </ScrollView>
-    </SafeAreaView>
+          {
+            selectedReport.label
+          }{" "}
+          ·{" "}
+          {
+            selectedFormatOption.label
+          }
+        </Text>
+
+        <Text
+          style={
+            styles.previewDescription
+          }
+        >
+          {
+            selectedReport.description
+          }
+        </Text>
+      </View>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Export ${selectedReport.label} as ${selectedFormatOption.label}`}
+        disabled={
+          isExporting
+        }
+        onPress={
+          onExport
+        }
+        style={({
+          pressed,
+        }) => [
+          styles.exportButton,
+
+          pressed &&
+            !isExporting &&
+            styles.exportButtonPressed,
+
+          isExporting &&
+            styles.exportButtonDisabled,
+        ]}
+      >
+        <Text
+          style={
+            styles.exportButtonText
+          }
+        >
+          {isExporting
+            ? "Generating…"
+            : "Generate & Share"}
+        </Text>
+      </Pressable>
+    </ScreenContainer>
   );
 }
 
 const styles =
   StyleSheet.create({
-    screen: {
-      flex:
-        1,
-
-      backgroundColor:
-        "#F4F6F8",
-    },
-
-    content: {
-      paddingHorizontal:
-        18,
-
-      paddingTop:
-        12,
-
-      paddingBottom:
-        50,
-    },
-
     headerRow: {
       flexDirection:
         "row",

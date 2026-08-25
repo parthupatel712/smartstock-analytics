@@ -7,6 +7,7 @@ import {
 } from "expo-status-bar";
 
 import {
+  type ReactNode,
   useCallback,
   useEffect,
   useRef,
@@ -26,8 +27,11 @@ import {
 
 import {
   SafeAreaProvider,
-  SafeAreaView,
 } from "react-native-safe-area-context";
+
+import {
+  AppHeader,
+} from "./src/components/AppHeader";
 
 import {
   BarcodeScanner,
@@ -59,6 +63,10 @@ import {
 } from "./src/components/GlobalTransactions";
 
 import {
+  HomeDashboard,
+} from "./src/components/HomeDashboard";
+
+import {
   ImportInventory,
 } from "./src/components/ImportInventory";
 
@@ -69,10 +77,6 @@ import {
 import {
   InventoryAnalytics,
 } from "./src/components/InventoryAnalytics";
-
-import {
-  InventoryDashboard,
-} from "./src/components/InventoryDashboard";
 
 import {
   InventoryToolbar,
@@ -127,11 +131,18 @@ import {
 } from "./src/components/ScannerProductResult";
 
 import {
+  getHomeOrderSummary,
+} from "./src/database/homeRepository";
+
+import type {
+  HomeOrderSummary,
+} from "./src/database/homeRepository";
+
+import {
   getInventoryAnalyticsSummary,
 } from "./src/database/inventoryAnalyticsRepository";
 
 import {
-  getDashboardRecentActivity,
   getInventoryDashboardSummary,
 } from "./src/database/inventoryDashboardRepository";
 
@@ -245,10 +256,6 @@ import {
 } from "./src/types/cloudSyncStatus";
 
 import type {
-  DashboardRecentActivity,
-} from "./src/types/dashboardRecentActivity";
-
-import type {
   ExportedReport,
   ExportFileFormat,
   ExportReportType,
@@ -322,6 +329,7 @@ type AppStatus =
   | "error";
 
 type AppView =
+  | "dashboard"
   | "inventory"
   | "add-product"
   | "edit-product"
@@ -330,7 +338,6 @@ type AppView =
   | "inventory-transaction"
   | "transaction-history"
   | "global-transactions"
-  | "dashboard"
   | "analytics"
   | "export-reports"
   | "product-details"
@@ -362,6 +369,9 @@ function getActiveBottomNavigationItem(
       return "home";
 
     case "inventory":
+    case "global-transactions":
+    case "export-reports":
+    case "import-inventory":
       return "inventory";
 
     case "scanner":
@@ -374,11 +384,6 @@ function getActiveBottomNavigationItem(
     case "analytics":
       return "analytics";
 
-    case "global-transactions":
-    case "export-reports":
-    case "import-inventory":
-      return "inventory";
-
     default:
       return null;
   }
@@ -389,6 +394,30 @@ const CLOUD_SYNC_TIMEOUT_MS =
 
 const INVENTORY_SEARCH_DEBOUNCE_MS =
   180;
+
+/*
+ * Temporary store name.
+ *
+ * Later this can come from
+ * Business / Store Settings.
+ */
+const STORE_NAME =
+  "Esso/Becker's";
+
+const INITIAL_HOME_ORDER_SUMMARY:
+  HomeOrderSummary = {
+    draftOrderCount:
+      0,
+
+    upcomingOrderCount:
+      0,
+
+    upcomingUnits:
+      0,
+
+    upcomingValue:
+      0,
+  };
 
 const INITIAL_DASHBOARD_SUMMARY:
   InventoryDashboardSummary = {
@@ -659,6 +688,10 @@ function SmartStockApp() {
       "loading",
     );
 
+  /*
+   * Home is the application
+   * launch screen.
+   */
   const [
     currentView,
     setCurrentView,
@@ -923,13 +956,11 @@ function SmartStockApp() {
     );
 
   const [
-    dashboardRecentActivity,
-    setDashboardRecentActivity,
+    homeOrderSummary,
+    setHomeOrderSummary,
   ] =
-    useState<
-      DashboardRecentActivity[]
-    >(
-      [],
+    useState<HomeOrderSummary>(
+      INITIAL_HOME_ORDER_SUMMARY,
     );
 
   const [
@@ -1013,8 +1044,8 @@ function SmartStockApp() {
     );
 
   const [
-    isDashboardLoading,
-    setIsDashboardLoading,
+    isHomeLoading,
+    setIsHomeLoading,
   ] =
     useState(
       false,
@@ -1175,9 +1206,9 @@ function SmartStockApp() {
           storedProducts,
           deliveryMap,
           dashboard,
-          recentActivity,
           currentReorderItems,
           currentOrderedQuantities,
+          currentHomeOrderSummary,
         ] =
           await Promise.all([
             getAllProducts(),
@@ -1186,13 +1217,11 @@ function SmartStockApp() {
 
             getInventoryDashboardSummary(),
 
-            getDashboardRecentActivity(
-              8,
-            ),
-
             getReorderItems(),
 
             getOrderedQuantitiesByProduct(),
+
+            getHomeOrderSummary(),
           ]);
 
         setProducts(
@@ -1207,16 +1236,16 @@ function SmartStockApp() {
           dashboard,
         );
 
-        setDashboardRecentActivity(
-          recentActivity,
-        );
-
         setReorderItems(
           currentReorderItems,
         );
 
         setOrderedQuantities(
           currentOrderedQuantities,
+        );
+
+        setHomeOrderSummary(
+          currentHomeOrderSummary,
         );
 
         setInventoryRevision(
@@ -1420,6 +1449,10 @@ function SmartStockApp() {
                       new Map(),
                     );
 
+                    setHomeOrderSummary(
+                      await getHomeOrderSummary(),
+                    );
+
                     return;
                   }
 
@@ -1448,6 +1481,10 @@ function SmartStockApp() {
                   );
 
                   await refreshDraftQuantities();
+
+                  setHomeOrderSummary(
+                    await getHomeOrderSummary(),
+                  );
                 } catch (
                   error
                 ) {
@@ -2476,11 +2513,8 @@ function SmartStockApp() {
       "product-restore",
     );
 
-    const archived =
-      await getArchivedProducts();
-
     setArchivedProducts(
-      archived,
+      await getArchivedProducts(),
     );
   }
 
@@ -2522,11 +2556,8 @@ function SmartStockApp() {
       product.id,
     );
 
-    const archived =
-      await getArchivedProducts();
-
     setArchivedProducts(
-      archived,
+      await getArchivedProducts(),
     );
 
     await loadInventoryData();
@@ -3002,13 +3033,10 @@ function SmartStockApp() {
 
       await loadInventoryData();
 
-      const updatedOrderHistory =
+      setPurchaseOrderHistory(
         await getPurchaseOrderHistory(
           200,
-        );
-
-      setPurchaseOrderHistory(
-        updatedOrderHistory,
+        ),
       );
 
       const [
@@ -3369,6 +3397,10 @@ function SmartStockApp() {
 
       await refreshDraftQuantities();
 
+      setHomeOrderSummary(
+        await getHomeOrderSummary(),
+      );
+
       Alert.alert(
         "Draft saved",
         `${saved.order.orderNumber} was saved.`,
@@ -3666,38 +3698,43 @@ function SmartStockApp() {
       ],
     );
 
-  async function openDashboard():
+  async function openHome():
     Promise<void> {
     setCurrentView(
       "dashboard",
     );
 
-    setIsDashboardLoading(
+    setIsHomeLoading(
       true,
     );
 
     try {
       const [
-        summary,
-        recentActivity,
+        inventorySummary,
+        orderSummary,
       ] =
         await Promise.all([
           getInventoryDashboardSummary(),
 
-          getDashboardRecentActivity(
-            8,
-          ),
+          getHomeOrderSummary(),
         ]);
 
       setDashboardSummary(
-        summary,
+        inventorySummary,
       );
 
-      setDashboardRecentActivity(
-        recentActivity,
+      setHomeOrderSummary(
+        orderSummary,
+      );
+    } catch (
+      error
+    ) {
+      console.error(
+        "Could not load Home:",
+        error,
       );
     } finally {
-      setIsDashboardLoading(
+      setIsHomeLoading(
         false,
       );
     }
@@ -4117,7 +4154,7 @@ function SmartStockApp() {
           )
         }
         onHome={() =>
-          void openDashboard()
+          void openHome()
         }
         onInventory={
           openInventory
@@ -4186,9 +4223,11 @@ function SmartStockApp() {
     "loading"
   ) {
     return (
-      <LoadingScreen
-        message="Loading inventory…"
-      />
+      <BrandedScreen>
+        <LoadingContent
+          message="Loading inventory…"
+        />
+      </BrandedScreen>
     );
   }
 
@@ -4197,867 +4236,948 @@ function SmartStockApp() {
     "error"
   ) {
     return (
-      <FallbackScreen
-        message={
-          errorMessage
-        }
-        onReturn={() =>
-          void loadProducts()
-        }
-      />
+      <BrandedScreen>
+        <FallbackContent
+          message={
+            errorMessage
+          }
+          onReturn={() =>
+            void loadProducts()
+          }
+        />
+      </BrandedScreen>
     );
   }
 
+  /*
+   * SCAN
+   */
   if (
     currentView ===
     "scanner"
   ) {
     return (
-      <BarcodeScanner
-        key={
-          scannerSessionKey
-        }
-        title="Scan Product"
-        subtitle="Scan a barcode or add a product manually."
-        onBarcodeDetected={
-          handleBarcodeDetected
-        }
-        onAddProductManually={
-          openManualProductFromScanner
-        }
-        onClose={
-          closeScannerWorkspace
-        }
-        bottomContent={
-          scannerProduct ? (
-            <ScannerProductResult
-              product={
-                scannerProduct
-              }
-              latestDelivery={
-                latestDeliveries.get(
-                  scannerProduct.id,
-                )
-              }
-              onUpdateInventory={
-                openScannerTransactionForm
-              }
-              onViewHistory={
-                openScannerTransactionHistory
-              }
-              onEditProduct={
-                openScannerEditProduct
-              }
-              onArchiveProduct={(
-                product,
-              ) =>
-                confirmArchiveProduct(
+      <BrandedScreen>
+        <BarcodeScanner
+          key={
+            scannerSessionKey
+          }
+          title="Scan Product"
+          subtitle="Scan a barcode or add a product manually."
+          onBarcodeDetected={
+            handleBarcodeDetected
+          }
+          onAddProductManually={
+            openManualProductFromScanner
+          }
+          onClose={
+            closeScannerWorkspace
+          }
+          bottomContent={
+            scannerProduct ? (
+              <ScannerProductResult
+                product={
+                  scannerProduct
+                }
+                latestDelivery={
+                  latestDeliveries.get(
+                    scannerProduct.id,
+                  )
+                }
+                onUpdateInventory={
+                  openScannerTransactionForm
+                }
+                onViewHistory={
+                  openScannerTransactionHistory
+                }
+                onEditProduct={
+                  openScannerEditProduct
+                }
+                onArchiveProduct={(
                   product,
-                  "scanner",
-                )
-              }
-            />
-          ) : undefined
-        }
-      />
+                ) =>
+                  confirmArchiveProduct(
+                    product,
+                    "scanner",
+                  )
+                }
+              />
+            ) : undefined
+          }
+        />
+      </BrandedScreen>
     );
   }
 
+  /*
+   * ORDER BARCODE SCANNER
+   */
   if (
     currentView ===
     "order-scanner"
   ) {
     return (
-      <BarcodeScanner
-        title="Scan Order Product"
-        subtitle="Scan a product barcode to add it to the purchase order."
-        onBarcodeDetected={
-          handleOrderBarcodeDetected
-        }
-        onClose={() =>
-          setCurrentView(
-            "create-order",
-          )
-        }
-      />
+      <BrandedScreen>
+        <BarcodeScanner
+          title="Scan Order Product"
+          subtitle="Scan a product barcode to add it to the purchase order."
+          onBarcodeDetected={
+            handleOrderBarcodeDetected
+          }
+          onClose={() =>
+            setCurrentView(
+              "create-order",
+            )
+          }
+        />
+      </BrandedScreen>
     );
   }
 
+  /*
+   * PRODUCT DETAILS
+   */
   if (
     currentView ===
       "product-details" &&
     selectedProduct
   ) {
     return (
-      <ProductDetails
-        product={
-          selectedProduct
-        }
-        latestDelivery={
-          latestDeliveries.get(
-            selectedProduct.id,
-          )
-        }
-        onUpdateStock={
-          openTransactionForm
-        }
-        onViewHistory={
-          openTransactionHistory
-        }
-        onEdit={
-          openEditProduct
-        }
-        onArchive={(
-          product,
-        ) =>
-          confirmArchiveProduct(
+      <BrandedScreen>
+        <ProductDetails
+          product={
+            selectedProduct
+          }
+          latestDelivery={
+            latestDeliveries.get(
+              selectedProduct.id,
+            )
+          }
+          onUpdateStock={
+            openTransactionForm
+          }
+          onViewHistory={
+            openTransactionHistory
+          }
+          onEdit={
+            openEditProduct
+          }
+          onArchive={(
             product,
-            "inventory",
-          )
-        }
-        onClose={
-          closeProductDetails
-        }
-      />
+          ) =>
+            confirmArchiveProduct(
+              product,
+              "inventory",
+            )
+          }
+          onClose={
+            closeProductDetails
+          }
+        />
+      </BrandedScreen>
     );
   }
 
+  /*
+   * HOME
+   */
   if (
     currentView ===
     "dashboard"
   ) {
     return (
-      <View
-        style={
-          styles.primaryNavigationScreen
-        }
-      >
+      <BrandedScreen>
         <View
           style={
-            styles.primaryContent
+            styles.primaryNavigationScreen
           }
         >
-          {isDashboardLoading ? (
-            <PrimaryLoadingContent
-              message="Loading home…"
-            />
-          ) : (
-            <InventoryDashboard
-              summary={
-                dashboardSummary
-              }
-              recentDays={
-                30
-              }
-              recentActivity={
-                dashboardRecentActivity
-              }
-              onViewAllActivity={() =>
-                void openGlobalTransactions()
-              }
-              onClose={
-                openInventory
-              }
-            />
-          )}
-        </View>
+          <View
+            style={
+              styles.primaryContent
+            }
+          >
+            {isHomeLoading ? (
+              <PrimaryLoadingContent
+                message="Loading Home…"
+              />
+            ) : (
+              <HomeDashboard
+                storeName={
+                  STORE_NAME
+                }
+                summary={
+                  dashboardSummary
+                }
+                draftOrderCount={
+                  homeOrderSummary.draftOrderCount
+                }
+                upcomingOrderCount={
+                  homeOrderSummary.upcomingOrderCount
+                }
+                upcomingUnits={
+                  homeOrderSummary.upcomingUnits
+                }
+                upcomingValue={
+                  homeOrderSummary.upcomingValue
+                }
+                cloudSyncStatus={
+                  cloudSyncStatus
+                }
+                onOpenInventory={
+                  openInventory
+                }
+                onOpenLowStock={() =>
+                  void openReorderManagement()
+                }
+                onOpenOutOfStock={
+                  openInventory
+                }
+                onOpenDraftOrders={() =>
+                  void openOrderManagement()
+                }
+                onOpenUpcomingOrders={() =>
+                  void openOrderManagement()
+                }
+              />
+            )}
+          </View>
 
-        {
-          renderBottomNavigation()
-        }
-      </View>
+          {
+            renderBottomNavigation()
+          }
+        </View>
+      </BrandedScreen>
     );
   }
 
+  /*
+   * STOCK AUDIT / GLOBAL TRANSACTIONS
+   */
   if (
     currentView ===
     "global-transactions"
   ) {
     return (
-      <View
-        style={
-          styles.primaryNavigationScreen
-        }
-      >
+      <BrandedScreen>
         <View
           style={
-            styles.primaryContent
+            styles.primaryNavigationScreen
           }
         >
-          {isGlobalTransactionsLoading ? (
-            <PrimaryLoadingContent
-              message="Loading stock history…"
-            />
-          ) : (
-            <GlobalTransactions
-              transactions={
-                globalTransactions
-              }
-              archivedProducts={
-                archivedProducts
-              }
-              onRestoreArchivedProduct={
-                confirmRestoreProduct
-              }
-              onDeleteArchivedProduct={
-                confirmDeleteArchivedProduct
-              }
-              onClose={
-                openInventory
-              }
-            />
-          )}
-        </View>
+          <View
+            style={
+              styles.primaryContent
+            }
+          >
+            {isGlobalTransactionsLoading ? (
+              <PrimaryLoadingContent
+                message="Loading stock history…"
+              />
+            ) : (
+              <GlobalTransactions
+                transactions={
+                  globalTransactions
+                }
+                archivedProducts={
+                  archivedProducts
+                }
+                onRestoreArchivedProduct={
+                  confirmRestoreProduct
+                }
+                onDeleteArchivedProduct={
+                  confirmDeleteArchivedProduct
+                }
+                onClose={
+                  openInventory
+                }
+              />
+            )}
+          </View>
 
-        {
-          renderBottomNavigation()
-        }
-      </View>
+          {
+            renderBottomNavigation()
+          }
+        </View>
+      </BrandedScreen>
     );
   }
 
+  /*
+   * ORDERS
+   */
   if (
     currentView ===
     "reorder-management"
   ) {
     return (
-      <View
-        style={
-          styles.primaryNavigationScreen
-        }
-      >
+      <BrandedScreen>
         <View
           style={
-            styles.primaryContent
+            styles.primaryNavigationScreen
           }
         >
-          {isReorderLoading ? (
-            <PrimaryLoadingContent
-              message="Loading orders…"
-            />
-          ) : (
-            <ReorderManagement
-              items={
-                reorderItems
-              }
-              draftQuantities={
-                draftQuantities
-              }
-              orderedQuantities={
-                orderedQuantities
-              }
-              onCreateOrder={() =>
-                void startNewOrder()
-              }
-              onOpenOrderManagement={() =>
-                void openOrderManagement()
-              }
-              onClose={
-                openInventory
-              }
-            />
-          )}
-        </View>
+          <View
+            style={
+              styles.primaryContent
+            }
+          >
+            {isReorderLoading ? (
+              <PrimaryLoadingContent
+                message="Loading orders…"
+              />
+            ) : (
+              <ReorderManagement
+                items={
+                  reorderItems
+                }
+                draftQuantities={
+                  draftQuantities
+                }
+                orderedQuantities={
+                  orderedQuantities
+                }
+                onCreateOrder={() =>
+                  void startNewOrder()
+                }
+                onOpenOrderManagement={() =>
+                  void openOrderManagement()
+                }
+                onClose={() =>
+                  void openHome()
+                }
+              />
+            )}
+          </View>
 
-        {
-          renderBottomNavigation()
-        }
-      </View>
+          {
+            renderBottomNavigation()
+          }
+        </View>
+      </BrandedScreen>
     );
   }
 
+  /*
+   * ORDER MANAGEMENT
+   */
   if (
     currentView ===
     "order-management"
   ) {
-    if (
-      isOrderManagementLoading
-    ) {
-      return (
-        <LoadingScreen
-          message="Loading purchase orders…"
-        />
-      );
-    }
-
     return (
-      <OrderManagement
-        orders={
-          purchaseOrderHistory
-        }
-        hasDraft={
-          activeDraftOrderId !==
-            null ||
-          orderDraftItems.length >
-            0
-        }
-        draftProductCount={
-          orderDraftItems.length
-        }
-        onCreateOrder={() =>
-          void startNewOrder()
-        }
-        onContinueDraft={() =>
-          void startNewOrder()
-        }
-        onOpenOrder={(
-          orderId,
-        ) =>
-          void openPurchaseOrderDetails(
-            orderId,
-          )
-        }
-        onClose={() =>
-          setCurrentView(
-            "reorder-management",
-          )
-        }
-      />
+      <BrandedScreen>
+        {isOrderManagementLoading ? (
+          <LoadingContent
+            message="Loading purchase orders…"
+          />
+        ) : (
+          <OrderManagement
+            orders={
+              purchaseOrderHistory
+            }
+            hasDraft={
+              activeDraftOrderId !==
+                null ||
+              orderDraftItems.length >
+                0
+            }
+            draftProductCount={
+              orderDraftItems.length
+            }
+            onCreateOrder={() =>
+              void startNewOrder()
+            }
+            onContinueDraft={() =>
+              void startNewOrder()
+            }
+            onOpenOrder={(
+              orderId,
+            ) =>
+              void openPurchaseOrderDetails(
+                orderId,
+              )
+            }
+            onClose={() =>
+              setCurrentView(
+                "reorder-management",
+              )
+            }
+          />
+        )}
+      </BrandedScreen>
     );
   }
 
+  /*
+   * ORDER DETAILS
+   */
   if (
     currentView ===
     "order-details"
   ) {
-    if (
-      isOrderDetailsLoading
-    ) {
-      return (
-        <LoadingScreen
-          message="Loading order details…"
-        />
-      );
-    }
-
-    if (
-      !selectedPurchaseOrder
-    ) {
-      return (
-        <FallbackScreen
-          message="Purchase order not selected"
-          onReturn={
-            closePurchaseOrderDetails
-          }
-        />
-      );
-    }
-
     return (
-      <OrderDetails
-        purchaseOrder={
-          selectedPurchaseOrder
-        }
-        onReceiveOrder={
-          openReceiveOrder
-        }
-        onClose={
-          closePurchaseOrderDetails
-        }
-      />
+      <BrandedScreen>
+        {isOrderDetailsLoading ? (
+          <LoadingContent
+            message="Loading order details…"
+          />
+        ) : !selectedPurchaseOrder ? (
+          <FallbackContent
+            message="Purchase order not selected"
+            onReturn={
+              closePurchaseOrderDetails
+            }
+          />
+        ) : (
+          <OrderDetails
+            purchaseOrder={
+              selectedPurchaseOrder
+            }
+            onReceiveOrder={
+              openReceiveOrder
+            }
+            onClose={
+              closePurchaseOrderDetails
+            }
+          />
+        )}
+      </BrandedScreen>
     );
   }
 
+  /*
+   * RECEIVE ORDER
+   */
   if (
     currentView ===
     "receive-order"
   ) {
-    if (
-      !selectedPurchaseOrder
-    ) {
-      return (
-        <FallbackScreen
-          message="Purchase order not selected"
-          onReturn={
-            closePurchaseOrderDetails
-          }
-        />
-      );
-    }
-
     return (
-      <ReceiveOrder
-        purchaseOrder={
-          selectedPurchaseOrder
-        }
-        isProcessing={
-          isInvoiceProcessing
-        }
-        onTakePhoto={() =>
-          void handleTakeInvoicePhoto()
-        }
-        onChooseImage={() =>
-          void handleChooseInvoiceImage()
-        }
-        onChooseFile={() =>
-          void handleChooseInvoiceFile()
-        }
-        onManualReview={() =>
-          void handleManualReceivingReview()
-        }
-        onClose={() =>
-          setCurrentView(
-            "order-details",
-          )
-        }
-      />
+      <BrandedScreen>
+        {!selectedPurchaseOrder ? (
+          <FallbackContent
+            message="Purchase order not selected"
+            onReturn={
+              closePurchaseOrderDetails
+            }
+          />
+        ) : (
+          <ReceiveOrder
+            purchaseOrder={
+              selectedPurchaseOrder
+            }
+            isProcessing={
+              isInvoiceProcessing
+            }
+            onTakePhoto={() =>
+              void handleTakeInvoicePhoto()
+            }
+            onChooseImage={() =>
+              void handleChooseInvoiceImage()
+            }
+            onChooseFile={() =>
+              void handleChooseInvoiceFile()
+            }
+            onManualReview={() =>
+              void handleManualReceivingReview()
+            }
+            onClose={() =>
+              setCurrentView(
+                "order-details",
+              )
+            }
+          />
+        )}
+      </BrandedScreen>
     );
   }
 
+  /*
+   * INVOICE REVIEW
+   */
   if (
     currentView ===
     "invoice-review"
   ) {
-    if (
-      !invoiceImportResult
-    ) {
-      return (
-        <FallbackScreen
-          message="Invoice review unavailable"
-          onReturn={() =>
-            setCurrentView(
-              "receive-order",
-            )
-          }
-        />
-      );
-    }
-
-    if (
-      isOrderReceiving
-    ) {
-      return (
-        <LoadingScreen
-          message="Receiving order and updating inventory…"
-        />
-      );
-    }
-
     return (
-      <InvoiceReview
-        result={
-          invoiceImportResult
-        }
-        onChangeResult={
-          setInvoiceImportResult
-        }
-        onConfirm={(
-          result,
-        ) =>
-          void handleConfirmPurchaseOrderReceiving(
-            result,
-          )
-        }
-        onClose={() => {
-          if (
-            isOrderReceiving
-          ) {
-            return;
-          }
+      <BrandedScreen>
+        {!invoiceImportResult ? (
+          <FallbackContent
+            message="Invoice review unavailable"
+            onReturn={() =>
+              setCurrentView(
+                "receive-order",
+              )
+            }
+          />
+        ) : isOrderReceiving ? (
+          <LoadingContent
+            message="Receiving order and updating inventory…"
+          />
+        ) : (
+          <InvoiceReview
+            result={
+              invoiceImportResult
+            }
+            onChangeResult={
+              setInvoiceImportResult
+            }
+            onConfirm={(
+              result,
+            ) =>
+              void handleConfirmPurchaseOrderReceiving(
+                result,
+              )
+            }
+            onClose={() => {
+              if (
+                isOrderReceiving
+              ) {
+                return;
+              }
 
-          setInvoiceImportResult(
-            null,
-          );
+              setInvoiceImportResult(
+                null,
+              );
 
-          setCurrentView(
-            "receive-order",
-          );
-        }}
-      />
+              setCurrentView(
+                "receive-order",
+              );
+            }}
+          />
+        )}
+      </BrandedScreen>
     );
   }
 
+  /*
+   * CREATE ORDER
+   */
   if (
     currentView ===
     "create-order"
   ) {
     return (
-      <CreateOrder
-        reorderItems={
-          reorderItems
-        }
-        products={
-          products
-        }
-        cartItems={
-          orderDraftItems
-        }
-        scannedProduct={
-          scannedOrderProduct
-        }
-        onAddToCart={
-          addProductToOrderDraft
-        }
-        onScanBarcode={() =>
-          setCurrentView(
-            "order-scanner",
-          )
-        }
-        onClearScannedProduct={() =>
-          setScannedOrderProduct(
-            null,
-          )
-        }
-        onPreviewOrder={() =>
-          setCurrentView(
-            "order-preview",
-          )
-        }
-        onClose={() =>
-          setCurrentView(
-            "reorder-management",
-          )
-        }
-      />
+      <BrandedScreen>
+        <CreateOrder
+          reorderItems={
+            reorderItems
+          }
+          products={
+            products
+          }
+          cartItems={
+            orderDraftItems
+          }
+          scannedProduct={
+            scannedOrderProduct
+          }
+          onAddToCart={
+            addProductToOrderDraft
+          }
+          onScanBarcode={() =>
+            setCurrentView(
+              "order-scanner",
+            )
+          }
+          onClearScannedProduct={() =>
+            setScannedOrderProduct(
+              null,
+            )
+          }
+          onPreviewOrder={() =>
+            setCurrentView(
+              "order-preview",
+            )
+          }
+          onClose={() =>
+            setCurrentView(
+              "reorder-management",
+            )
+          }
+        />
+      </BrandedScreen>
     );
   }
 
+  /*
+   * ORDER PREVIEW
+   */
   if (
     currentView ===
     "order-preview"
   ) {
     return (
-      <OrderPreview
-        items={
-          orderDraftItems
-        }
-        vendorName={
-          orderVendorName
-        }
-        notes={
-          orderNotes
-        }
-        tax={
-          orderTax
-        }
-        orderNumber={
-          orderNumber
-        }
-        onVendorNameChange={
-          setOrderVendorName
-        }
-        onNotesChange={
-          setOrderNotes
-        }
-        onTaxChange={
-          setOrderTax
-        }
-        onIncrease={(
-          productId,
-        ) =>
-          changeOrderDraftQuantity(
+      <BrandedScreen>
+        <OrderPreview
+          items={
+            orderDraftItems
+          }
+          vendorName={
+            orderVendorName
+          }
+          notes={
+            orderNotes
+          }
+          tax={
+            orderTax
+          }
+          orderNumber={
+            orderNumber
+          }
+          onVendorNameChange={
+            setOrderVendorName
+          }
+          onNotesChange={
+            setOrderNotes
+          }
+          onTaxChange={
+            setOrderTax
+          }
+          onIncrease={(
             productId,
-            1,
-          )
-        }
-        onDecrease={(
-          productId,
-        ) =>
-          changeOrderDraftQuantity(
+          ) =>
+            changeOrderDraftQuantity(
+              productId,
+              1,
+            )
+          }
+          onDecrease={(
             productId,
-            -1,
-          )
-        }
-        onRemove={
-          removeOrderDraftItem
-        }
-        onAddMore={() =>
-          setCurrentView(
-            "create-order",
-          )
-        }
-        onSaveDraft={() =>
-          void handleSaveOrderDraft()
-        }
-        onPlaceOrder={() =>
-          void handlePlaceOrder()
-        }
-        isSaving={
-          isOrderDraftSaving
-        }
-        isPlacing={
-          isOrderPlacing
-        }
-        onClose={() =>
-          setCurrentView(
-            "create-order",
-          )
-        }
-      />
+          ) =>
+            changeOrderDraftQuantity(
+              productId,
+              -1,
+            )
+          }
+          onRemove={
+            removeOrderDraftItem
+          }
+          onAddMore={() =>
+            setCurrentView(
+              "create-order",
+            )
+          }
+          onSaveDraft={() =>
+            void handleSaveOrderDraft()
+          }
+          onPlaceOrder={() =>
+            void handlePlaceOrder()
+          }
+          isSaving={
+            isOrderDraftSaving
+          }
+          isPlacing={
+            isOrderPlacing
+          }
+          onClose={() =>
+            setCurrentView(
+              "create-order",
+            )
+          }
+        />
+      </BrandedScreen>
     );
   }
 
+  /*
+   * ANALYTICS
+   */
   if (
     currentView ===
     "analytics"
   ) {
     return (
-      <View
-        style={
-          styles.primaryNavigationScreen
-        }
-      >
+      <BrandedScreen>
         <View
           style={
-            styles.primaryContent
+            styles.primaryNavigationScreen
           }
         >
-          {isAnalyticsLoading ? (
-            <PrimaryLoadingContent
-              message="Loading analytics…"
-            />
-          ) : (
-            <InventoryAnalytics
-              summary={
-                analyticsSummary
-              }
-              selectedPeriod={
-                analyticsPeriod
-              }
-              onPeriodChange={(
-                period,
-              ) =>
-                void handleAnalyticsPeriodChange(
+          <View
+            style={
+              styles.primaryContent
+            }
+          >
+            {isAnalyticsLoading ? (
+              <PrimaryLoadingContent
+                message="Loading analytics…"
+              />
+            ) : (
+              <InventoryAnalytics
+                summary={
+                  analyticsSummary
+                }
+                selectedPeriod={
+                  analyticsPeriod
+                }
+                onPeriodChange={(
                   period,
-                )
-              }
-              onClose={
-                openInventory
-              }
-            />
-          )}
-        </View>
+                ) =>
+                  void handleAnalyticsPeriodChange(
+                    period,
+                  )
+                }
+                onClose={() =>
+                  void openHome()
+                }
+              />
+            )}
+          </View>
 
-        {
-          renderBottomNavigation()
-        }
-      </View>
+          {
+            renderBottomNavigation()
+          }
+        </View>
+      </BrandedScreen>
     );
   }
 
+  /*
+   * EXPORT REPORTS
+   */
   if (
     currentView ===
     "export-reports"
   ) {
     return (
-      <View
-        style={
-          styles.primaryNavigationScreen
-        }
-      >
+      <BrandedScreen>
         <View
           style={
-            styles.primaryContent
+            styles.primaryNavigationScreen
           }
         >
-          <ExportReports
-            selectedReportType={
-              selectedExportReportType
+          <View
+            style={
+              styles.primaryContent
             }
-            selectedFormat={
-              selectedExportFormat
-            }
-            isExporting={
-              isExporting
-            }
-            onReportTypeChange={
-              setSelectedExportReportType
-            }
-            onFormatChange={
-              setSelectedExportFormat
-            }
-            onExport={() =>
-              void handleExport()
-            }
-            onClose={
-              openInventory
-            }
-          />
-        </View>
+          >
+            <ExportReports
+              selectedReportType={
+                selectedExportReportType
+              }
+              selectedFormat={
+                selectedExportFormat
+              }
+              isExporting={
+                isExporting
+              }
+              onReportTypeChange={
+                setSelectedExportReportType
+              }
+              onFormatChange={
+                setSelectedExportFormat
+              }
+              onExport={() =>
+                void handleExport()
+              }
+              onClose={
+                openInventory
+              }
+            />
+          </View>
 
-        {
-          renderBottomNavigation()
-        }
-      </View>
+          {
+            renderBottomNavigation()
+          }
+        </View>
+      </BrandedScreen>
     );
   }
 
+  /*
+   * UPDATE INVENTORY
+   */
   if (
     currentView ===
       "inventory-transaction" &&
     selectedProduct
   ) {
     return (
-      <InventoryTransactionForm
-        product={
-          selectedProduct
-        }
-        isSubmitting={
-          isTransactionSubmitting
-        }
-        onCancel={
-          closeTransactionForm
-        }
-        onSubmit={
-          handleInventoryTransaction
-        }
-      />
+      <BrandedScreen>
+        <InventoryTransactionForm
+          product={
+            selectedProduct
+          }
+          isSubmitting={
+            isTransactionSubmitting
+          }
+          onCancel={
+            closeTransactionForm
+          }
+          onSubmit={
+            handleInventoryTransaction
+          }
+        />
+      </BrandedScreen>
     );
   }
 
+  /*
+   * PRODUCT STOCK HISTORY
+   */
   if (
     currentView ===
       "transaction-history" &&
     selectedProduct
   ) {
-    if (
-      isHistoryLoading
-    ) {
-      return (
-        <LoadingScreen
-          message="Loading transaction history…"
-        />
-      );
-    }
-
     return (
-      <ProductTransactionHistory
-        productName={
-          selectedProduct.name
-        }
-        currentStock={
-          selectedProduct.currentStock
-        }
-        transactions={
-          transactionHistory
-        }
-        onClose={
-          closeTransactionHistory
-        }
-      />
+      <BrandedScreen>
+        {isHistoryLoading ? (
+          <LoadingContent
+            message="Loading transaction history…"
+          />
+        ) : (
+          <ProductTransactionHistory
+            productName={
+              selectedProduct.name
+            }
+            currentStock={
+              selectedProduct.currentStock
+            }
+            transactions={
+              transactionHistory
+            }
+            onClose={
+              closeTransactionHistory
+            }
+          />
+        )}
+      </BrandedScreen>
     );
   }
 
+  /*
+   * EDIT PRODUCT
+   */
   if (
     currentView ===
       "edit-product" &&
     selectedProduct
   ) {
     return (
-      <EditProductForm
-        product={
-          selectedProduct
-        }
-        isSubmitting={
-          isProductUpdating
-        }
-        onCancel={
-          closeEditProduct
-        }
-        onSubmit={
-          handleUpdateProduct
-        }
-      />
+      <BrandedScreen>
+        <EditProductForm
+          product={
+            selectedProduct
+          }
+          isSubmitting={
+            isProductUpdating
+          }
+          onCancel={
+            closeEditProduct
+          }
+          onSubmit={
+            handleUpdateProduct
+          }
+        />
+      </BrandedScreen>
     );
   }
 
+  /*
+   * ADD PRODUCT
+   */
   if (
     currentView ===
     "add-product"
   ) {
     return (
-      <SafeAreaView
-        edges={[
-          "top",
-          "left",
-          "right",
-          "bottom",
-        ]}
-        style={
-          styles.screen
-        }
-      >
+      <BrandedScreen>
         <View
           style={
-            styles.topBar
+            styles.addProductScreen
           }
         >
-          <Pressable
-            onPress={
-              closeProductForm
-            }
+          <View
             style={
-              styles.secondaryButton
+              styles.topBar
             }
           >
-            <Text
+            <Pressable
+              accessibilityRole="button"
+              onPress={
+                closeProductForm
+              }
               style={
-                styles.secondaryButtonText
+                styles.secondaryButton
               }
             >
-              {productFormReturnView ===
-              "scanner"
-                ? "Back"
-                : "Cancel"}
-            </Text>
-          </Pressable>
-        </View>
+              <Text
+                style={
+                  styles.secondaryButtonText
+                }
+              >
+                {productFormReturnView ===
+                "scanner"
+                  ? "Back"
+                  : "Cancel"}
+              </Text>
+            </Pressable>
+          </View>
 
-        <ProductForm
-          initialBarcode={
-            scannedBarcode
-          }
-          isSubmitting={
-            isSubmitting
-          }
-          onSubmit={
-            handleCreateProduct
-          }
-        />
-      </SafeAreaView>
+          <View
+            style={
+              styles.formContent
+            }
+          >
+            <ProductForm
+              initialBarcode={
+                scannedBarcode
+              }
+              isSubmitting={
+                isSubmitting
+              }
+              onSubmit={
+                handleCreateProduct
+              }
+            />
+          </View>
+        </View>
+      </BrandedScreen>
     );
   }
 
+  /*
+   * IMPORT INVENTORY
+   */
   if (
     currentView ===
     "import-inventory"
   ) {
     return (
-      <View
-        style={
-          styles.primaryNavigationScreen
-        }
-      >
+      <BrandedScreen>
         <View
           style={
-            styles.primaryContent
+            styles.primaryNavigationScreen
           }
         >
-          <ImportInventory
-            onClose={
-              openInventory
+          <View
+            style={
+              styles.primaryContent
             }
-          />
-        </View>
+          >
+            <ImportInventory
+              onClose={
+                openInventory
+              }
+            />
+          </View>
 
-        {
-          renderBottomNavigation()
-        }
-      </View>
+          {
+            renderBottomNavigation()
+          }
+        </View>
+      </BrandedScreen>
     );
   }
 
+  /*
+   * MAIN INVENTORY
+   */
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-      ]}
-      style={
-        styles.screen
-      }
-    >
+    <BrandedScreen>
       <View
         style={
           styles.inventoryScreen
@@ -5079,6 +5199,9 @@ function SmartStockApp() {
             styles.listContent
           }
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={
+            false
+          }
           ListHeaderComponent={
             <View>
               <View
@@ -5152,7 +5275,7 @@ function SmartStockApp() {
 
                 <InventoryActionBar
                   onDashboard={() =>
-                    void openDashboard()
+                    void openHome()
                   }
                   onReorder={() =>
                     void openReorderManagement()
@@ -5217,7 +5340,7 @@ function SmartStockApp() {
       </View>
 
       <Modal
-        animationType="slide"
+        animationType="fade"
         transparent
         visible={
           isInventoryMenuVisible
@@ -5290,7 +5413,7 @@ function SmartStockApp() {
                       styles.inventoryMenuSubtitle
                     }
                   >
-                    Manage inventory data and review activity.
+                    Manage data and review inventory activity.
                   </Text>
                 </View>
               </View>
@@ -5325,7 +5448,7 @@ function SmartStockApp() {
             <InventoryMenuItem
               icon="time-outline"
               title="Stock Audit History"
-              subtitle="Review stock changes and archived products"
+              subtitle="Review stock movements and archived products"
               onPress={() => {
                 closeInventoryMenu();
 
@@ -5358,11 +5481,47 @@ function SmartStockApp() {
           </Pressable>
         </Pressable>
       </Modal>
+    </BrandedScreen>
+  );
+}
+
+/*
+ * GLOBAL SMARTSTOCK HEADER
+ *
+ * AppHeader handles the iPhone
+ * safe-area itself.
+ *
+ * Child screens therefore should not
+ * add the "top" SafeArea edge.
+ */
+function BrandedScreen({
+  children,
+}: {
+  children:
+    ReactNode;
+}) {
+  return (
+    <View
+      style={
+        styles.brandedScreen
+      }
+    >
+      <AppHeader />
+
+      <View
+        style={
+          styles.brandedContent
+        }
+      >
+        {
+          children
+        }
+      </View>
 
       <StatusBar
-        style="auto"
+        style="dark"
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -5483,52 +5642,36 @@ function PrimaryLoadingContent({
   );
 }
 
-function LoadingScreen({
+function LoadingContent({
   message,
 }: {
   message:
     string;
 }) {
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-        "bottom",
-      ]}
+    <View
       style={
-        styles.screen
+        styles.centeredContainer
       }
     >
-      <View
+      <ActivityIndicator
+        size="large"
+      />
+
+      <Text
         style={
-          styles.centeredContainer
+          styles.statusText
         }
       >
-        <ActivityIndicator
-          size="large"
-        />
-
-        <Text
-          style={
-            styles.statusText
-          }
-        >
-          {
-            message
-          }
-        </Text>
-
-        <StatusBar
-          style="auto"
-        />
-      </View>
-    </SafeAreaView>
+        {
+          message
+        }
+      </Text>
+    </View>
   );
 }
 
-function FallbackScreen({
+function FallbackContent({
   message,
   onReturn,
 }: {
@@ -5539,59 +5682,69 @@ function FallbackScreen({
     () => void;
 }) {
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-        "bottom",
-      ]}
+    <View
       style={
-        styles.screen
+        styles.centeredContainer
       }
     >
-      <View
+      <Text
         style={
-          styles.centeredContainer
+          styles.errorTitle
+        }
+      >
+        {
+          message
+        }
+      </Text>
+
+      <Pressable
+        accessibilityRole="button"
+        onPress={
+          onReturn
+        }
+        style={
+          styles.primaryButton
         }
       >
         <Text
           style={
-            styles.errorTitle
+            styles.primaryButtonText
           }
         >
-          {
-            message
-          }
+          Return
         </Text>
-
-        <Pressable
-          accessibilityRole="button"
-          onPress={
-            onReturn
-          }
-          style={
-            styles.primaryButton
-          }
-        >
-          <Text
-            style={
-              styles.primaryButtonText
-            }
-          >
-            Return
-          </Text>
-        </Pressable>
-      </View>
-    </SafeAreaView>
+      </Pressable>
+    </View>
   );
 }
 
 const styles =
   StyleSheet.create({
-    screen: {
+    brandedScreen: {
       flex:
         1,
+
+      minHeight:
+        0,
+
+      backgroundColor:
+        "#F4F6F8",
+    },
+
+    /*
+     * IMPORTANT:
+     *
+     * No paddingTop here.
+     *
+     * AppHeader already handles the
+     * iPhone safe area.
+     */
+    brandedContent: {
+      flex:
+        1,
+
+      minHeight:
+        0,
 
       backgroundColor:
         "#F4F6F8",
@@ -5600,6 +5753,9 @@ const styles =
     primaryNavigationScreen: {
       flex:
         1,
+
+      minHeight:
+        0,
 
       backgroundColor:
         "#F4F6F8",
@@ -5633,11 +5789,36 @@ const styles =
 
       minHeight:
         0,
+
+      backgroundColor:
+        "#F4F6F8",
+    },
+
+    addProductScreen: {
+      flex:
+        1,
+
+      minHeight:
+        0,
+
+      backgroundColor:
+        "#F4F6F8",
+    },
+
+    formContent: {
+      flex:
+        1,
+
+      minHeight:
+        0,
     },
 
     listContent: {
-      padding:
+      paddingHorizontal:
         16,
+
+      paddingTop:
+        8,
 
       paddingBottom:
         10,
@@ -5703,7 +5884,10 @@ const styles =
 
     title: {
       fontSize:
-        30,
+        28,
+
+      lineHeight:
+        34,
 
       fontWeight:
         "800",
@@ -5731,7 +5915,10 @@ const styles =
         20,
 
       paddingTop:
-        8,
+        6,
+
+      paddingBottom:
+        4,
     },
 
     centeredContainer: {

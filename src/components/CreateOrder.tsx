@@ -18,12 +18,12 @@ import {
 } from "react-native";
 
 import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
-
-import {
   OrderProductCard,
 } from "./OrderProductCard";
+
+import {
+  ScreenContainer,
+} from "./ScreenContainer";
 
 import type {
   OrderDraftItem,
@@ -235,6 +235,7 @@ export function CreateOrder({
             MAX_SEARCH_RESULTS,
           );
       },
+
       [
         normalizedSearch,
         products,
@@ -473,15 +474,18 @@ export function CreateOrder({
       : 0;
 
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-        "bottom",
-      ]}
-      style={
-        styles.screen
+    <ScreenContainer
+      scrollable={
+        false
+      }
+      padded={
+        false
+      }
+      topSpacing={
+        0
+      }
+      bottomSpacing={
+        0
       }
     >
       <View
@@ -490,6 +494,10 @@ export function CreateOrder({
         }
       >
         <ScrollView
+          contentInsetAdjustmentBehavior="never"
+          automaticallyAdjustContentInsets={
+            false
+          }
           contentContainerStyle={
             styles.content
           }
@@ -1804,7 +1812,7 @@ export function CreateOrder({
           />
         </Pressable>
       </View>
-    </SafeAreaView>
+    </ScreenContainer>
   );
 }
 
@@ -1899,14 +1907,6 @@ function formatCurrency(
 
 const styles =
   StyleSheet.create({
-    screen: {
-      flex:
-        1,
-
-      backgroundColor:
-        "#F4F6F8",
-    },
-
     screenContent: {
       flex:
         1,
@@ -1920,7 +1920,7 @@ const styles =
         18,
 
       paddingTop:
-        12,
+        8,
 
       paddingBottom:
         40,

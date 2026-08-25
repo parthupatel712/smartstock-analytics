@@ -10,9 +10,7 @@ import {
   View,
 } from "react-native";
 
-import {
-  SafeAreaView,
-} from "react-native-safe-area-context";
+import{ScreenContainer}from"./ScreenContainer";
 
 import type {
   PurchaseOrderStatus,
@@ -98,25 +96,7 @@ export function OrderManagement({
     );
 
   return (
-    <SafeAreaView
-      edges={[
-        "top",
-        "left",
-        "right",
-        "bottom",
-      ]}
-      style={
-        styles.screen
-      }
-    >
-      <ScrollView
-        contentContainerStyle={
-          styles.content
-        }
-        showsVerticalScrollIndicator={
-          false
-        }
-      >
+    <ScreenContainer>
         <View
           style={
             styles.header
@@ -412,8 +392,7 @@ export function OrderManagement({
             ),
           )
         )}
-      </ScrollView>
-    </SafeAreaView>
+     </ScreenContainer>
   );
 }
 
@@ -1094,25 +1073,6 @@ function formatDate(
 
 const styles =
   StyleSheet.create({
-    screen: {
-      flex:
-        1,
-
-      backgroundColor:
-        "#F4F6F8",
-    },
-
-    content: {
-      paddingHorizontal:
-        18,
-
-      paddingTop:
-        12,
-
-      paddingBottom:
-        50,
-    },
-
     header: {
       flexDirection:
         "row",
